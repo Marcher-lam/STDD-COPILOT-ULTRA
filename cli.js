@@ -61,6 +61,8 @@ program
   .description('Initialize STDD Copilot in your project')
   .option('--force', 'Overwrite existing files')
   .option('--skip-skills', 'Skip copying skills directory')
+  .option('-y, --yes', 'Run non-interactively with default settings')
+  .option('--non-interactive', 'Run non-interactively (same as --yes)')
   .action(async (targetPath = '.', options = {}) => {
     const spinner = createSpinner('Initializing STDD Copilot...').start();
     try {

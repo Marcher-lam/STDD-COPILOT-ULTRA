@@ -49,9 +49,10 @@ STDD Copilot (Spec + Test Driven Development) 是一个融合了 SDD 和 TDD 最
 详见: https://github.com/Marcher-lam/STDD-COPILOT
 `;
 
-const CONFIG_YAML_TEMPLATE = `# STDD Copilot Configuration
+function buildConfigYamlTemplate(projectName) {
+  return `# STDD Copilot Configuration
 version: "1.0"
-name: "${path.basename(process.cwd())}"
+name: "${projectName}"
 
 project:
   type: "\${PROJECT_TYPE:-node}"
@@ -91,6 +92,7 @@ memory:
   enabled: true
   persist: true
 `;
+}
 
 const GITIGNORE_ENTRIES = `
 # STDD Copilot
@@ -105,9 +107,23 @@ class InitCommand {
     this.spinner = spinner || { text: '', start() {}, stop() {}, succeed() {}, fail() {} };
   }
 
+  getDefaultSelectedAgents() {
+    const defaults = enginesConfig.engines.filter(e => e.checked).map(e => e.value);
+    if (defaults.length > 0) {
+      return defaults;
+    }
+    if (enginesConfig.engines[0]?.value) {
+      return [enginesConfig.engines[0].value];
+    }
+    return ['.claude'];
+  }
+
+  shouldPromptForAgents(options = {}) {
+    const nonInteractive = Boolean(options.yes || options.nonInteractive);
+    return !nonInteractive && Boolean(process.stdin.isTTY && process.stdout.isTTY);
+  }
+
   async execute(targetPath, options = {}) {
-    const inquirer = require('inquirer');
-    
     // Check if already initialized
     const stddDir = path.join(targetPath, 'stdd');
     // Dynamic agent dirs
@@ -121,28 +137,36 @@ class InitCommand {
 
     const SUPPORTED_AGENTS = enginesConfig.engines;
 
-    let selectedAgents = enginesConfig.engines.filter(e => e.checked).map(e => e.value);
+    let selectedAgents = this.getDefaultSelectedAgents();
 
     // In interactive mode, prompt user for extensions
-    if (this.spinner) {
-      if (this.spinner.stop) this.spinner.stop();
-      console.log('\n');
-      const answers = await inquirer.prompt([
-        {
-          type: 'checkbox',
-          message: 'Select the AI CLI engines you want to support:',
-          name: 'agents',
-          choices: SUPPORTED_AGENTS,
-          validate(answer) {
-            if (answer.length < 1) {
-              return 'You must choose at least one CLI engine.';
-            }
-            return true;
+    if (this.shouldPromptForAgents(options)) {
+      try {
+        const inquirer = require('inquirer');
+        if (this.spinner.stop) this.spinner.stop();
+        console.log('\n');
+        const answers = await inquirer.prompt([
+          {
+            type: 'checkbox',
+            message: 'Select the AI CLI engines you want to support:',
+            name: 'agents',
+            choices: SUPPORTED_AGENTS,
+            validate(answer) {
+              if (answer.length < 1) {
+                return 'You must choose at least one CLI engine.';
+              }
+              return true;
+            },
           },
-        },
-      ]);
-      selectedAgents = answers.agents;
-      if (this.spinner.start) this.spinner.start();
+        ]);
+        selectedAgents = answers.agents;
+      } finally {
+        if (this.spinner.start) this.spinner.start();
+      }
+    }
+
+    if (!Array.isArray(selectedAgents) || selectedAgents.length === 0) {
+      throw new Error('No AI CLI engine selected. Please configure at least one engine.');
     }
 
     // Create directory structure
@@ -162,8 +186,12 @@ class InitCommand {
     await this.copyClaudeCommands(targetPath, selectedAgents);
 
     // Copy skills payload
-    this.spinner.text = 'Copying STDD skills...';
-    await this.copySkills(targetPath, selectedAgents);
+    if (options.skipSkills) {
+      this.spinner.text = 'Skipping STDD skills copy (--skip-skills)...';
+    } else {
+      this.spinner.text = 'Copying STDD skills...';
+      await this.copySkills(targetPath, selectedAgents);
+    }
 
     // Copy schemas
     this.spinner.text = 'Copying schemas...';
@@ -215,9 +243,10 @@ class InitCommand {
   }
 
   async createConfigYaml(targetPath) {
+    const projectName = path.basename(path.resolve(targetPath)) || 'project';
     await fs.writeFile(
       path.join(targetPath, 'stdd', 'config.yaml'),
-      CONFIG_YAML_TEMPLATE
+      buildConfigYamlTemplate(projectName)
     );
   }
 
