@@ -129,13 +129,28 @@ program
   });
 
 // New command group
-const newCmd = program.command('new').description('Create new items');
+const newCmd = program.command('new').description('Create new changes or specs');
+
+newCmd.addHelpText('after', `
+Examples:
+  stdd new change add-dark-mode
+  stdd new change api-v2 --title "API V2"
+  stdd new spec auth
+
+Run \`stdd init\` before creating changes or specs.
+`);
 
 newCmd
   .command('change <name>')
-  .description('Create a new change proposal')
+  .description('Create a new change')
   .option('--title <title>', 'Change title')
   .option('--description <desc>', 'Change description')
+  .addHelpText('after', `
+Examples:
+  stdd new change add-dark-mode
+  stdd new change add-auth --title "User Authentication"
+  stdd new change api-v2 --description "Introduce API v2"
+`)
   .action(async (name, options = {}) => {
     const spinner = createSpinner(`Creating change: ${name}...`).start();
     try {
@@ -150,7 +165,12 @@ newCmd
 
 newCmd
   .command('spec <domain>')
-  .description('Create a new spec file')
+  .description('Create a new domain spec')
+  .addHelpText('after', `
+Examples:
+  stdd new spec auth
+  stdd new spec payment
+`)
   .action(async (domain, options = {}) => {
     const spinner = createSpinner(`Creating spec: ${domain}...`).start();
     try {

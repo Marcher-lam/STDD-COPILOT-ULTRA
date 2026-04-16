@@ -124,7 +124,7 @@ Commands:
   update [options] [path]    Update STDD Copilot files in your project
   list|ls [options]          List all changes or specs
   status [options] [change]  Show status of a change or current work
-  new                        Create new items
+  new                        Create new changes or specs
   skills [options]           List all available STDD skills
   commands                   List all Claude Code slash commands
   hooks [options]            Manage Hooks for AI Code engines
@@ -368,6 +368,8 @@ stdd status [change] [options]
 
 创建新变更。
 
+使用前提: 先在当前目录执行 `stdd init`。
+
 ```bash
 stdd new change <name> [options]
 
@@ -394,8 +396,10 @@ stdd/changes/add-dark-mode/
 
 创建新规格。
 
+使用前提: 先在当前目录执行 `stdd init`。
+
 ```bash
-stdd new spec <domain> [options]
+stdd new spec <domain>
 
 示例:
   stdd new spec auth        # 创建 auth 域规格

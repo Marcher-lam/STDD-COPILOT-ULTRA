@@ -12,6 +12,17 @@ class NewCommand {
     this.spinner = spinner;
   }
 
+  async ensureWorkspaceDir(dirPath) {
+    try {
+      await fs.access(dirPath);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        throw new Error('STDD not initialized. Run `stdd init` first.');
+      }
+      throw error;
+    }
+  }
+
   /**
    * 校验名称合法性：防路径遍历、非法字符、长度
    */
@@ -38,6 +49,8 @@ class NewCommand {
 
     const changesDir = path.join(process.cwd(), 'stdd', 'changes');
     const changeDir = path.join(changesDir, name);
+
+    await this.ensureWorkspaceDir(changesDir);
 
     // 原子创建：直接 mkdir，如果已存在则报错
     try {
@@ -74,6 +87,8 @@ class NewCommand {
     const specsDir = path.join(process.cwd(), 'stdd', 'specs');
     const specDir = path.join(specsDir, domain);
     const specFile = path.join(specDir, 'spec.md');
+
+    await this.ensureWorkspaceDir(specsDir);
 
     // 检查 spec 文件是否已存在
     try {
