@@ -156,7 +156,8 @@ stdd commands
   /stdd:continue        Continue paused work
   /stdd:apply           Execute TDD cycle
   /stdd:verify          Verify implementation
-  /stdd:archive        Archive completed change
+  /stdd:archive         Archive completed change
+  /stdd:constitution    Constitution management
   /stdd:graph *         Graph engine commands
 
 Use these commands in Claude Code conversations.
@@ -425,6 +426,7 @@ stdd skills [options]
 
 选项:
   --phase <number>    按阶段筛选 (1-5)
+  -h, --help          显示帮助
 
 示例:
   stdd skills              # 所有技能
@@ -463,6 +465,8 @@ Use in Claude Code: /stdd:<skill-name>
 stdd commands
 ```
 
+列出的是 Claude Code 斜杠命令，不是 `stdd init` 这类 CLI 命令。
+
 **输出示例:**
 
 ```
@@ -476,6 +480,7 @@ stdd commands
   /stdd:apply           Execute TDD cycle
   /stdd:verify          Verify implementation
   /stdd:archive         Archive completed change
+  /stdd:constitution    Constitution management
   /stdd:graph *         Graph engine commands
 
 Use these commands in Claude Code conversations.
@@ -892,7 +897,10 @@ stdd constitution
 
 # 查看特定条例详情
 stdd constitution show 2    # Article 2: TDD
-stdd constitution show 7    # Article 7: Security
+stdd constitution show --article 7    # Article 7: Security
+
+# 执行 CLI 侧合规检查入口
+stdd constitution check
 ```
 
 **输出示例:**
@@ -914,6 +922,16 @@ Priority 2 (Warning):
 Priority 3 (Suggestion):
   Article 5: Documentation (文档即代码)
   Article 8: Performance (性能默认)
+```
+
+查看单条条例时，输出会变成：
+
+```
+📋 Article 2: TDD
+
+Priority: Blocking
+Description: 测试先行
+Enforcement: Hook 阻断
 ```
 
 ---

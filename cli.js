@@ -18,6 +18,17 @@ const hooksCommand = require('./src/cli/commands/hooks');
 
 const program = new Command();
 const packageJson = require('./package.json');
+const CONSTITUTION_ARTICLES = [
+  { n: 1, name: 'Library-First', priority: 'Warning', desc: '优先使用成熟库', enforcement: '警告提示' },
+  { n: 2, name: 'TDD', priority: 'Blocking', desc: '测试先行', enforcement: 'Hook 阻断' },
+  { n: 3, name: 'Small Commits', priority: 'Warning', desc: '原子提交', enforcement: '警告提示' },
+  { n: 4, name: 'Code Style', priority: 'Warning', desc: '统一风格', enforcement: 'Hook 检查' },
+  { n: 5, name: 'Documentation', priority: 'Suggestion', desc: '文档即代码', enforcement: '建议提示' },
+  { n: 6, name: 'Error Handling', priority: 'Warning', desc: '显式错误处理', enforcement: '建议提示' },
+  { n: 7, name: 'Security', priority: 'Blocking', desc: '安全优先', enforcement: 'Hook 阻断' },
+  { n: 8, name: 'Performance', priority: 'Suggestion', desc: '性能默认', enforcement: '建议提示' },
+  { n: 9, name: 'CI/CD', priority: 'Blocking', desc: '自动化流水线', enforcement: 'CI 门禁' }
+];
 
 // Simple spinner implementation
 function createSpinner(text) {
@@ -188,6 +199,14 @@ program
   .command('skills')
   .description('List all available STDD skills')
   .option('--phase <phase>', 'Filter by phase (1-5)')
+  .addHelpText('after', `
+Examples:
+  stdd skills
+  stdd skills --phase 1
+  stdd skills --phase 4
+
+Valid phases: 1, 2, 3, 4, 5
+`)
   .action(async (options = {}) => {
     try {
       const skillsPath = path.join(__dirname, '.claude', 'skills');
@@ -237,6 +256,12 @@ program
 program
   .command('commands')
   .description('List all Claude Code slash commands')
+  .addHelpText('after', `
+Examples:
+  stdd commands
+
+This command lists Claude Code slash commands, not CLI commands like \`stdd init\`.
+`)
   .action(async () => {
     console.log(chalk.bold('\n🔧 STDD Copilot Commands\n'));
 
@@ -263,59 +288,83 @@ program
 // Hooks command (使用函数式导入)
 hooksCommand(program);
 
+function getArticleByNumber(articleNumber) {
+  const normalized = Number.parseInt(articleNumber, 10);
+  if (Number.isNaN(normalized)) {
+    return null;
+  }
+  return CONSTITUTION_ARTICLES.find(article => article.n === normalized) || null;
+}
+
+function printConstitutionOverview() {
+  console.log(chalk.bold('\n📋 STDD Constitution - 9 篇开发条例\n'));
+
+  const blocking = CONSTITUTION_ARTICLES.filter(a => a.priority === 'Blocking');
+  const warning = CONSTITUTION_ARTICLES.filter(a => a.priority === 'Warning');
+  const suggestion = CONSTITUTION_ARTICLES.filter(a => a.priority === 'Suggestion');
+
+  console.log(chalk.red('Priority 1 (Blocking):'));
+  blocking.forEach(a => {
+    console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
+  });
+
+  console.log(chalk.yellow('\nPriority 2 (Warning):'));
+  warning.forEach(a => {
+    console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
+  });
+
+  console.log(chalk.blue('\nPriority 3 (Suggestion):'));
+  suggestion.forEach(a => {
+    console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
+  });
+
+  console.log(chalk.dim('\n详情: stdd constitution show 2'));
+  console.log(chalk.dim('检查: stdd constitution check'));
+}
+
+function printConstitutionArticle(article) {
+  console.log(chalk.bold(`\n📋 Article ${article.n}: ${article.name}\n`));
+  console.log(`Priority: ${article.priority}`);
+  console.log(`Description: ${article.desc}`);
+  console.log(`Enforcement: ${article.enforcement}`);
+}
+
 // Constitution command
 program
-  .command('constitution [action]')
+  .command('constitution [action] [target]')
   .description('Manage STDD Constitution (9 articles)')
   .option('--article <n>', 'Specific article number')
   .option('--reason <reason>', 'Reason for waiver')
   .option('--days <days>', 'Waiver duration in days')
-  .action(async (action = 'show', options = {}) => {
+  .addHelpText('after', `
+Examples:
+  stdd constitution
+  stdd constitution show 2
+  stdd constitution show --article 7
+  stdd constitution check
+
+Supported actions: show, check
+`)
+  .action(async (action = 'show', target, options = {}) => {
     try {
-      const constitutionPath = path.join(__dirname, 'schemas', 'constitution', 'constitution.yaml');
-
       if (action === 'show') {
-        console.log(chalk.bold('\n📋 STDD Constitution - 9 篇开发条例\n'));
-
-        const articles = [
-          { n: 1, name: 'Library-First', priority: 'Warning', desc: '优先使用成熟库' },
-          { n: 2, name: 'TDD', priority: 'Blocking', desc: '测试先行' },
-          { n: 3, name: 'Small Commits', priority: 'Warning', desc: '原子提交' },
-          { n: 4, name: 'Code Style', priority: 'Warning', desc: '统一风格' },
-          { n: 5, name: 'Documentation', priority: 'Suggestion', desc: '文档即代码' },
-          { n: 6, name: 'Error Handling', priority: 'Warning', desc: '显式错误处理' },
-          { n: 7, name: 'Security', priority: 'Blocking', desc: '安全优先' },
-          { n: 8, name: 'Performance', priority: 'Suggestion', desc: '性能默认' },
-          { n: 9, name: 'CI/CD', priority: 'Blocking', desc: '自动化流水线' },
-        ];
-
-        const blocking = articles.filter(a => a.priority === 'Blocking');
-        const warning = articles.filter(a => a.priority === 'Warning');
-        const suggestion = articles.filter(a => a.priority === 'Suggestion');
-
-        console.log(chalk.red('Priority 1 (Blocking):'));
-        blocking.forEach(a => {
-          console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
-        });
-
-        console.log(chalk.yellow('\nPriority 2 (Warning):'));
-        warning.forEach(a => {
-          console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
-        });
-
-        console.log(chalk.blue('\nPriority 3 (Suggestion):'));
-        suggestion.forEach(a => {
-          console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
-        });
-
-        console.log(chalk.dim('\n详情: stdd constitution show <article>'));
-        console.log(chalk.dim('检查: stdd constitution check'));
+        const articleRef = options.article || target;
+        if (articleRef) {
+          const article = getArticleByNumber(articleRef);
+          if (!article) {
+            throw new Error(`Unknown article '${articleRef}'. Use a number between 1 and 9.`);
+          }
+          printConstitutionArticle(article);
+        } else {
+          printConstitutionOverview();
+        }
       } else if (action === 'check') {
         console.log(chalk.bold('\n🔍 Constitution 合规检查\n'));
         console.log('请使用 Claude Code 运行: /stdd:constitution check');
       } else {
         console.log(`未知操作: ${action}`);
-        console.log('可用操作: show, check, waiver');
+        console.log('可用操作: show, check');
+        process.exit(1);
       }
     } catch (error) {
       console.error(chalk.red(`Error: ${error.message}`));
