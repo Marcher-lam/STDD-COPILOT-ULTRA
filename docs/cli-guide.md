@@ -883,6 +883,7 @@ rm -rf stdd/memory/*
 | `stdd hooks disable` | 禁用 Hooks |
 | `stdd constitution` | 查看条例 |
 | `stdd constitution show <n>` | 查看特定条例 |
+| `stdd constitution check` | 触发 CLI 侧合规检查入口 |
 | `stdd --version` | 查看版本 |
 | `stdd --help` | 查看帮助 |
 

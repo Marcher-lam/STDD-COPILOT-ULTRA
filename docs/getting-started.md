@@ -78,7 +78,14 @@ stdd init
 |------|------|
 | `stdd skills` | 列出所有技能 |
 | `stdd skills --phase 4` | 按阶段筛选技能 |
-| `stdd commands` | 列出 Claude Code 命令 |
+| `stdd commands` | 列出 Claude Code 斜杠命令 |
+| `stdd constitution` | 查看所有条例 |
+| `stdd constitution check` | 触发 CLI 侧合规检查入口 |
+| `stdd hooks install` | 安装 Hooks |
+| `stdd hooks verify` | 验证 Hooks |
+| `stdd hooks status` | 查看 Hooks 状态 |
+| `stdd hooks disable` | 禁用 Hooks |
+| `stdd hooks enable` | 恢复 Hooks |
 
 ### 命令选项
 
@@ -87,6 +94,8 @@ stdd init --force          # 强制覆盖
 stdd list --json           # JSON 输出
 stdd list --archived       # 包含已归档
 stdd status --json         # JSON 输出
+stdd constitution check    # CLI 侧合规检查入口
+stdd hooks status          # 查看 Hooks 状态
 ```
 
 ## 快速路径
