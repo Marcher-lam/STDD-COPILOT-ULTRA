@@ -54,6 +54,26 @@ Translates confirmed requirements into Gherkin-format BDD specifications (Given/
 /stdd:commit     # Atomic commit with scope-creep review
 ```
 
+## CLI Quick Reference
+
+Use the `stdd` CLI for workspace bootstrap, status checks, and hook / constitution operations:
+
+```bash
+stdd init                    # Initialize the project
+stdd list --archived         # Include archived changes
+stdd status --json           # Machine-readable status output
+
+stdd commands                # List Claude Code slash commands
+stdd constitution            # Show all constitution articles
+stdd constitution check      # Trigger the CLI-side compliance entry point
+
+stdd hooks install           # Install hooks
+stdd hooks verify            # Verify hooks
+stdd hooks status            # Show hooks status
+stdd hooks disable           # Disable hooks
+stdd hooks enable            # Re-enable hooks
+```
+
 ## Fast-Forward Mode
 
 Skip all pre-phases and go straight to implementation:

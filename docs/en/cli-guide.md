@@ -12,6 +12,58 @@ npm install
 npm link
 ```
 
+## CLI Quick Reference
+
+The `stdd` CLI handles project bootstrap, status reporting, and hook / constitution management.
+
+```bash
+stdd init                    # Initialize the project
+stdd init /path/to/project   # Initialize a specific directory
+stdd init --force            # Overwrite existing STDD files
+
+stdd list                    # List active changes
+stdd list --specs            # List specs
+stdd list --archived         # Include archived changes
+stdd list --json             # JSON output
+
+stdd status                  # Overall project status
+stdd status add-dark-mode    # Status for a specific change
+stdd status --json           # Machine-readable status output
+
+stdd new change add-dark-mode      # Create a new change
+stdd new spec auth                 # Create a new spec
+
+stdd skills                  # List all skills
+stdd skills --phase 4        # Filter skills by phase
+
+stdd commands                # List Claude Code slash commands
+stdd constitution            # Show all constitution articles
+stdd constitution show 2     # Show Article 2 details
+stdd constitution check      # Trigger the CLI-side compliance entry point
+
+stdd hooks install           # Install hooks
+stdd hooks verify            # Verify hooks
+stdd hooks status            # Show hooks status
+stdd hooks disable           # Disable hooks
+stdd hooks enable            # Re-enable hooks
+```
+
+### Info and Maintenance Commands
+
+| Command | Description |
+|---------|-------------|
+| `stdd skills` | List all available STDD skills |
+| `stdd skills --phase 4` | Filter skills by phase |
+| `stdd commands` | List Claude Code slash commands |
+| `stdd constitution` | Show all constitution articles |
+| `stdd constitution show 2` | Show details for a specific article |
+| `stdd constitution check` | Trigger the CLI-side compliance entry point |
+| `stdd hooks install` | Install hooks |
+| `stdd hooks verify` | Verify hooks |
+| `stdd hooks status` | Show hooks status |
+| `stdd hooks disable` | Disable hooks |
+| `stdd hooks enable` | Re-enable hooks |
+
 ## Command Reference
 
 ### Initialization
