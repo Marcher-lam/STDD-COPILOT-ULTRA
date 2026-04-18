@@ -249,6 +249,24 @@ stdd/changes/change-YYYYMMDD-HHMMSS/
 
 ### CLI 命令
 
+| 命令 | 说明 |
+|------|------|
+| `stdd init [path]` | 初始化项目 (`--force` 覆盖, `--skip-skills` 跳过技能) |
+| `stdd update [path]` | 更新 STDD 文件 (`--force` 强制更新) |
+| `stdd list` / `stdd ls` | 列出变更 (`--specs`, `--archived`, `--json`) |
+| `stdd status [change]` | 查看变更状态 (`--json`) |
+| `stdd new change <name>` | 创建新变更 (`--title`, `--description`) |
+| `stdd new spec <domain>` | 创建新规格 |
+| `stdd skills` | 列出所有技能 (`--phase <1-5>`) |
+| `stdd commands` | 列出 Claude Code 斜杠命令 |
+| `stdd hooks install` | 安装 AI Code 引擎 Hooks |
+| `stdd hooks verify` | 验证 Hooks 状态 |
+| `stdd constitution` | 查看所有条例 |
+| `stdd constitution show 2` | 查看指定条例详情 |
+| `stdd constitution check` | 触发 CLI 侧 Constitution 检查入口 |
+
+可直接复制的示例与 `README.md` 保持同步：
+
 ```bash
 stdd init                    # 初始化项目
 stdd init /path/to/project   # 指定目录
