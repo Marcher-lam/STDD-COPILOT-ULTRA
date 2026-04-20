@@ -85,9 +85,10 @@ stdd hooks enable            # Re-enable hooks
 
 | Document | Description |
 |----------|-------------|
+| [English Docs Index](./docs/en/README.md) | English documentation hub and entry-point map |
 | [Installation](./INSTALL.md) | Setup instructions and requirements |
-| [CLI Guide](./docs/en/cli-guide.md) | Complete CLI and command reference (EN) |
-| [Getting Started](./docs/en/getting-started.md) | Quick start tutorial and core concepts (EN) |
+| [Getting Started](./docs/en/getting-started.md) | First-run workflow and quick CLI reference |
+| [CLI Guide](./docs/en/cli-guide.md) | Full CLI command reference |
 | [Usage](./USAGE.md) | Complete usage guide |
 | [Architecture](./ARCHITECTURE.md) | System architecture overview |
 | [Examples](./EXAMPLES.md) | Best practice templates and examples |

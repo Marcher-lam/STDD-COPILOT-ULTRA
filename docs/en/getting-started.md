@@ -135,7 +135,7 @@ All settings are in `stdd/config.yaml`. Key sections:
 ## Documentation
 
 - [English Docs Index](README.md) — English documentation hub
-- [CLI Guide](cli-guide.md) — Full command reference
+- [CLI Guide](cli-guide.md) — Full CLI command reference
 - [Project README](../../README_EN.md) — Project overview and top-level examples
 - [中文项目首页](../../README.md) — Complete Chinese documentation
 

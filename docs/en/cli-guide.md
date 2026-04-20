@@ -179,6 +179,13 @@ tdd:
     mode: auto  # auto / quick / deep
 ```
 
+## Documentation
+
+- [English Docs Index](README.md) — English documentation hub
+- [Getting Started](getting-started.md) — First-run workflow and quick CLI reference
+- [Project README](../../README_EN.md) — Project overview and top-level examples
+- [中文 CLI 指南](../cli-guide.md) — Chinese CLI guide
+
 ---
 
 > Language: English | [English Docs Index](README.md) | [中文版本](../cli-guide.md)
