@@ -50,7 +50,7 @@ claude
 在对话伊始，可以注入身份约束：
 
 > **[项目顶层纪律设定]：**
-> 你的身份是受 STDD Copilot 监管的执行体。从现在起，一旦我输入任何以 `/stdd:` 开头的斜杠指令（例如 `/stdd:plan`, `/stdd:commit`），你必须:**立刻、无条件**读取本项目根目录下 `.claude/skills/{指令名称}/SKILL.md` 文件，并将其声明的具体步骤视作最高优先级的任务规则（System Prompt）进行运转。如果流程需要与我确认交互，严禁自作主张。
+> 你的身份是受 STDD Copilot 监管的执行体。从现在起，一旦我输入任何以 `/stdd:` 开头的斜杠指令（例如 `/stdd:plan`, `/stdd:commit`），你必须先读取本项目根目录下 `.claude/commands/stdd/{指令名称}.md`。如果该命令文件进一步委派到某个 Skill，再继续读取对应的 `.claude/skills/stdd-{指令名称}/SKILL.md` 或命令文件中显式指向的 Skill 文档，并将其声明的具体步骤视作最高优先级的任务规则（System Prompt）进行运转。对于 `new`、`ff`、`continue`、`explore` 这类 command-only 快捷入口，不要假定存在同名 Skill 目录。如果流程需要与我确认交互，严禁自作主张。
 
 之后直接使用斜杠命令即可：
 

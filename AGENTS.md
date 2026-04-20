@@ -117,7 +117,9 @@ stdd-copilot/
 4. 静态质检门 - 语法/类型检查
 5. 伪变异审查 - 检测骗绿灯断言
 
-## 全部 Skills (38 个)
+## 全部能力入口 (42 个 = 38 Skills + 4 Command-only 快捷入口)
+
+### Skills (38 个)
 
 ### 核心流程 (12)
 init, propose, clarify, confirm, spec, plan, apply, execute,
@@ -132,9 +134,9 @@ api-spec, schema, contract, validate
 ### TDD 增强 (4)
 outside-in, mock, factory, mutation
 
-### 辅助功能 (11)
-guard, prp, supervisor, context, iterate, memory, parallel, roles,
-metrics, learn, help
+### 辅助功能 (12)
+guard, constitution, prp, supervisor, context, iterate, memory, parallel,
+roles, metrics, learn, help
 
 ### 质量评估 (3)
 certainty, complexity, vision
