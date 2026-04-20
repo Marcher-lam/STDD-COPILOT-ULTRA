@@ -202,6 +202,139 @@ proposal → specs → design → tasks → ready
 
 ---
 
+### /stdd:propose
+
+提出新特性需求草案并进行边界澄清。
+
+```bash
+/stdd:propose <需求描述>        # 提出需求草案
+```
+
+**执行要点:**
+- 检测是否为过大 Epic，必要时要求切分
+- 自动补充边界问题和隐含约束
+- 将结果写入 `stdd/changes/<change>/proposal.md`
+
+---
+
+### /stdd:clarify
+
+对需求草案进行多轮澄清。
+
+```bash
+/stdd:clarify                  # 澄清当前活跃变更
+/stdd:clarify --change=<name>  # 澄清指定变更
+```
+
+**下一步:**
+- 澄清完成后进入 `/stdd:confirm`
+
+---
+
+### /stdd:confirm
+
+用户审阅并确认需求，作为进入规格阶段的人机确认门。
+
+```bash
+/stdd:confirm                  # 确认当前活跃变更
+/stdd:confirm --change=<name>  # 确认指定变更
+```
+
+**分支结果:**
+- `yes` → 进入 `/stdd:spec`
+- `no` → 返回 `/stdd:propose`
+
+---
+
+### /stdd:spec
+
+将确认后的需求转译为 BDD 规格。
+
+```bash
+/stdd:spec                     # 为当前活跃变更生成规格
+/stdd:spec --change=<name>     # 为指定变更生成规格
+```
+
+**红线规则:**
+- 只描述外部可观察行为
+- 禁止写实现细节
+- 每个边界条件都应对应独立 Scenario
+
+---
+
+### /stdd:plan
+
+评估架构变更并生成细粒度微任务清单。
+
+```bash
+/stdd:plan                     # 为当前活跃变更拆解任务
+/stdd:plan --change=<name>     # 为指定变更拆解任务
+```
+
+**拆解原则:**
+- 每个变更控制在 5-6 个原子任务
+- 每个任务尽量在 30 分钟内完成
+- 完成后进入 `/stdd:apply`
+
+---
+
+### /stdd:execute
+
+启动严格的 Ralph Loop TDD 执行闭环。
+
+```bash
+/stdd:execute                  # 执行全部待办任务
+/stdd:execute --task=TASK-001  # 执行特定任务
+/stdd:execute --next           # 执行下一个任务
+```
+
+**循环阶段:**
+- RED → CHECK → GREEN → MUTATION → REFACTOR
+
+---
+
+### /stdd:final-doc
+
+聚合所有阶段产出，生成最终需求文档。
+
+```bash
+/stdd:final-doc                  # 为当前活跃变更生成文档
+/stdd:final-doc --change=<name>  # 为指定变更生成文档
+```
+
+**输出:**
+- `FINAL_REQUIREMENT.md`
+
+---
+
+### /stdd:brainstorm
+
+纯分析建议模式。
+
+```bash
+/stdd:brainstorm                # 进入只读分析模式
+```
+
+**约束:**
+- 只读分析，不创建、不修改、不删除项目文件
+
+---
+
+### /stdd:issue
+
+Issue Resolution 模式，用于 Bug 的 TDD 修复流程。
+
+```bash
+/stdd:issue                     # 启动 Bug 修复流程
+```
+
+**适用场景:**
+- Bug 分类
+- 失败测试先行
+- 最小修复与回归验证
+
+---
+
 ## Graph 引擎命令
 
 ### /stdd:graph visualize
@@ -616,6 +749,46 @@ TDD 守护钩子系统。
 /stdd:help tdd                 # TDD 相关帮助
 /stdd:help graph               # Graph 引擎帮助
 ```
+
+---
+
+### /stdd:certainty
+
+在关键决策点进行置信度评分。
+
+```bash
+/stdd:certainty                # 进行当前决策置信度评估
+```
+
+**作用:**
+- 低于阈值时暂停并请求人类确认
+
+---
+
+### /stdd:complexity
+
+量化代码复杂度，输出复杂度评估结果。
+
+```bash
+/stdd:complexity               # 评估当前代码复杂度
+```
+
+**作用:**
+- 为重构阶段提供复杂度度量基线
+
+---
+
+### /stdd:commit
+
+完成闭环审查并执行原子化提交。
+
+```bash
+/stdd:commit                   # 执行归档与规范提交
+```
+
+**前置条件:**
+- `tasks.md` 已全部完成
+- 测试全部通过
 
 ---
 

@@ -324,6 +324,6 @@ stdd status add-dark-mode
 ## 下一步
 
 - [Workflows](workflows.md) - 常见模式和使用场景
-- [Commands](commands.md) - 所有斜杠命令的完整参考
+- [Commands](commands.md) - 统一会话入口参考
 - [Concepts](concepts.md) - 深入理解 specs, changes, 和 schemas
 - [CLI Guide](cli-guide.md) - CLI 完整文档
