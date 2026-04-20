@@ -181,4 +181,4 @@ tdd:
 
 ---
 
-> Language: English | [中文版本](../cli-guide.md)
+> Language: English | [English Docs Index](README.md) | [中文版本](../cli-guide.md)

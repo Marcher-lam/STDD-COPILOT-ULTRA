@@ -9,6 +9,14 @@ English translations of STDD Copilot documentation.
 | [Getting Started](getting-started.md) | Quick start guide and core concepts |
 | [CLI Guide](cli-guide.md) | Full command reference |
 
+## Recommended Entry Points
+
+Use these entry points in order when you are looking for CLI-related documentation:
+
+1. [Project README](../../README_EN.md) — Project overview and top-level examples
+2. [Getting Started](getting-started.md) — First-run workflow and quick CLI reference
+3. [CLI Guide](cli-guide.md) — Full CLI command reference
+
 ## Chinese Documentation (Complete)
 
 | Document | Description |
@@ -22,8 +30,9 @@ English translations of STDD Copilot documentation.
 
 ## Language
 
-- [English](./) (You are here)
-- [中文](../)
+- [English Docs Index](./README.md) (You are here)
+- [English Project README](../../README_EN.md)
+- [中文项目首页](../../README.md)
 
 ## Contributing Translations
 
