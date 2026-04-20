@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node cli.js",
     "test": "jest",
-    "test:docs": "jest --runInBand __tests__/docs-taxonomy-consistency.test.js __tests__/docs-cli-examples-consistency.test.js"
+    "test:docs": "jest --runInBand __tests__/docs-taxonomy-consistency.test.js __tests__/docs-cli-examples-consistency.test.js",
+    "premerge": "npm run test:docs && jest --runInBand --testPathIgnorePatterns=__tests__/docs-taxonomy-consistency.test.js --testPathIgnorePatterns=__tests__/docs-cli-examples-consistency.test.js"
   },
   "repository": {
     "type": "git",

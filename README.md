@@ -389,7 +389,7 @@ stdd hooks enable
 | [系统架构](./ARCHITECTURE.md) | 架构设计和组件说明 |
 | [示例集](./EXAMPLES.md) | 社区示例和学习资源 |
 | [CLI 使用指南](./docs/cli-guide.md) | CLI 完整文档 |
-| [快速开始](./docs/getting-started.md) | 5 分钟上手 |
+| [快速开始](./docs/getting-started.md) | 首次使用流程和 CLI 速查 |
 | [核心概念](./docs/concepts.md) | Specs、Changes、Schemas 详解 |
 | [工作流程](./docs/workflows.md) | 8 种常见工作流模式 |
 | [命令参考](./docs/commands.md) | 40+ 命令完整参考 |

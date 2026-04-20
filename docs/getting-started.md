@@ -346,7 +346,10 @@ stdd status add-dark-mode
 
 ## 下一步
 
+- [项目首页](../README.md) - 项目概览和顶层示例
+- [使用手册](../USAGE.md) - 完整使用指南
+- [CLI 使用指南](cli-guide.md) - CLI 完整文档
 - [Workflows](workflows.md) - 常见模式和使用场景
 - [Commands](commands.md) - 统一会话入口参考
 - [Concepts](concepts.md) - 深入理解 specs, changes, 和 schemas
-- [CLI Guide](cli-guide.md) - CLI 完整文档
+- [English Docs Index](en/README.md) - 英文文档入口
