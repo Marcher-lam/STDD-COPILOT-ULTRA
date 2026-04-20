@@ -1,4 +1,4 @@
-const { CANONICAL_CLI_ENTRIES, readFile } = require('./docs-contracts');
+const { CANONICAL_CLI_ENTRIES, readFile } = require('../test-support/docs-contracts');
 
 const CHINESE_CLI_DOCS = [
   'README.md',
@@ -42,6 +42,8 @@ describe('Documentation CLI example consistency', () => {
     expect(readme).toContain('[Getting Started](./docs/en/getting-started.md) | First-run workflow and quick CLI reference');
     expect(readme).toContain('[CLI Guide](./docs/en/cli-guide.md) | Full CLI command reference');
 
+    expect(docsIndex).toContain('[Getting Started](getting-started.md) | First-run workflow and quick CLI reference');
+    expect(docsIndex).toContain('[CLI Guide](cli-guide.md) | Full CLI command reference');
     expect(docsIndex).toContain('[Project README](../../README_EN.md) — Project overview and top-level examples');
     expect(docsIndex).toContain('[Getting Started](getting-started.md) — First-run workflow and quick CLI reference');
     expect(docsIndex).toContain('[CLI Guide](cli-guide.md) — Full CLI command reference');

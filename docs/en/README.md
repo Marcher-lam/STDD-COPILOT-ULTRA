@@ -6,8 +6,8 @@ English translations of STDD Copilot documentation.
 
 | Document | Description |
 |----------|-------------|
-| [Getting Started](getting-started.md) | Quick start guide and core concepts |
-| [CLI Guide](cli-guide.md) | Full command reference |
+| [Getting Started](getting-started.md) | First-run workflow and quick CLI reference |
+| [CLI Guide](cli-guide.md) | Full CLI command reference |
 
 ## Recommended Entry Points
 

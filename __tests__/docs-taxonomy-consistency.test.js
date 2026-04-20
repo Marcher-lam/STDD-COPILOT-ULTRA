@@ -8,7 +8,7 @@ const {
   getSkillDirEntriesSet,
   getSlashEntriesFromCommandFiles,
   getSlashEntriesFromSkillDirs
-} = require('./docs-contracts');
+} = require('../test-support/docs-contracts');
 
 describe('Documentation taxonomy consistency', () => {
   it('keeps the documented command/skill counts in sync with the repository', () => {
