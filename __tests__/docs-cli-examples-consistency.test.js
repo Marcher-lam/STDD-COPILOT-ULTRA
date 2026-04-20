@@ -62,6 +62,7 @@ describe('Documentation CLI example consistency', () => {
     const readme = readFile('README.md');
     const cliGuide = readFile('docs/cli-guide.md');
     const gettingStarted = readFile('docs/getting-started.md');
+    const usage = readFile('USAGE.md');
 
     expect(readme).toContain('[CLI 使用指南](./docs/cli-guide.md) | CLI 完整文档');
     expect(readme).toContain('[快速开始](./docs/getting-started.md) | 首次使用流程和 CLI 速查');
@@ -75,5 +76,15 @@ describe('Documentation CLI example consistency', () => {
     expect(gettingStarted).toContain('[项目首页](../README.md) - 项目概览和顶层示例');
     expect(gettingStarted).toContain('[使用手册](../USAGE.md) - 完整使用指南');
     expect(gettingStarted).toContain('[CLI 使用指南](cli-guide.md) - CLI 完整文档');
+    expect(gettingStarted).toContain('[工作流程](workflows.md) - 常见模式和使用场景');
+    expect(gettingStarted).toContain('[命令参考](commands.md) - 统一会话入口参考');
+    expect(gettingStarted).toContain('[核心概念](concepts.md) - 深入理解 specs、changes 和 schemas');
+    expect(gettingStarted).toContain('[英文文档入口](en/README.md) - English docs index');
+
+    expect(usage).toContain('## 文档导航');
+    expect(usage).toContain('[项目首页](./README.md) - 项目概览和顶层示例');
+    expect(usage).toContain('[快速开始](./docs/getting-started.md) - 首次使用流程和 CLI 速查');
+    expect(usage).toContain('[CLI 使用指南](./docs/cli-guide.md) - CLI 完整文档');
+    expect(usage).toContain('[英文文档入口](./docs/en/README.md) - English docs index');
   });
 });

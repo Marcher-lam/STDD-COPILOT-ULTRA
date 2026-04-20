@@ -407,4 +407,13 @@ stdd hooks enable            # 恢复 Hooks
 
 ---
 
+## 文档导航
+
+- [项目首页](./README.md) - 项目概览和顶层示例
+- [快速开始](./docs/getting-started.md) - 首次使用流程和 CLI 速查
+- [CLI 使用指南](./docs/cli-guide.md) - CLI 完整文档
+- [英文文档入口](./docs/en/README.md) - English docs index
+
+---
+
 > 参考: 借鉴自 OpenSpec 规范先行理念和 Stryker 变异测试
