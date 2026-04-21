@@ -300,7 +300,7 @@ stdd hooks disable           # 禁用 Hooks
 stdd hooks enable            # 恢复 Hooks
 ```
 
-### 核心流程
+### 核心流程 (斜杠命令)
 
 | 命令 | 说明 |
 |------|------|
@@ -318,7 +318,7 @@ stdd hooks enable            # 恢复 Hooks
 | `/stdd:ff <需求>` | Fast-Forward 快速生成所有产物 |
 | `/stdd:continue` | 继续生成下一个产物 |
 | `/stdd:explore [目标]` | 自由探索模式 (只读) |
-| `/stdd:turbo <需求>` | One-Shot 一键全流程 |
+| `/stdd:turbo <需求>` | One-Shot 一键全流程 (Skill 触发) |
 | `/stdd:brainstorm` | 纯分析建议模式 |
 | `/stdd:issue` | Bug/Issue TDD 修复流程 |
 
