@@ -1,8 +1,11 @@
 {
-  "name": "stdd-copilot",
+  "name": "@marcher-lam/stdd-copilot",
   "version": "1.0.0",
   "description": "STDD (Specification + Test Driven Development) Copilot CLI",
   "main": "cli.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node cli.js",
     "test": "jest",
@@ -11,10 +14,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Marcher-lam/STDD-COPILOT.git"
+    "url": "git+https://github.com/Marcher-lam/STDD-COPILOT.git"
   },
   "bin": {
-    "stdd": "./cli.js"
+    "stdd": "cli.js"
   },
   "dependencies": {
     "chalk": "^4.1.2",

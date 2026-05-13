@@ -7,12 +7,16 @@ const { SpecGenerator } = require('../src/cli/commands/spec-generator');
 const { ApplyCommand } = require('../src/cli/commands/apply');
 const { VerifyCommand } = require('../src/cli/commands/verify');
 const { ArchiveCommand } = require('../src/cli/commands/archive');
+const { FixPacketCommand } = require('../src/cli/commands/fix-packet');
+const { OutsideInCommand } = require('../src/cli/commands/outside-in');
 
 jest.mock('../src/cli/commands/ff');
 jest.mock('../src/cli/commands/spec-generator');
 jest.mock('../src/cli/commands/apply');
 jest.mock('../src/cli/commands/verify');
 jest.mock('../src/cli/commands/archive');
+jest.mock('../src/cli/commands/fix-packet');
+jest.mock('../src/cli/commands/outside-in');
 
 jest.mock('child_process', () => ({
   exec: jest.fn((cmd, opts, cb) => cb(null, { stdout: '', stderr: '' })),
@@ -65,6 +69,12 @@ describe('GraphRunCommand', () => {
     ArchiveCommand.mockImplementation(() => ({
       execute: jest.fn().mockResolvedValue(undefined),
     }));
+    FixPacketCommand.mockImplementation(() => ({
+      execute: jest.fn().mockReturnValue({ output: 'stdd/changes/test/evidence/fix-packet.md', jsonOutput: 'stdd/changes/test/evidence/fix-packet.json' }),
+    }));
+    OutsideInCommand.mockImplementation(() => ({
+      execute: jest.fn().mockReturnValue({ plan: 'stdd/changes/test/outside-in/plan.md', skeletons: [] }),
+    }));
 
     exec.mockImplementation((cmd, opts, cb) => cb(null, { stdout: '', stderr: '' }));
     exec.mockClear();
@@ -100,6 +110,7 @@ describe('GraphRunCommand', () => {
       'stdd-propose',
       'stdd-spec',
       'stdd-plan',
+      'stdd-outside-in',
       'stdd-apply',
       'stdd-verify',
     ]);
@@ -107,6 +118,7 @@ describe('GraphRunCommand', () => {
     // Verify each command class was called in order
     expect(FFCommand).toHaveBeenCalled();
     expect(SpecGenerator).toHaveBeenCalled();
+    expect(OutsideInCommand).toHaveBeenCalled();
     expect(ApplyCommand).toHaveBeenCalled();
     expect(VerifyCommand).toHaveBeenCalled();
   });
@@ -139,6 +151,18 @@ describe('GraphRunCommand', () => {
     expect(skippedSteps.length).toBeGreaterThanOrEqual(2);
     expect(skippedSteps.some(s => s.node === 'stdd-apply')).toBe(true);
     expect(skippedSteps.some(s => s.node === 'stdd-verify')).toBe(true);
+  });
+
+  it('should execute repair intent starting with fix-packet', async () => {
+    const projectPath = createTempProject('graph-run-repair');
+    process.chdir(projectPath);
+
+    const command = new GraphRunCommand();
+    const result = await command.execute('repair', { changeName: 'repair-change' });
+
+    const stepNames = result.steps.map(s => s.node);
+    expect(stepNames).toEqual(['stdd-fix-packet', 'stdd-apply', 'stdd-verify']);
+    expect(FixPacketCommand).toHaveBeenCalled();
   });
 
   it('should include workspace in skip-apply step results and output', async () => {
@@ -261,6 +285,7 @@ describe('GraphRunCommand', () => {
       'stdd-propose',
       'stdd-spec',
       'stdd-plan',
+      'stdd-outside-in',
       'stdd-apply',
       'stdd-verify',
     ]);

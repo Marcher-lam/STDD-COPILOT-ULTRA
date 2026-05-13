@@ -256,17 +256,31 @@ skills:
 
   # ========== TDD 增强技能 ==========
   stdd-outside-in:
-    description: "外向内 TDD"
+    description: "外向内 TDD layer registry 与分层测试骨架"
     phase: execute
     inputs:
       - "stdd/specs/features/"
     outputs:
-      - "tests/e2e/"
-      - "tests/integration/"
-      - "tests/unit/"
+      - "stdd/tdd-registry.yaml"
+      - "stdd/changes/*/outside-in/plan.md"
+      - "stdd/changes/*/outside-in/*-*.spec.md"
     metadata:
       priority: high
       category: tdd
+
+  stdd-fix-packet:
+    description: "Golden Packet 失败修复上下文"
+    phase: repair
+    inputs:
+      - "stdd/changes/*/tasks.md"
+      - "stdd/changes/*/specs/"
+      - "stdd/changes/*/evidence/"
+    outputs:
+      - "stdd/changes/*/evidence/fix-packet-*.md"
+      - "stdd/changes/*/evidence/fix-packet-*.json"
+    metadata:
+      priority: high
+      category: repair
 
   stdd-mock:
     description: "自动 Mock 生成"
@@ -376,6 +390,10 @@ dependencies:
       - stdd-outside-in
       - stdd-mock
       - stdd-factory
+
+  stdd-fix-packet:
+    requires:
+      - stdd-apply
 
   stdd-final-doc:
     requires:

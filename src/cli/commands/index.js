@@ -41,6 +41,8 @@ module.exports = {
   StoryCommand: require('./story').StoryCommand,
   UserTestCommand: require('./user-test').UserTestCommand,
   PipelineCommand: require('./pipeline').PipelineCommand,
+  FixPacketCommand: require('./fix-packet').FixPacketCommand,
+  OutsideInCommand: require('./outside-in').OutsideInCommand,
   AgentEngine: require('../../runtime/agent-simulator').AgentEngine,
   SudoLangParser: require('../../runtime/sudolang-parser').SudoLangParser,
   BabyStepsCommand: require('./baby-steps').BabyStepsCommand,

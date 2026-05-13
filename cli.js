@@ -45,6 +45,8 @@ const {
   StoryCommand,
   UserTestCommand,
   PipelineCommand,
+  FixPacketCommand,
+  OutsideInCommand,
   RecommendEngine,
   printRecommendations,
   GraphRunCommand,
@@ -403,6 +405,35 @@ program
   .option('--json')
   .action(async (change, options = {}) => {
     try { await new ValidateCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Fix Packet / Golden Packet
+program
+  .command('fix-packet [change]')
+  .description('Generate a Golden Packet style failure context for AI handoff')
+  .option('--test-output <file>', 'Include captured test output from a file')
+  .option('--test-command <cmd>', 'Test command to show in the packet')
+  .option('--task <task>', 'Task description to include')
+  .option('--json')
+  .action(async (change, options = {}) => {
+    try { new FixPacketCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Outside-In TDD registry and scaffolds
+program
+  .command('outside-in [action] [change]')
+  .description('Manage outside-in TDD registry and layer scaffolds')
+  .option('--feature <name>', 'Feature key for generated layer skeletons')
+  .option('--force', 'Overwrite registry during init')
+  .option('--json')
+  .action(async (action = 'status', change, options = {}) => {
+    try { new OutsideInCommand().execute(action, change, options); } catch (error) {
       console.error(chalk.red(error.message));
       process.exit(1);
     }

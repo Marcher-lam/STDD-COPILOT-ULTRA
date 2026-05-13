@@ -19,6 +19,6 @@ describe('DynamicGraphRouter (自适应动态拓扑)', () => {
     
     expect(graph.name).toContain('UNKNOWN');
     // 默认回落完整的特征瀑布流
-    expect(Object.keys(graph.skills)).toEqual(['stdd-propose', 'stdd-spec', 'stdd-plan', 'stdd-apply', 'stdd-verify']);
+    expect(Object.keys(graph.skills)).toEqual(['stdd-propose', 'stdd-spec', 'stdd-plan', 'stdd-outside-in', 'stdd-apply', 'stdd-verify']);
   });
 });

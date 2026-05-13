@@ -16,13 +16,17 @@ const { SpecGenerator } = require('./spec-generator');
 const { ApplyCommand } = require('./apply');
 const { VerifyCommand } = require('./verify');
 const { ArchiveCommand } = require('./archive');
+const { FixPacketCommand } = require('./fix-packet');
+const { OutsideInCommand } = require('./outside-in');
 const { resolveWorkspace } = require('../../utils/workspace-detector');
 
 const NODE_COMMAND_MAP = {
   'stdd-propose': 'propose',
   'stdd-spec': 'spec',
   'stdd-plan': 'plan',
+  'stdd-outside-in': 'outside-in',
   'stdd-apply': 'apply',
+  'stdd-fix-packet': 'fix-packet',
   'stdd-verify': 'verify',
   'stdd-archive': 'archive',
   'stdd-commit': 'commit',
@@ -84,6 +88,19 @@ class GraphRunCommand {
       case 'stdd-plan':
         return { status: 'success', node: nodeName, detail: 'plan step merged with propose/spec' };
 
+      case 'stdd-outside-in': {
+        const outsideIn = new OutsideInCommand(process.cwd());
+        const registryPath = path.join(process.cwd(), 'stdd', 'tdd-registry.yaml');
+        if (!fs.existsSync(registryPath)) {
+          outsideIn.execute('init', undefined, { json: false });
+        }
+        const result = outsideIn.execute('scaffold', changeName, {
+          feature: options.feature || changeName,
+          json: false,
+        });
+        return { status: 'success', node: nodeName, detail: result };
+      }
+
       case 'stdd-apply': {
         if (options.skipApply) {
           console.log(chalk.dim(`  [Skipping: ${nodeName}] (--skip-apply)`));
@@ -92,6 +109,14 @@ class GraphRunCommand {
         const apply = new ApplyCommand();
         await apply.execute(changeName, { ...(options.applyOptions || {}), workspace: options.workspace });
         return { status: 'success', node: nodeName, workspace: options.workspaceContext };
+      }
+
+      case 'stdd-fix-packet': {
+        const packet = new FixPacketCommand(process.cwd()).execute(changeName, {
+          testCommand: options.applyOptions && options.applyOptions.testCommand,
+          silent: true,
+        });
+        return { status: 'success', node: nodeName, detail: { output: packet.output, jsonOutput: packet.jsonOutput } };
       }
 
       case 'stdd-verify': {
@@ -250,6 +275,15 @@ class GraphRunCommand {
           graph.skills = {};
         }
 
+        const originalDependents = [];
+        if (afterNode) {
+          for (const [name, node] of Object.entries(graph.skills)) {
+            if (name === injectNode || name === afterNode) continue;
+            if (node.depends_on && node.depends_on.includes(afterNode)) {
+              originalDependents.push(name);
+            }
+          }
+        }
         const dependsOn = afterNode && graph.skills[afterNode] ? [afterNode] : [];
         graph.skills[injectNode] = {
           description: `Condition-injected node: ${injectNode}`,
@@ -261,7 +295,7 @@ class GraphRunCommand {
         if (afterNode) {
           for (const [name, node] of Object.entries(graph.skills)) {
             if (name === injectNode || name === afterNode) continue;
-            if (node.depends_on && node.depends_on.includes(afterNode)) {
+            if (node.depends_on && node.depends_on.includes(afterNode) && originalDependents.includes(name)) {
               node.depends_on = node.depends_on.filter(d => d !== afterNode);
               node.depends_on.push(injectNode);
             }

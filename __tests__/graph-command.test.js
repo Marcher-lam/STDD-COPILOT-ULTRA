@@ -41,8 +41,21 @@ describe('graph CLI command', () => {
     expect(result.status).toBe(0);
     const payload = JSON.parse(result.stdout);
     expect(payload.nodes).toContain('stdd-propose');
+    expect(payload.nodes).toContain('stdd-outside-in');
     expect(payload.edges).toEqual(expect.arrayContaining([
       expect.objectContaining({ from: 'stdd-propose', to: 'stdd-spec' }),
+      expect.objectContaining({ from: 'stdd-plan', to: 'stdd-outside-in' }),
+    ]));
+  });
+
+  it('prints repair graph with fix-packet node', () => {
+    const result = runCli(['graph', 'visualize', '--intent', 'repair', '--format', 'json']);
+
+    expect(result.status).toBe(0);
+    const payload = JSON.parse(result.stdout);
+    expect(payload.nodes).toContain('stdd-fix-packet');
+    expect(payload.edges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ from: 'stdd-fix-packet', to: 'stdd-apply' }),
     ]));
   });
 

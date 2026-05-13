@@ -27,6 +27,9 @@ stdd new spec auth
 stdd skills
 stdd skills --phase 4
 stdd commands
+stdd fix-packet add-dark-mode
+stdd outside-in init
+stdd outside-in scaffold add-dark-mode
 stdd constitution
 stdd constitution show 2
 stdd constitution check

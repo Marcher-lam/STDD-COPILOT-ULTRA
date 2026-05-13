@@ -12,6 +12,7 @@ DAG-based skill orchestration engine for visualization, analysis, execution, par
 - Visualizing skill dependencies (graph visualize)
 - Analyzing execution state and bottlenecks (graph analyze)
 - Running skills from specific points (graph run)
+- Showing TDD repair and outside-in nodes in the active DAG
 - Detecting and executing parallel tasks (graph parallel)
 - Viewing execution history (graph history)
 - Replaying past executions (graph replay)
@@ -25,6 +26,8 @@ DAG-based skill orchestration engine for visualization, analysis, execution, par
 5. **history**: Query execution logs, filter by status/time/failure
 6. **replay**: Restore past execution state, optionally re-execute
 7. **recommend**: Analyze current state + goal to recommend next skills
+8. **repair intent**: `stdd graph run --intent repair --change-name <change>` starts with `stdd-fix-packet`
+9. **feature intent**: includes `stdd-outside-in` between plan and apply to generate layer registry/scaffolds
 
 ## Rules
 - Always respect DAG dependency order
@@ -38,3 +41,4 @@ DAG-based skill orchestration engine for visualization, analysis, execution, par
 - Execution state analysis
 - Execution history records
 - Next-step recommendations
+- Dynamic DAG nodes for `stdd-outside-in` and `stdd-fix-packet`

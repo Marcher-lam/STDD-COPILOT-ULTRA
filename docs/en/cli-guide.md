@@ -14,6 +14,9 @@ stdd new spec auth
 stdd skills
 stdd skills --phase 4
 stdd commands
+stdd fix-packet add-dark-mode
+stdd outside-in init
+stdd outside-in scaffold add-dark-mode
 stdd constitution
 stdd constitution show 2
 stdd constitution check
@@ -30,3 +33,8 @@ stdd hooks enable
 [Project README](../../README_EN.md) — Project overview and top-level examples
 [Getting Started](getting-started.md) — First-run workflow and quick CLI reference
 [CLI Guide](cli-guide.md) — Full CLI command reference
+
+## TDD Gap Enhancements
+`stdd fix-packet [change]` creates a Golden Packet style AI handoff context for failed tests.
+
+`stdd outside-in init/scaffold/status` creates and uses a layer registry for outside-in TDD.

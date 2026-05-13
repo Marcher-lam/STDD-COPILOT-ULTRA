@@ -88,6 +88,9 @@ describe('apply CLI command', () => {
     const tasksContent = fs.readFileSync(tasksPath, 'utf-8');
     expect(tasksContent).toContain('- [ ] TASK-001');
     expect(tasksContent).not.toContain('- [x] TASK-001');
+    expect(result.stdout).toContain('Fix packet:');
+    const evidenceDir = path.join(projectPath, 'stdd', 'changes', 'demo', 'evidence');
+    expect(fs.readdirSync(evidenceDir).some(file => /^fix-packet-.*\.md$/.test(file))).toBe(true);
   });
 
   it('selects specified task with --task flag', () => {

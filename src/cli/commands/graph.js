@@ -254,11 +254,12 @@ Currently implemented: visualize, analyze, parallel --detect, history, replay, r
 Examples:
   stdd graph run
   stdd graph run --intent hotfix
+  stdd graph run --intent repair --change-name existing-change
   stdd graph run --intent feature --skip-apply
   stdd graph run --change-name my-change
   stdd graph run --workspace packages/api
 
-Executes nodes in topological order: propose → spec → plan → apply → verify → archive.
+Executes nodes in topological order. Feature intent includes outside-in scaffolding; repair intent starts with fix-packet evidence.
 `)
     .action((options = {}) => {
       try {

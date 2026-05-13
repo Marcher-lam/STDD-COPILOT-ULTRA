@@ -4,6 +4,8 @@ STDD Copilot 提供双入口设计：CLI 命令行工具 (`stdd`) 和 Claude Cod
 
 当前 CLI 已覆盖日常工程闭环：`stdd ff/spec/api-spec/apply/continue/mutation/verify/archive/commit`、`stdd issue/turbo/explore`、`stdd constitution check/status/fix/audit/waive`、`stdd guard/hooks`、`stdd graph run/history/recommend`、`stdd workspace`、`stdd metrics/context/ci/starters/update`、`stdd validate --spec-guardian`、`stdd learn scan`、`stdd roles party/adversarial`、`stdd story`、`stdd user-test`、`stdd pipeline`、`stdd schema create/fork/validate`、`stdd extensions` 和 **`stdd runtime agent/sudo`**。
 
+最新补强：`stdd fix-packet [change]` 会生成 Golden Packet 风格失败修复上下文，`stdd outside-in init/scaffold/status` 会生成 layer registry 与分层 TDD 骨架；Skill Graph 的 feature intent 已包含 `stdd-outside-in`，repair intent 已包含 `stdd-fix-packet → stdd-apply → stdd-verify`。完整测试验证：`npm test -- --runInBand`，60 个测试套件、757 个测试通过。
+
 ## 核心概念
 
 | 概念 | 路径 | 说明 |
@@ -387,6 +389,8 @@ stdd/changes/change-YYYYMMDD-HHMMSS/
 | `stdd story create/bdd` | 创建 Story Mapping YAML，并可生成 BDD feature |
 | `stdd user-test [change]` | 生成人工/AI 双模式用户测试脚本 |
 | `stdd pipeline [change]` | 从 specs 生成 parser IR 与 acceptance test skeleton |
+| `stdd fix-packet [change]` | 生成 Golden Packet 风格失败修复上下文；`apply` 测试失败时自动写入 evidence |
+| `stdd outside-in init/scaffold/status` | 管理外向内 TDD layer registry，并生成 E2E/集成/单元测试骨架 |
 | `stdd extensions list/install/validate/publish` | 管理 extension catalog、本地安装与发布校验 |
 | `stdd graph run/history/recommend` | CLI Graph 执行、历史和推荐 |
 | `stdd recommend [change]` | 基于当前状态推荐下一步 |
@@ -428,6 +432,7 @@ stdd api-spec add-dark-mode  # 从 feature 生成 OpenAPI 规范
 stdd apply add-dark-mode     # 执行下一个任务并运行测试
 stdd apply add-dark-mode --delegate              # 失败时记录跨模型委托 evidence
 stdd apply add-dark-mode --e2e-command "npm run e2e"  # 运行 E2E probe
+stdd fix-packet add-dark-mode  # 手动生成失败修复上下文包 (Golden Packet)
 stdd mutation add-dark-mode  # quick 启发式 mutation score / anti-fake-green，并保存 evidence
 stdd continue add-dark-mode  # 从最近任务状态继续
 stdd verify add-dark-mode    # 验证任务、测试、Constitution、证据
@@ -469,6 +474,8 @@ stdd story create checkout-flow
 stdd story bdd stdd/journeys/checkout-flow.yaml
 stdd user-test add-dark-mode
 stdd pipeline add-dark-mode
+stdd outside-in init
+stdd outside-in scaffold add-dark-mode
 stdd extensions list
 stdd extensions install ./my-extension
 stdd extensions validate
@@ -476,7 +483,8 @@ stdd runtime agent start "Design Auth" --rounds 3
 stdd runtime agent next
 stdd runtime sudo design.sudo --generate
 
-stdd graph run feature       # 基于动态 DAG 执行 workflow
+stdd graph run feature       # 基于动态 DAG 执行 workflow，含 outside-in 节点
+stdd graph run --intent repair --change-name add-dark-mode  # 从 fix-packet 修复上下文开始
 stdd graph history           # 查看 graph 执行历史
 stdd graph recommend         # 推荐下一步
 stdd recommend               # CLI 侧下一步推荐

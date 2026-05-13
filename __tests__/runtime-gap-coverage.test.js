@@ -7,6 +7,8 @@ const { UserTestCommand } = require('../src/cli/commands/user-test');
 const { PipelineCommand } = require('../src/cli/commands/pipeline');
 const { ExtensionsCommand } = require('../src/cli/commands/extensions');
 const { SchemaCommand } = require('../src/cli/commands/schema');
+const { FixPacketCommand } = require('../src/cli/commands/fix-packet');
+const { OutsideInCommand } = require('../src/cli/commands/outside-in');
 const { buildPhaseSubject, extractIssue } = require('../src/cli/commands/commit-msg');
 
 function tempProject() {
@@ -77,5 +79,34 @@ describe('runtime gap coverage commands', () => {
     expect(buildPhaseSubject('red', '42', 'add failing login spec')).toContain('red:');
     expect(buildPhaseSubject('red', '42', 'add failing login spec')).toContain('(#42)');
     expect(extractIssue('Fix login (#77)', 'change')).toBe('77');
+  });
+
+  test('fix-packet creates Golden Packet style markdown and json evidence', () => {
+    const root = tempProject();
+    const changeDir = path.join(root, 'stdd', 'changes', 'demo');
+    fs.mkdirSync(path.join(changeDir, 'specs'), { recursive: true });
+    fs.writeFileSync(path.join(changeDir, 'tasks.md'), '- [ ] TASK-001 Fix checkout\n');
+    fs.writeFileSync(path.join(changeDir, 'specs', 'checkout.feature'), 'Feature: Checkout\n  Scenario: Pay\n    Given a cart\n');
+
+    const result = new FixPacketCommand(root).execute('demo', { testCommand: 'npm test', silent: true });
+
+    expect(result.output).toMatch(/stdd\/changes\/demo\/evidence\/fix-packet-.*\.md/);
+    expect(fs.readFileSync(path.join(root, result.output), 'utf8')).toContain('Fix application code, not test expectations');
+    expect(JSON.parse(fs.readFileSync(path.join(root, result.jsonOutput), 'utf8')).contextFiles[0]).toHaveProperty('path');
+  });
+
+  test('outside-in initializes registry and scaffolds layer plans', () => {
+    const root = tempProject();
+    const changeDir = path.join(root, 'stdd', 'changes', 'demo');
+    fs.mkdirSync(changeDir, { recursive: true });
+    fs.writeFileSync(path.join(changeDir, 'tasks.md'), '- [ ] TASK-001 Add login\n');
+
+    const command = new OutsideInCommand(root);
+    const init = command.execute('init', undefined, { json: false });
+    expect(init.layers).toEqual(['e2e', 'integration', 'unit']);
+
+    const scaffold = command.execute('scaffold', 'demo', { feature: 'login', json: false });
+    expect(fs.readFileSync(path.join(root, scaffold.plan), 'utf8')).toContain('Outside-In Plan');
+    expect(scaffold.skeletons).toHaveLength(3);
   });
 });

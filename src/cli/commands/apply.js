@@ -13,6 +13,7 @@ const { injectReporter } = require('../../utils/reporter-injector');
 const { resolveTestCommands } = require('../../utils/test-command-resolver');
 const { commandToWorkspaceScope, resolveWorkspaceScope } = require('../../utils/workspace-scope');
 const { runCommand: runParsedCommand } = require('../../utils/command-runner');
+const { FixPacketCommand } = require('./fix-packet');
 
 function getConfigTestCommand(cwd) {
   const configPath = path.join(cwd, 'stdd', 'config.yaml');
@@ -193,6 +194,12 @@ class ApplyCommand {
     } else if (resultStatus === 'failed') {
       updateTaskLine(tasksPath, selectedTask, ' ');
       console.log(chalk.red(`\n✗ Task failed tests — reverted to pending`));
+      const fixPacket = new FixPacketCommand(cwd).execute(changeNameActual, {
+        task: selectedTask.description,
+        testCommand: testCommands.map(testCommand => testCommand.command).join(' && '),
+        silent: true,
+      });
+      console.log(chalk.yellow(`  Fix packet: ${fixPacket.output}`));
     } else {
       updateTaskLine(tasksPath, selectedTask, 'x');
       console.log(chalk.dim(`\n  Task marked complete (tests skipped)`));
