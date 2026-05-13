@@ -3,15 +3,11 @@ const path = require('path');
 
 const REPO_ROOT = path.join(__dirname, '..');
 
-const COMMAND_ONLY_ENTRIES = [
-  '/stdd:new',
-  '/stdd:ff',
-  '/stdd:continue',
-  '/stdd:explore'
-];
+const COMMAND_ONLY_ENTRIES = [];
 
 const COMMAND_FILE_BACKED_ENTRIES = [
   '/stdd:init',
+  '/stdd:new',
   '/stdd:propose',
   '/stdd:clarify',
   '/stdd:confirm',
@@ -22,10 +18,14 @@ const COMMAND_FILE_BACKED_ENTRIES = [
   '/stdd:verify',
   '/stdd:archive',
   '/stdd:final-doc',
-  '/stdd:graph',
   '/stdd:brainstorm',
   '/stdd:issue',
-  '/stdd:constitution'
+  '/stdd:constitution',
+  '/stdd:ff',
+  '/stdd:continue',
+  '/stdd:explore',
+  '/stdd:graph',
+  '/stdd:turbo'
 ];
 
 const SKILL_DRIVEN_ENTRIES = [
@@ -35,6 +35,7 @@ const SKILL_DRIVEN_ENTRIES = [
   '/stdd:complexity',
   '/stdd:context',
   '/stdd:contract',
+  '/stdd:design',
   '/stdd:factory',
   '/stdd:guard',
   '/stdd:help',
@@ -50,7 +51,6 @@ const SKILL_DRIVEN_ENTRIES = [
   '/stdd:roles',
   '/stdd:schema',
   '/stdd:supervisor',
-  '/stdd:turbo',
   '/stdd:user-test',
   '/stdd:validate',
   '/stdd:vision'
@@ -86,7 +86,7 @@ function readFile(relativePath) {
 }
 
 function getSlashEntriesFromCommandFiles() {
-  const dir = path.join(REPO_ROOT, '.claude', 'commands', 'stdd');
+  const dir = path.join(REPO_ROOT, 'src', 'templates', 'commands');
   return fs.readdirSync(dir)
     .filter(name => name.endsWith('.md'))
     .map(name => `/stdd:${name.replace(/\.md$/, '')}`)
@@ -94,7 +94,7 @@ function getSlashEntriesFromCommandFiles() {
 }
 
 function getSlashEntriesFromSkillDirs() {
-  const dir = path.join(REPO_ROOT, '.claude', 'skills');
+  const dir = path.join(REPO_ROOT, 'src', 'templates', 'skills');
   return fs.readdirSync(dir)
     .filter(name => name.startsWith('stdd-'))
     .map(name => `/stdd:${name.replace(/^stdd-/, '')}`)

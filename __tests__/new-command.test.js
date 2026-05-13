@@ -44,6 +44,9 @@ describe('NewCommand', () => {
   });
 
   afterAll(() => {
+    if (originalCwd && process.cwd() !== originalCwd) {
+      process.chdir(originalCwd);
+    }
     for (const dir of tempDirs) {
       fs.rmSync(dir, { recursive: true, force: true });
     }

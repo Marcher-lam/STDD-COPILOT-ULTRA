@@ -1,0 +1,502 @@
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const yaml = require('js-yaml');
+const { MockGenCommand } = require('../src/cli/commands/mock-gen');
+
+describe('MockGenCommand', () => {
+  let tempDirs = [];
+  let originalCwd;
+
+  function createTempProject(name) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-mock-test-'));
+    tempDirs.push(root);
+
+    const projectPath = path.join(root, name);
+    fs.mkdirSync(projectPath, { recursive: true });
+    fs.mkdirSync(path.join(projectPath, 'stdd', 'changes'), { recursive: true });
+    fs.mkdirSync(path.join(projectPath, 'stdd', 'specs'), { recursive: true });
+
+    return projectPath;
+  }
+
+  function createApiSpec(projectPath, changeName, filename, spec) {
+    const specsDir = path.join(projectPath, 'stdd', 'changes', changeName, 'specs');
+    fs.mkdirSync(specsDir, { recursive: true });
+    fs.writeFileSync(path.join(specsDir, filename), yaml.dump(spec, { noRefs: true, lineWidth: -1 }), 'utf8');
+  }
+
+  function createWorkspace(projectPath, workspacePath, name) {
+    fs.writeFileSync(path.join(projectPath, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }, null, 2));
+    const root = path.join(projectPath, workspacePath);
+    fs.mkdirSync(root, { recursive: true });
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name }, null, 2));
+  }
+
+  beforeEach(() => {
+    originalCwd = process.cwd();
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+  });
+
+  afterAll(() => {
+    if (originalCwd && process.cwd() !== originalCwd) {
+      process.chdir(originalCwd);
+    }
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('should generate mock JSON files for endpoints', async () => {
+    const projectPath = createTempProject('mock-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'add-users', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Users API', version: '0.1.0' },
+      paths: {
+        '/api/users': {
+          get: {
+            summary: 'List users',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          name: { type: 'string' },
+                          email: { type: 'string', format: 'email' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('add-users');
+
+    expect(result.mockFiles).toHaveLength(1);
+    expect(result.mockFiles[0].filename).toBe('GET_api_users.json');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toHaveLength(1);
+    expect(mockContent[0]).toHaveProperty('id', 0);
+    expect(mockContent[0]).toHaveProperty('email', 'user@example.com');
+  });
+
+  it('should generate mock for POST endpoint with 201 response', async () => {
+    const projectPath = createTempProject('mock-post-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'create-user', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Create User API', version: '0.1.0' },
+      paths: {
+        '/api/users': {
+          post: {
+            summary: 'Create user',
+            responses: {
+              '201': {
+                description: 'Created',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('create-user');
+
+    expect(result.mockFiles).toHaveLength(1);
+    expect(result.mockFiles[0].filename).toBe('POST_api_users.json');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toEqual({ id: 0, name: '<string>' });
+  });
+
+  it('should use example values when available', async () => {
+    const projectPath = createTempProject('mock-example-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'with-examples', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Example API', version: '0.1.0' },
+      paths: {
+        '/api/status': {
+          get: {
+            summary: 'Get status',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        status: { type: 'string', example: 'healthy' },
+                        version: { type: 'string', example: '1.0.0' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('with-examples');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toEqual({ status: 'healthy', version: '1.0.0' });
+  });
+
+  it('should generate placeholder when no schema is available', async () => {
+    const projectPath = createTempProject('mock-placeholder-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'no-schema', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'No Schema API', version: '0.1.0' },
+      paths: {
+        '/api/data': {
+          get: {
+            summary: 'Get data',
+            responses: {
+              '200': {
+                description: 'Success',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('no-schema');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toHaveProperty('method', 'GET');
+    expect(mockContent).toHaveProperty('path', '/api/data');
+    expect(mockContent.statusCode).toBe(200);
+    expect(mockContent.body).toHaveProperty('message');
+  });
+
+  it('should generate handlers.js with MSW and fetch mock', async () => {
+    const projectPath = createTempProject('mock-handlers-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'with-handlers', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Handlers API', version: '0.1.0' },
+      paths: {
+        '/api/users': {
+          get: {
+            summary: 'List users',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: { type: 'array', items: { type: 'object' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        '/api/users': {
+          post: {
+            summary: 'Create user',
+            responses: { '201': { description: 'Created' } },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('with-handlers');
+
+    expect(fs.existsSync(result.handlersPath)).toBe(true);
+    const handlersContent = fs.readFileSync(result.handlersPath, 'utf8');
+
+    expect(handlersContent).toContain('mswHandlers');
+    expect(handlersContent).toContain('mockFetch');
+    expect(handlersContent).toContain('require(\'msw\')');
+    expect(handlersContent).toContain('mocks:');
+  });
+
+  it('should handle multiple endpoints', async () => {
+    const projectPath = createTempProject('mock-multi-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'multi-endpoint', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Multi API', version: '0.1.0' },
+      paths: {
+        '/api/users': {
+          get: { summary: 'List', responses: { '200': { description: 'OK' } } },
+          post: { summary: 'Create', responses: { '201': { description: 'Created' } } },
+        },
+        '/api/users/{id}': {
+          get: { summary: 'Get', responses: { '200': { description: 'OK' } } },
+          delete: { summary: 'Delete', responses: { '204': { description: 'No Content' } } },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('multi-endpoint');
+
+    expect(result.mockFiles).toHaveLength(4);
+
+    const filenames = result.mockFiles.map(f => f.filename);
+    expect(filenames).toContain('GET_api_users.json');
+    expect(filenames).toContain('POST_api_users.json');
+    expect(filenames).toContain('GET_api_users_id.json');
+    expect(filenames).toContain('DELETE_api_users_id.json');
+  });
+
+  it('should handle enum values', async () => {
+    const projectPath = createTempProject('mock-enum-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'enum-change', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Enum API', version: '0.1.0' },
+      paths: {
+        '/api/status': {
+          get: {
+            summary: 'Get status',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        status: { type: 'string', enum: ['active', 'inactive', 'pending'] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('enum-change');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent.status).toBe('active');
+  });
+
+  it('should handle nested objects', async () => {
+    const projectPath = createTempProject('mock-nested-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'nested-change', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Nested API', version: '0.1.0' },
+      paths: {
+        '/api/profile': {
+          get: {
+            summary: 'Get profile',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        user: {
+                          type: 'object',
+                          properties: {
+                            name: { type: 'string' },
+                            address: {
+                              type: 'object',
+                              properties: {
+                                city: { type: 'string' },
+                                zip: { type: 'string' },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('nested-change');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toHaveProperty('user');
+    expect(mockContent.user).toHaveProperty('address');
+    expect(mockContent.user.address).toHaveProperty('city');
+  });
+
+  it('should throw when change does not exist', async () => {
+    const projectPath = createTempProject('missing-change-project');
+    process.chdir(projectPath);
+
+    const cmd = new MockGenCommand();
+
+    await expect(cmd.execute('nonexistent-change')).rejects.toThrow(
+      "Change 'nonexistent-change' does not exist in stdd/changes/."
+    );
+  });
+
+  it('should throw when no api-spec.yaml exists', async () => {
+    const projectPath = createTempProject('no-spec-project');
+    process.chdir(projectPath);
+
+    const changeDir = path.join(projectPath, 'stdd', 'changes', 'no-spec-change');
+    fs.mkdirSync(changeDir, { recursive: true });
+    fs.mkdirSync(path.join(changeDir, 'specs'));
+
+    const cmd = new MockGenCommand();
+
+    await expect(cmd.execute('no-spec-change')).rejects.toThrow(
+      "No api-spec.yaml found"
+    );
+  });
+
+  it('should generate workspace-scoped mocks', async () => {
+    const projectPath = createTempProject('workspace-mock-project');
+    process.chdir(projectPath);
+    createWorkspace(projectPath, 'packages/api', '@demo/api');
+
+    createApiSpec(projectPath, 'workspace-change', 'api-spec.packages-api.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Workspace API', version: '0.1.0' },
+      'x-stdd-workspace': 'packages/api',
+      paths: {
+        '/api/workspace/users': {
+          get: {
+            summary: 'List workspace users',
+            responses: { '200': { description: 'OK' } },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('workspace-change', { workspace: 'packages/api' });
+
+    expect(result.mockFiles).toHaveLength(1);
+    expect(result.mockFiles[0].filename).toBe('GET_api_workspace_users.json');
+    expect(result.workspace).toMatchObject({ path: 'packages/api', tag: 'packages-api' });
+  });
+
+  it('should mock filename correctly sanitizes path params', async () => {
+    const projectPath = createTempProject('mock-sanitize-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'sanitize-change', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Sanitize API', version: '0.1.0' },
+      paths: {
+        '/api/users/{userId}/posts/{postId}': {
+          get: {
+            summary: 'Get user post',
+            responses: { '200': { description: 'OK' } },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('sanitize-change');
+
+    expect(result.mockFiles[0].filename).toBe('GET_api_users_userId_posts_postId.json');
+  });
+
+  it('should handle boolean and date format types', async () => {
+    const projectPath = createTempProject('mock-types-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'types-change', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Types API', version: '0.1.0' },
+      paths: {
+        '/api/event': {
+          get: {
+            summary: 'Get event',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        active: { type: 'boolean' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        date: { type: 'string', format: 'date' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('types-change');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent.active).toBe(false);
+    expect(mockContent.createdAt).toBe('2024-01-01T00:00:00Z');
+    expect(mockContent.date).toBe('2024-01-01');
+  });
+});

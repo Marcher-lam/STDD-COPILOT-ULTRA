@@ -9,15 +9,75 @@ const { Command } = require('commander');
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
-const { InitCommand } = require('./src/cli/commands/init');
-const { UpdateCommand } = require('./src/cli/commands/update');
-const { ListCommand } = require('./src/cli/commands/list');
-const { NewCommand } = require('./src/cli/commands/new');
-const { StatusCommand } = require('./src/cli/commands/status');
+const os = require('os');
+
+// Import Commands from Index
+const {
+  InitCommand,
+  UpdateCommand,
+  ListCommand,
+  NewCommand,
+  StatusCommand,
+  ApplyCommand,
+  VerifyCommand,
+  ArchiveCommand,
+  FFCommand,
+  TurboCommand,
+  MetricsCommand,
+  GuardCommand,
+  ExploreCommand,
+  StartersCommand,
+  ContinueCommand,
+  IssueCommand,
+  CommitCommand,
+  ContextCommand,
+  CiGeneratorCommand,
+  AuditCommand,
+  WorkspaceCommand,
+  DepcheckCommand,
+  SchemaCommand,
+  ContractCommand,
+  MockGenCommand,
+  ValidateCommand,
+  LearnCommand,
+  RolesCommand,
+  ExtensionsCommand,
+  StoryCommand,
+  UserTestCommand,
+  PipelineCommand,
+  RecommendEngine,
+  printRecommendations,
+  GraphRunCommand,
+  ConstitutionFixCommand,
+  MutationCommand,
+  AgentEngine,
+  SudoLangParser,
+  BabyStepsCommand,
+  SudoExecutor,
+  ElicitationCommand,
+  BrowserDoctor,
+  createAgentExecutor
+} = require('./src/cli/commands/index');
+
+// ... (keep existing imports)
+
+const BrowserCommand = require('./src/cli/commands/browser');
+const { BrowserController } = require('./src/runtime/browser-controller');
+
+const { SpecGenerator } = require('./src/cli/commands/spec-generator');
+const { ApiSpecCommand } = require('./src/cli/commands/api-spec');
+const { MemoryScanner } = require('./src/cli/commands/memory-scan');
+const { TddInitCommand } = require('./src/cli/commands/tdd-init');
+const { ConstitutionStatusCommand } = require('./src/cli/commands/constitution-status');
+
 const hooksCommand = require('./src/cli/commands/hooks');
+const graphCommand = require('./src/cli/commands/graph');
+const { ConstitutionChecker } = require('./src/cli/commands/constitution-checker');
+const { WaiverManager } = require('./src/cli/commands/waiver-manager');
 
 const program = new Command();
 const packageJson = require('./package.json');
+
 const CONSTITUTION_ARTICLES = [
   { n: 1, name: 'Library-First', priority: 'Warning', desc: '优先使用成熟库', enforcement: '警告提示' },
   { n: 2, name: 'TDD', priority: 'Blocking', desc: '测试先行', enforcement: 'Hook 阻断' },
@@ -30,12 +90,11 @@ const CONSTITUTION_ARTICLES = [
   { n: 9, name: 'CI/CD', priority: 'Blocking', desc: '自动化流水线', enforcement: 'CI 门禁' }
 ];
 
-// Simple spinner implementation
+// Simple spinner
 function createSpinner(text) {
   let interval;
   const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
   let i = 0;
-
   return {
     start() {
       if (interval) clearInterval(interval);
@@ -54,14 +113,15 @@ function createSpinner(text) {
       if (interval) clearInterval(interval);
       process.stdout.write(`\r${chalk.red('✗')} ${msg || text}\n`);
     },
-    text: ''
   };
 }
 
+// ─── Base Configuration ───
 program
   .name('stdd')
   .description('STDD Copilot - Spec + Test Driven Development Framework')
-  .version(packageJson.version);
+  .version(packageJson.version)
+  .option('--no-color', 'Disable color output');
 
 program.addHelpText('after', `
 Common examples:
@@ -73,72 +133,51 @@ Common examples:
 For Claude Code slash commands: stdd commands
 `);
 
-// Global options
-program.option('--no-color', 'Disable color output');
-
-// Init command
+// ─── Core Commands ───
 program
   .command('init [path]')
   .description('Initialize STDD Copilot in your project')
   .option('--force', 'Overwrite existing files')
-  .option('--skip-skills', 'Skip copying skills directory')
-  .option('-y, --yes', 'Run non-interactively with default settings')
-  .option('--non-interactive', 'Run non-interactively (same as --yes)')
-  .addHelpText('after', `
-Examples:
-  stdd init
-  stdd init /path/to/project
-  stdd init --force
-  stdd init --skip-skills --yes
-`)
+  .option('--skip-skills', 'Skip copying skills')
+  .option('-y, --yes', 'Run non-interactively')
+  .addHelpText('after', `\nExamples:\n  stdd init\n  stdd init /path/to/project\n  stdd init --force\n  stdd init --skip-skills --yes`)
   .action(async (targetPath = '.', options = {}) => {
-    const spinner = createSpinner('Initializing STDD Copilot...').start();
+    const spinner = createSpinner('Initializing STDD Copilot').start();
     try {
-      const resolvedPath = path.resolve(targetPath);
-      const initCommand = new InitCommand(spinner);
-      await initCommand.execute(resolvedPath, options);
-      spinner.succeed('STDD Copilot initialized successfully!');
+      await new InitCommand(spinner).execute(path.resolve(targetPath), options);
+      spinner.succeed('STDD initialized successfully!');
     } catch (error) {
-      spinner.fail(`Error: ${error.message}`);
+      spinner.fail(error.message);
       process.exit(1);
     }
   });
 
-// Update command
+// Update
 program
   .command('update [path]')
-  .description('Update STDD Copilot files in your project')
-  .option('--force', 'Force update even when files exist')
-  .addHelpText('after', `
-Examples:
-  stdd update
-  stdd update /path/to/project
-  stdd update --force
-
-Use this after upgrading the CLI to sync command files and schemas.
-`)
+  .description('Update STDD Copilot files')
+  .option('--force', 'Force update')
+  .option('--dry-run', 'Show changes without writing')
   .action(async (targetPath = '.', options = {}) => {
-    const spinner = createSpinner('Updating STDD Copilot...').start();
+    const spinner = createSpinner('Updating STDD Copilot').start();
     try {
-      const resolvedPath = path.resolve(targetPath);
-      const updateCommand = new UpdateCommand(spinner);
-      await updateCommand.execute(resolvedPath, options);
-      spinner.succeed('STDD Copilot updated successfully!');
+      await new UpdateCommand(spinner).execute(path.resolve(targetPath), options);
+      spinner.succeed('Update complete!');
     } catch (error) {
-      spinner.fail(`Error: ${error.message}`);
+      spinner.fail(error.message);
       process.exit(1);
     }
   });
 
-// List command
+// List & Status
 program
   .command('list')
   .alias('ls')
-  .description('List all changes or specs')
-  .option('--changes', 'List changes (default)')
+  .description('List all changes')
+  .option('--changes', 'List changes')
   .option('--specs', 'List specs')
-  .option('--archived', 'Include archived items')
-  .option('--json', 'Output as JSON')
+  .option('--archived', 'Include archived')
+  .option('--json', 'JSON output')
   .addHelpText('after', `
 Examples:
   stdd list
@@ -149,20 +188,17 @@ Examples:
 \`--archived\` applies to change listings, not spec listings.
 `)
   .action(async (options = {}) => {
-    try {
-      const listCommand = new ListCommand();
-      await listCommand.execute('.', options);
-    } catch (error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+    try { await new ListCommand().execute('.', options); } catch (error) {
+      console.error(chalk.red(error.message));
       process.exit(1);
     }
   });
 
-// Status command
+// Status
 program
   .command('status [change]')
-  .description('Show status of a change or current work')
-  .option('--json', 'Output as JSON')
+  .description('Show status of a change')
+  .option('--json', 'JSON output')
   .addHelpText('after', `
 Examples:
   stdd status
@@ -170,72 +206,14 @@ Examples:
   stdd status --json
   stdd status add-dark-mode --json
 `)
-  .action(async (changeName, options = {}) => {
-    try {
-      const statusCommand = new StatusCommand();
-      await statusCommand.execute(changeName, options);
-    } catch (error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+  .action(async (change, options = {}) => {
+    try { await new StatusCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
       process.exit(1);
     }
   });
 
-// New command group
-const newCmd = program.command('new').description('Create new changes or specs');
-
-newCmd.addHelpText('after', `
-Examples:
-  stdd new change add-dark-mode
-  stdd new change api-v2 --title "API V2"
-  stdd new spec auth
-
-Run \`stdd init\` before creating changes or specs.
-`);
-
-newCmd
-  .command('change <name>')
-  .description('Create a new change')
-  .option('--title <title>', 'Change title')
-  .option('--description <desc>', 'Change description')
-  .addHelpText('after', `
-Examples:
-  stdd new change add-dark-mode
-  stdd new change add-auth --title "User Authentication"
-  stdd new change api-v2 --description "Introduce API v2"
-`)
-  .action(async (name, options = {}) => {
-    const spinner = createSpinner(`Creating change: ${name}...`).start();
-    try {
-      const newCommand = new NewCommand(spinner);
-      await newCommand.createChange(name, options);
-      spinner.succeed(`Change '${name}' created!`);
-    } catch (error) {
-      spinner.fail(`Error: ${error.message}`);
-      process.exit(1);
-    }
-  });
-
-newCmd
-  .command('spec <domain>')
-  .description('Create a new domain spec')
-  .addHelpText('after', `
-Examples:
-  stdd new spec auth
-  stdd new spec payment
-`)
-  .action(async (domain, options = {}) => {
-    const spinner = createSpinner(`Creating spec: ${domain}...`).start();
-    try {
-      const newCommand = new NewCommand(spinner);
-      await newCommand.createSpec(domain, options);
-      spinner.succeed(`Spec '${domain}' created!`);
-    } catch (error) {
-      spinner.fail(`Error: ${error.message}`);
-      process.exit(1);
-    }
-  });
-
-// Skills command
+// Skills
 program
   .command('skills')
   .description('List all available STDD skills')
@@ -243,7 +221,6 @@ program
   .addHelpText('after', `
 Examples:
   stdd skills
-  stdd skills --phase 1
   stdd skills --phase 4
 
 Valid phases: 1, 2, 3, 4, 5
@@ -252,44 +229,26 @@ Valid phases: 1, 2, 3, 4, 5
     try {
       const skillsPath = path.join(__dirname, '.claude', 'skills');
       const stddSkillsPath = path.join(__dirname, 'src', 'stdd-skills');
-
       console.log(chalk.bold('\n📚 STDD Copilot Skills\n'));
-
-      // Core skills
       console.log(chalk.cyan('Core Skills:'));
       const coreSkills = fs.existsSync(path.join(__dirname, 'src', 'core-skills'))
         ? fs.readdirSync(path.join(__dirname, 'src', 'core-skills')).filter(f => !f.startsWith('.'))
         : [];
-      coreSkills.forEach(skill => {
-        console.log(`  • ${skill}`);
-      });
-
-      // Phase-based skills
+      coreSkills.forEach(skill => console.log(`  • ${skill}`));
       console.log(chalk.cyan('\nPhase-based Skills:'));
       [1, 2, 3, 4, 5].forEach(phase => {
-        const phasePath = path.join(stddSkillsPath, `${phase}-*`);
-        const phaseSkills = fs.existsSync(stddSkillsPath)
+        const stddSkills = fs.existsSync(stddSkillsPath)
           ? fs.readdirSync(stddSkillsPath).filter(f => f.startsWith(`${phase}-`))
           : [];
-        if (phaseSkills.length > 0) {
-          const phaseNames = {
-            1: 'Proposal',
-            2: 'Specification',
-            3: 'Design',
-            4: 'Implementation',
-            5: 'Verification'
-          };
+        if (stddSkills.length > 0) {
+          const phaseNames = { 1: 'Proposal', 2: 'Specification', 3: 'Design', 4: 'Implementation', 5: 'Verification' };
           console.log(`  ${chalk.yellow(`Phase ${phase}`)} (${phaseNames[phase]}):`);
-          phaseSkills.forEach(skill => {
-            console.log(`    • ${skill}`);
-          });
+          stddSkills.forEach(skill => console.log(`    • ${skill}`));
         }
       });
-
       console.log(chalk.dim('\nUse in Claude Code: /stdd:<skill-name>'));
     } catch (error) {
-      console.error(chalk.red(`Error: ${error.message}`));
-      process.exit(1);
+      console.error(chalk.red(error.message)); process.exit(1);
     }
   });
 
@@ -297,15 +256,9 @@ Valid phases: 1, 2, 3, 4, 5
 program
   .command('commands')
   .description('List all Claude Code slash commands')
-  .addHelpText('after', `
-Examples:
-  stdd commands
-
-This command lists Claude Code slash commands, not CLI commands like \`stdd init\`.
-`)
+  .addHelpText('after', `\nExamples:\n  stdd commands\n\nThis command lists Claude Code slash commands, not CLI commands like \`stdd init\`.`)
   .action(async () => {
     console.log(chalk.bold('\n🔧 STDD Copilot Commands\n'));
-
     const commands = [
       { cmd: '/stdd:init', desc: 'Initialize STDD workspace' },
       { cmd: '/stdd:new', desc: 'Create new change proposal' },
@@ -318,65 +271,223 @@ This command lists Claude Code slash commands, not CLI commands like \`stdd init
       { cmd: '/stdd:constitution', desc: 'Constitution management' },
       { cmd: '/stdd:graph *', desc: 'Graph engine commands' },
     ];
-
-    commands.forEach(({ cmd, desc }) => {
-      console.log(`  ${chalk.cyan(cmd.padEnd(24))} ${desc}`);
-    });
-
+    commands.forEach(c => console.log(`  ${chalk.cyan(c.cmd.padEnd(24))} ${c.desc}`));
     console.log(chalk.dim('\nUse these commands in Claude Code conversations.'));
   });
 
-// Hooks command (使用函数式导入)
-hooksCommand(program);
-
-function getArticleByNumber(articleNumber) {
-  const normalized = Number.parseInt(articleNumber, 10);
-  if (Number.isNaN(normalized)) {
-    return null;
-  }
-  return CONSTITUTION_ARTICLES.find(article => article.n === normalized) || null;
-}
-
-function printConstitutionOverview() {
-  console.log(chalk.bold('\n📋 STDD Constitution - 9 篇开发条例\n'));
-
-  const blocking = CONSTITUTION_ARTICLES.filter(a => a.priority === 'Blocking');
-  const warning = CONSTITUTION_ARTICLES.filter(a => a.priority === 'Warning');
-  const suggestion = CONSTITUTION_ARTICLES.filter(a => a.priority === 'Suggestion');
-
-  console.log(chalk.red('Priority 1 (Blocking):'));
-  blocking.forEach(a => {
-    console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
+// New
+const newCmd = program.command('new').description('Create new changes');
+newCmd
+  .command('change <name>')
+  .description('Create a new change')
+  .option('--title <title>', 'Change title')
+  .action(async (name, options = {}) => {
+    const spinner = createSpinner(`Creating change: ${name}`).start();
+    try {
+      await new NewCommand(spinner).createChange(name, options);
+      spinner.succeed(`Change '${name}' created!`);
+    } catch (error) {
+      spinner.fail(error.message);
+      process.exit(1);
+    }
   });
 
-  console.log(chalk.yellow('\nPriority 2 (Warning):'));
-  warning.forEach(a => {
-    console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
+// ─── Workflow Commands ───
+// FF
+program
+  .command('ff <description>')
+  .description('Fast-forward: create change with pre-populated tasks')
+  .option('--change-name <name>', 'Custom change name')
+  .option('--workspace <workspace>', 'Scope to workspace')
+  .action(async (desc, options) => {
+    const spinner = createSpinner('Fast-forwarding').start();
+    try {
+      const result = await new FFCommand().execute(desc, options);
+      spinner.succeed(`Created fast-forward: ${result.changeName}`);
+      console.log(`${chalk.cyan('Next steps:')}\n  stdd apply ${result.changeName}`);
+    } catch (error) {
+      spinner.fail(error.message);
+      process.exit(1);
+    }
   });
 
-  console.log(chalk.blue('\nPriority 3 (Suggestion):'));
-  suggestion.forEach(a => {
-    console.log(`  Article ${a.n}: ${chalk.bold(a.name)} - ${a.desc}`);
+// Issue
+program
+  .command('issue <description>')
+  .description('Create bug-fix change')
+  .option('--title <title>')
+  .option('--severity <severity>')
+  .option('--workspace <workspace>')
+  .action(async (desc, options) => {
+    const spinner = createSpinner('Creating bug').start();
+    try {
+      await new IssueCommand().execute(desc, options);
+      spinner.succeed('Bug-fix change created!');
+    } catch (error) {
+      spinner.fail(error.message);
+      process.exit(1);
+    }
   });
 
-  console.log(chalk.dim('\n详情: stdd constitution show 2'));
-  console.log(chalk.dim('检查: stdd constitution check'));
-}
+// Turbo
+program
+  .command('turbo <description>')
+  .description('One-shot full process')
+  .option('--change-name <name>')
+  .option('--no-spec')
+  .action(async (desc, options) => {
+    const spinner = createSpinner('Running Turbo').start();
+    try {
+      await new TurboCommand().execute(desc, options);
+      spinner.succeed('Turbo sequence completed!');
+    } catch (error) {
+      spinner.fail(error.message);
+      process.exit(1);
+    }
+  });
 
-function printConstitutionArticle(article) {
-  console.log(chalk.bold(`\n📋 Article ${article.n}: ${article.name}\n`));
-  console.log(`Priority: ${article.priority}`);
-  console.log(`Description: ${article.desc}`);
-  console.log(`Enforcement: ${article.enforcement}`);
-}
+// Apply
+program
+  .command('apply [change]')
+  .description('Run next pending task')
+  .option('--task <id>')
+  .option('--dry-run')
+  .option('--test-command <cmd>')
+  .option('--delegate', 'Write cross-model delegation evidence on failure')
+  .option('--e2e-command <cmd>', 'Run E2E probe as part of apply evidence')
+  .option('--workspace <workspace>')
+  .addHelpText('after', 'Examples:\n  stdd apply\n  stdd apply --dry-run')
+  .action(async (change, options = {}) => {
+    try { await new ApplyCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
 
-// Constitution command
+// Verify
+program
+  .command('verify [change]')
+  .description('Verify change readiness')
+  .option('--no-constitution')
+  .option('--lint')
+  .option('--lint-command <cmd>', 'Custom lint command')
+  .option('--test-command <cmd>', 'Custom test command')
+  .option('--workspace <workspace>')
+  .addHelpText('after', 'Examples:\n  stdd verify\n  stdd verify --lint')
+  .action(async (change, options = {}) => {
+    try { await new VerifyCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Archive
+program
+  .command('archive [change]')
+  .description('Archive completed change')
+  .action(async (change, options = {}) => {
+    try {
+      await new ArchiveCommand().execute(change, options);
+    } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Validate / Spec Guardian
+program
+  .command('validate [change]')
+  .description('Validate specs and run Spec Guardian checks')
+  .option('--spec-guardian', 'Run implementation leakage checks')
+  .option('--fix', 'Write rewrite suggestions for diagnostics')
+  .option('--json')
+  .action(async (change, options = {}) => {
+    try { await new ValidateCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Roles / Party Mode / Adversarial Review
+program
+  .command('roles [action] [args...]')
+  .description('Run role utilities, party mode, or adversarial review')
+  .option('--roles <roles>', 'Comma-separated role ids for party mode')
+  .option('--json')
+  .action(async (action = 'list', args = [], options = {}) => {
+    try { await new RolesCommand().execute(action, args, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// ─── Quality & Governance ───
+// Guard
+program
+  .command('guard')
+  .description('Run STDD Guard checks')
+  .option('--no-constitution')
+  .option('--workspace <workspace>')
+  .option('--strict', 'Fail on warnings instead of passing')
+  .action(async (options) => {
+    try { await new GuardCommand().execute(options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Metrics
+program
+  .command('metrics [change]')
+  .description('Show metrics')
+  .option('--workspace <workspace>')
+  .option('--json')
+  .action(async (change, options) => {
+    try { await new MetricsCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Depcheck
+program
+  .command('depcheck [path]')
+  .description('Check dependencies')
+  .option('--workspace <workspace>')
+  .option('--safe-list <list>')
+  .option('--json')
+  .action(async (p, options) => {
+    try { await new DepcheckCommand().execute(p, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+const schemaCmd = program.command('schema').description('Manage workflow and data schemas');
+schemaCmd.command('validate [path]').description('Validate schemas').option('--strict').option('--json').action((p, options) => {
+  try { new SchemaCommand().validate(p, options); } catch (error) { console.error(chalk.red(error.message)); process.exit(1); }
+});
+schemaCmd.command('create <name>').description('Create workflow schema').option('--force').option('--json').action((name, options) => {
+  try { new SchemaCommand().create(name, options); } catch (error) { console.error(chalk.red(error.message)); process.exit(1); }
+});
+schemaCmd.command('fork <source> <name>').description('Fork workflow schema').option('--force').option('--json').action((source, name, options) => {
+  try { new SchemaCommand().fork(source, name, options); } catch (error) { console.error(chalk.red(error.message)); process.exit(1); }
+});
+
+// ─── Quality & Governance ───
+// Constitution
 program
   .command('constitution [action] [target]')
-  .description('Manage STDD Constitution (9 articles)')
-  .option('--article <n>', 'Specific article number')
-  .option('--reason <reason>', 'Reason for waiver')
-  .option('--days <days>', 'Waiver duration in days')
+  .description('Manage constitution')
+  .option('--article <n>')
+  .option('--force')
+  .option('--reason <reason>')
+  .option('--days <days>')
+  .option('--json')
+  .option('--workspace <workspace>')
+  .option('--no-constitution')
+  .option('--lint')
+  .option('--dry-run')
   .addHelpText('after', `
 Examples:
   stdd constitution
@@ -386,32 +497,496 @@ Examples:
 
 Supported actions: show, check
 `)
-  .action(async (action = 'show', target, options = {}) => {
+  .action(async (action = 'show', target, options) => {
     try {
-      if (action === 'show') {
-        const articleRef = options.article || target;
-        if (articleRef) {
-          const article = getArticleByNumber(articleRef);
-          if (!article) {
-            throw new Error(`Unknown article '${articleRef}'. Use a number between 1 and 9.`);
-          }
-          printConstitutionArticle(article);
-        } else {
-          printConstitutionOverview();
-        }
-      } else if (action === 'check') {
-        console.log(chalk.bold('\n🔍 Constitution 合规检查\n'));
-        console.log('请使用 Claude Code 运行: /stdd:constitution check');
+      if (action === 'check') {
+        await new ConstitutionChecker().run();
+      } else if (action === 'status') {
+        await new ConstitutionStatusCommand().execute(options);
+      } else if (action === 'fix') {
+        await new ConstitutionFixCommand().execute(target, options);
+      } else if (action === 'audit') {
+        await new AuditCommand().execute(options);
+      } else if (action === 'waive' || action === 'waiver') {
+        await new WaiverManager(process.cwd()).add(target, options);
       } else {
-        console.log(`未知操作: ${action}`);
-        console.log('可用操作: show, check');
-        process.exit(1);
+        // Default: show
+        if (target || options.article) {
+          const articleIdx = options.article || target;
+          const article = CONSTITUTION_ARTICLES.find(a => a.n === parseInt(articleIdx));
+          if (article) {
+            console.log(chalk.bold(`\n📋 Article ${article.n}: ${article.name}\n`));
+            console.log(`Priority: ${article.priority}`);
+            console.log(`Description: ${article.desc}`);
+            console.log(`Enforcement: ${article.enforcement}`);
+          } else {
+            console.log(chalk.red('Unknown article number.'));
+            process.exit(1);
+          }
+        } else {
+          console.log(chalk.bold('\n📋 STDD Constitution - 9 Articles\n'));
+          CONSTITUTION_ARTICLES.forEach(a => {
+            console.log(`  ${chalk.cyan(`Article ${a.n}: ${a.name}`)} - ${a.desc}`);
+          });
+        }
       }
     } catch (error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      console.error(chalk.red(error.message));
       process.exit(1);
     }
   });
 
-// Parse arguments
+// ─── Graph & Workspace ───
+// Graph
+graphCommand(program);
+
+// Workspace
+const wsCmd = program.command('workspace').description('Manage workspaces');
+const wsCmdInstance = new WorkspaceCommand();
+wsCmd.command('list').description('List workspaces').option('--json').action(() => wsCmdInstance.list());
+wsCmd.command('validate').description('Validate registry').action(() => wsCmdInstance.validate());
+wsCmd.command('repair').description('Repair registry').option('--dry-run').action((opts) => wsCmdInstance.repair(opts));
+
+// ─── Tools ───
+// Context
+program
+  .command('context [layer]')
+  .description('Show project context')
+  .option('--export')
+  .option('--workspace <workspace>')
+  .option('--json')
+  .option('--format <format>')
+  .action(async (layer, options) => {
+    try { await new ContextCommand().execute(layer, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Explore
+program
+  .command('explore [scope]')
+  .description('Explore project')
+  .option('--output <file>')
+  .option('--json')
+  .action(async (scope, options) => {
+    try { await new ExploreCommand().execute(scope, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// CI
+program
+  .command('ci [platform]')
+  .description('Generate CI config')
+  .option('--force')
+  .action(async (platform, options) => {
+    try { await new CiGeneratorCommand().execute(platform, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Starters
+program
+  .command('starters <subcommand> [args...]')
+  .description('Manage project starters')
+  .action(async (sub, args) => {
+    try { await new StartersCommand().execute(sub, args); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Extensions marketplace
+program
+  .command('extensions [action] [args...]')
+  .description('List, install, validate, and package STDD extensions')
+  .option('--json')
+  .action(async (action = 'list', args = [], options = {}) => {
+    try { await new ExtensionsCommand().execute(action, args, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Story mapping
+program
+  .command('story [action] [name]')
+  .description('Create story maps and convert journeys to BDD')
+  .option('--persona <persona>')
+  .option('--goal <goal>')
+  .option('--force')
+  .option('--json')
+  .action(async (action = 'create', name = 'journey', options = {}) => {
+    try { await new StoryCommand().execute(action, name, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// User testing scripts
+program
+  .command('user-test [change]')
+  .description('Generate human and agent user test scripts')
+  .option('--human-only')
+  .option('--agent-only')
+  .option('--json')
+  .action(async (change, options = {}) => {
+    try { await new UserTestCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Pipeline builder
+program
+  .command('pipeline [change]')
+  .description('Generate parser IR and acceptance test skeletons from specs')
+  .option('--json')
+  .action(async (change, options = {}) => {
+    try { await new PipelineCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Hooks
+hooksCommand(program);
+
+// Recommend
+program
+  .command('recommend')
+  .description('Recommend next step')
+  .option('--workspace <workspace>')
+  .option('--json', 'Output as JSON')
+  .action(async (options) => {
+    try {
+      const engine = new RecommendEngine(process.cwd());
+      const recs = engine.recommend(undefined, options);
+      if (options.json) {
+        const jsonOut = recs.map(r => ({
+          command: r.command,
+          reason: r.reason,
+          state: r.state,
+          workspace: r.workspace
+        }));
+        console.log(JSON.stringify(jsonOut, null, 2));
+      } else {
+        printRecommendations(recs);
+      }
+    } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Memory
+program
+  .command('memory <action> [args...]')
+  .description('Manage memory')
+  .action(async (action, args) => {
+    const ms = new MemoryScanner();
+    if (action === 'scan') await ms.scan();
+    else if (action === 'list') await ms.listMemory();
+  });
+
+// Learn / Pattern Teaching
+program
+  .command('learn [action] [args...]')
+  .description('Learn project patterns and record feedback')
+  .option('--json')
+  .action(async (action = 'status', args = [], options = {}) => {
+    try { await new LearnCommand().execute(action, args, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// ─── Missing CLI Commands ───
+// Commit
+program
+  .command('commit [change]')
+  .description('Generate commit message')
+  .option('--format <format>', 'Output format (text|json)', 'text')
+  .option('--tdd', 'Use TDG red/green/refactor commit prefix')
+  .option('--phase <phase>', 'TDD phase prefix: red, green, refactor')
+  .option('--issue <number>', 'Issue number for traceability')
+  .option('--require-issue', 'Fail when no issue number is available')
+  .action(async (change, options = {}) => {
+    try { await new CommitCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Spec
+program
+  .command('spec <change>')
+  .description('Generate specs from tasks')
+  .option('--merge')
+  .action(async (change, options) => {
+    try {
+      await new SpecGenerator().generateFromTasks(change, options);
+    } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// API Spec
+program
+  .command('api-spec [change]')
+  .description('Generate OpenAPI spec')
+  .option('--format <format>', 'yaml or json', 'yaml')
+  .option('--workspace <workspace>')
+  .action(async (change, options) => {
+    try { await new ApiSpecCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Contract
+program
+  .command('contract <action> [change]')
+  .description('Manage contracts')
+  .option('--workspace <workspace>')
+  .option('--consumer <name>')
+  .option('--provider <name>')
+  .action(async (action, change, options) => {
+    try { await new ContractCommand().execute(action, change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Mock
+program
+  .command('mock [change]')
+  .description('Generate mocks')
+  .option('--workspace <workspace>')
+  .action(async (change, options) => {
+    try { await new MockGenCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// TDD Init
+program
+  .command('tdd:init [path]')
+  .description('Initialize test scaffolds')
+  .option('--source-dir <dir>')
+  .option('--dry-run')
+  .action(async (path, options) => {
+    try { await new TddInitCommand().execute(path, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Audit
+program
+  .command('audit')
+  .description('Historical compliance audit')
+  .option('--json')
+  .action(async (options) => {
+    try { await new AuditCommand().execute(options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Continue
+program
+  .command('continue [change]')
+  .description('Continue interrupted work')
+  .option('--force')
+  .option('--dry-run')
+  .option('--test-command <cmd>', 'Test command to use')
+  .action(async (change, options = {}) => {
+    try { await new ContinueCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// Mutation
+program
+  .command('mutation [change]')
+  .description('Run mutation testing')
+  .option('--mode <mode>', 'quick or stryker', 'quick')
+  .option('--workspace <workspace>')
+  .option('--threshold <num>', 'Score threshold', '80')
+  .option('--json')
+  .action(async (change, options) => {
+    try { await new MutationCommand().execute(change, options); } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
+  });
+
+// ─── Advanced Runtime ───
+const agentCmd = program.command('runtime').description('Interact with STDD Runtime Engines');
+
+// Agent Runtime
+agentCmd.command('agent <action> [topic]')
+  .description('Start/Manage multi-agent simulation (Party Mode)')
+  .option('--rounds <n>', 'Max rounds')
+  .option('--executor <name>', 'Executor adapter for run action (noop or shell)', 'noop')
+  .option('--command <cmd>', 'Shell command for --executor shell')
+  .option('--role <role>', 'Agent role for run action')
+  .option('--json')
+  .action(async (action, topic, options) => {
+    const engine = new AgentEngine();
+    if (action === 'start') {
+      if (!topic) throw new Error('Topic is required to start.');
+      const state = engine.start(topic, { rounds: options.rounds });
+      console.log(chalk.green(`Simulation started: ${topic}`));
+      if (options.json) console.log(JSON.stringify(state, null, 2));
+    } else if (action === 'next') {
+      const turn = engine.nextTurn();
+      if (turn.error) return console.error(chalk.red(turn.error));
+      console.log(chalk.bold(`\nTurn ${turn.turn}: ${turn.speaker.name}`));
+      console.log(`Role: ${turn.speaker.role}`);
+      console.log(chalk.dim(`Context: ${turn.history.slice(-2).map(h => `[${h.speakerId} -> ${h.content}`).join(' | ')}`));
+      if (options.json) console.log(JSON.stringify(turn, null, 2));
+    } else if (action === 'record') {
+      // Assuming topic contains "id|content"
+      const parts = (topic || '').split('|');
+      engine.recordTurn(parts[0], parts.slice(1).join('|'));
+      console.log('Recorded agent turn.');
+    } else if (action === 'stop') {
+      console.log(JSON.stringify(engine.forceStop(), null, 2));
+    } else if (action === 'run') {
+      if (!topic) throw new Error('Goal is required to run an agent executor.');
+      const executor = createAgentExecutor(options.executor, { command: options.command, cwd: process.cwd() });
+      const result = await executor.run({ role: options.role || 'developer', goal: topic, context: engine.getStatus() });
+      if (options.json) console.log(JSON.stringify(result, null, 2));
+      else console.log(result.output || JSON.stringify(result, null, 2));
+    }
+  });
+
+// SudoLang Interpreter
+agentCmd.command('sudo [file]')
+  .description('Interpret SudoLang pseudo-code and generate artifacts')
+  .option('--generate', 'Generate STDD artifacts')
+  .option('--json')
+  .action(async (file, options) => {
+    const parser = new SudoLangParser();
+    if (!file) throw new Error('Source file path is required.');
+    try {
+      const parsed = parser.parse(file);
+      if (options.generate) {
+        const artifacts = parser.generateArtifacts(parsed);
+        console.log(chalk.green('Generated artifacts:'));
+        for (const [name, path] of Object.entries(artifacts)) {
+          console.log(`  ${name}: ${path}`);
+        }
+        if (options.json) console.log(JSON.stringify(artifacts, null, 2));
+      } else {
+        console.log(JSON.stringify(parsed, null, 2));
+      }
+    } catch (e) {
+      console.error(chalk.red(e.message));
+      process.exit(1);
+    }
+  });
+
+// ─── BMAD Elicitation Command ───
+program
+  .command('brainstorm <topic...>')
+  .description('Advanced elicitation and reasoning engine')
+  .option('--method <id>', 'Specific elicitation method (e.g., first-principles)')
+  .option('--list', 'List available methods')
+  .option('--json', 'JSON output')
+  .action(async (topic, options) => {
+    try { await new ElicitationCommand().execute(topic, options); } catch (error) {
+      console.error(chalk.red(error.message)); process.exit(1);
+    }
+  });
+
+// ─── Baby Steps TDD Command ───
+program
+  .command('baby-steps [task]')
+  .description('Interactive TDD guessing game guide')
+  .action(async (task, options) => {
+    try {
+      const { findActiveChange } = require('./src/utils/change-utils');
+      const stddDir = path.join(process.cwd(), 'stdd');
+      if (!fs.existsSync(stddDir)) throw new Error('Not initialized.');
+      const changeDir = findActiveChange(stddDir);
+      if (!changeDir) throw new Error('No active changes.');
+      await new BabyStepsCommand(changeDir).execute(task || 'Next Step');
+    } catch (error) {
+      console.error(chalk.red(error.message)); process.exit(1);
+    }
+  });
+
+// ─── SudoLang Execution ───
+program
+  .command('sudo run [file]')
+  .description('Execute SudoLang logic and return validation results')
+  .action(async (file, options) => {
+    try {
+      if (!file) throw new Error('File path is required.');
+      const exec = new SudoExecutor(process.cwd());
+      await exec.executeFile(path.resolve(file));
+    } catch (error) {
+      console.error(chalk.red(error.message)); process.exit(1);
+    }
+  });
+
+// ─── Browser Automation ───
+const browserCmd = program.command('browser').description('Built-in browser drive for E2E testing');
+browserCmd.command('snapshot <url>')
+  .description('Take a screenshot of the URL and save as evidence')
+  .option('--width <width>', 'Viewport width', '1280')
+  .option('--height <height>', 'Viewport height', '800')
+  .action(async (url, options) => {
+    const { BrowserController } = require('./src/runtime/browser-controller');
+    const controller = new BrowserController();
+    await controller.snapshot({ ...options, url });
+  });
+
+browserCmd.command('inspect <url>')
+  .description('Inspect the page title and basic info')
+  .action(async (url, options) => {
+    const { BrowserController } = require('./src/runtime/browser-controller');
+    const controller = new BrowserController();
+    await controller.inspect({ ...options, url });
+  });
+
+browserCmd.command('doctor')
+  .description('Check Playwright browser dependency health')
+  .option('--no-launch', 'Skip headless Chromium launch probe')
+  .option('--json', 'JSON output')
+  .action(async (options) => {
+    const result = new BrowserDoctor(process.cwd()).check({ launch: options.launch });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+      if (result.status !== 'pass') process.exitCode = 1;
+      return;
+    }
+    console.log(chalk.bold('\nBrowser Doctor'));
+    for (const check of result.checks) {
+      const label = check.status === 'pass' ? chalk.green('PASS') : chalk.red('FAIL');
+      console.log(`  ${label} ${check.name}${check.message ? ` - ${check.message}` : ''}`);
+    }
+    if (result.suggestions.length) {
+      console.log(chalk.yellow('\nSuggested fixes:'));
+      result.suggestions.forEach(command => console.log(`  ${command}`));
+    }
+    if (result.status !== 'pass') process.exitCode = 1;
+  });
+
 program.parse();
+
+// Helpers
+async function recommendEngine(options = {}) {
+  const engine = new RecommendEngine(process.cwd());
+  const recs = engine.recommend(undefined, options);
+  printRecommendations(recs);
+}

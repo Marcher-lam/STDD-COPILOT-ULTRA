@@ -5,12 +5,18 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 const { getPackageRoot } = require('../../utils/path-resolver');
 const os = require('os');
 const chalk = require('chalk');
 
 const enginesConfig = require('../../config/engines.json');
 const ALL_SUPPORTED_AGENTS = enginesConfig.engines.map(e => e.value);
+
+const GIT_HOOK_SCRIPT = `#!/bin/sh
+echo "\\033[1m\\033[36m🛡️ Running STDD Guard...\\033[0m"
+npx stdd guard --no-constitution --no-lint
+`;
 
 function getDefaultEngine() {
   return enginesConfig.engines.find(e => e.checked) || enginesConfig.engines[0];
@@ -181,63 +187,166 @@ function installHooks(options) {
 }
 
 /**
+ * 从 hook 配置条目中提取脚本路径
+ */
+function extractScriptPath(hookEntry) {
+  if (!hookEntry || typeof hookEntry !== 'object') return null;
+  const hooks = hookEntry.hooks;
+  if (!Array.isArray(hooks)) return null;
+  for (const h of hooks) {
+    if (h.command && typeof h.command === 'string') {
+      const match = h.command.match(/node\s+(.+?\.js)/);
+      if (match) return match[1];
+    }
+  }
+  return null;
+}
+
+/**
+ * 检查命令字符串是否包含 STDD hooks 标识
+ */
+function isSTDDHook(command) {
+  if (!command || typeof command !== 'string') return false;
+  return command.includes('pre-file-write.js') ||
+         command.includes('post-file-write.js') ||
+         command.includes('stdd-guard');
+}
+
+/**
+ * 验证单个 settings 文件的 hook 状态
+ * 返回: { status: 'active' | 'not-installed' | 'broken', details: { pre: ..., post: ... } }
+ */
+function verifySettingsFile(settingsPath) {
+  const settings = readSettings(settingsPath);
+
+  if (!settingsPath || !fs.existsSync(settingsPath)) {
+    return {
+      status: 'not-installed',
+      settingsPath,
+      pre: { status: 'not-installed', scriptPath: null },
+      post: { status: 'not-installed', scriptPath: null }
+    };
+  }
+
+  if (!settings.hooks || typeof settings.hooks !== 'object') {
+    return {
+      status: 'not-installed',
+      settingsPath,
+      pre: { status: 'not-installed', scriptPath: null },
+      post: { status: 'not-installed', scriptPath: null }
+    };
+  }
+
+  const preEntries = settings.hooks.PreToolUse || [];
+  const postEntries = settings.hooks.PostToolUse || [];
+
+  let preResult = { status: 'not-installed', scriptPath: null };
+  let postResult = { status: 'not-installed', scriptPath: null };
+
+  // 检查 PreToolUse
+  for (const entry of (Array.isArray(preEntries) ? preEntries : [])) {
+    if (isSTDDHook(entry?.hooks?.[0]?.command)) {
+      const scriptPath = extractScriptPath(entry);
+      if (scriptPath && fs.existsSync(scriptPath)) {
+        preResult = { status: 'active', scriptPath };
+      } else if (scriptPath) {
+        preResult = { status: 'broken', scriptPath };
+      }
+      break;
+    }
+  }
+
+  // 检查 PostToolUse
+  for (const entry of (Array.isArray(postEntries) ? postEntries : [])) {
+    if (isSTDDHook(entry?.hooks?.[0]?.command)) {
+      const scriptPath = extractScriptPath(entry);
+      if (scriptPath && fs.existsSync(scriptPath)) {
+        postResult = { status: 'active', scriptPath };
+      } else if (scriptPath) {
+        postResult = { status: 'broken', scriptPath };
+      }
+      break;
+    }
+  }
+
+  // 整体状态判定
+  const allActive = preResult.status === 'active' && postResult.status === 'active';
+  const anyBroken = preResult.status === 'broken' || postResult.status === 'broken';
+  const allMissing = preResult.status === 'not-installed' && postResult.status === 'not-installed';
+
+  let overallStatus;
+  if (allActive) overallStatus = 'active';
+  else if (anyBroken) overallStatus = 'broken';
+  else if (allMissing) overallStatus = 'not-installed';
+  else overallStatus = 'broken';
+
+  return {
+    status: overallStatus,
+    settingsPath,
+    pre: preResult,
+    post: postResult
+  };
+}
+
+/**
+ * 格式化验证结果输出
+ */
+function formatVerificationResult(results) {
+  const lines = [];
+
+  lines.push(chalk.bold('\n🔍 验证 STDD Hooks 安装\n'));
+
+  for (const result of results) {
+    lines.push(chalk.cyan(`\n📂 检查引擎: ${result.settingsPath}`));
+
+    const preIcon = result.pre.status === 'active' ? chalk.green('✅') :
+                    result.pre.status === 'broken' ? chalk.yellow('⚠️') :
+                    chalk.red('❌');
+    const preLabel = result.pre.status === 'active' ? 'Active' :
+                     result.pre.status === 'broken' ? 'Broken' : 'Not Installed';
+    const preDetail = result.pre.scriptPath ? ` (${result.pre.scriptPath})` : '';
+    lines.push(`  ${preIcon} PreToolUse Hook: ${chalk.bold(preLabel)}${preDetail}`);
+
+    const postIcon = result.post.status === 'active' ? chalk.green('✅') :
+                     result.post.status === 'broken' ? chalk.yellow('⚠️') :
+                     chalk.red('❌');
+    const postLabel = result.post.status === 'active' ? 'Active' :
+                      result.post.status === 'broken' ? 'Broken' : 'Not Installed';
+    const postDetail = result.post.scriptPath ? ` (${result.post.scriptPath})` : '';
+    lines.push(`  ${postIcon} PostToolUse Hook: ${chalk.bold(postLabel)}${postDetail}`);
+  }
+
+  const allActive = results.every(r => r.status === 'active');
+  const anyBroken = results.some(r => r.status === 'broken');
+  const allMissing = results.every(r => r.status === 'not-installed');
+
+  lines.push('');
+  if (allActive) {
+    lines.push(chalk.green('✅ 该环境下所有引擎 Hooks 验证通过!'));
+  } else if (anyBroken) {
+    lines.push(chalk.yellow('⚠️ 部分 Hook 脚本路径无效 (Broken)，请运行: stdd hooks install --force'));
+  } else if (allMissing) {
+    lines.push(chalk.red('❌ Hooks 未安装，请运行: stdd hooks install'));
+  } else {
+    lines.push(chalk.red('❌ 部分验证失败，请运行: stdd hooks install --force'));
+  }
+
+  return lines.join('\n');
+}
+
+/**
  * 验证 hooks 安装
  */
 function verifyHooks(options) {
   const { global = false } = options;
-  console.log(chalk.bold('\n🔍 验证 STDD Hooks 安装\n'));
 
   const settingsPaths = getSettingsPaths(global);
-  let allOk = true;
+  const results = settingsPaths.map(sp => verifySettingsFile(sp));
 
-  for (const settingsPath of settingsPaths) {
-    console.log(chalk.cyan(`\n📂 检查引擎: ${settingsPath}`));
-    const settings = readSettings(settingsPath);
+  const output = formatVerificationResult(results);
+  console.log(output);
 
-    if (settings.hooks?.PreToolUse) {
-      console.log(chalk.green('  ✅ PreToolUse Hook: 已配置'));
-    } else {
-      console.log(chalk.red('  ❌ PreToolUse Hook: 未配置'));
-      allOk = false;
-    }
-
-    if (settings.hooks?.PostToolUse) {
-      console.log(chalk.green('  ✅ PostToolUse Hook: 已配置'));
-    } else {
-      console.log(chalk.red('  ❌ PostToolUse Hook: 未配置'));
-      allOk = false;
-    }
-  }
-
-  const hooksPath = getSTDDHooksPath();
-  if (hooksPath) {
-    console.log(chalk.cyan('\n📜 检查脚本文件'));
-    if (fs.existsSync(path.join(hooksPath, 'pre-file-write.js'))) {
-      console.log(chalk.green('  ✅ pre-file-write.js: 存在'));
-    } else {
-      console.log(chalk.red('  ❌ pre-file-write.js: 不存在'));
-      allOk = false;
-    }
-
-    if (fs.existsSync(path.join(hooksPath, 'post-file-write.js'))) {
-      console.log(chalk.green('  ✅ post-file-write.js: 存在'));
-    } else {
-      console.log(chalk.red('  ❌ post-file-write.js: 不存在'));
-      allOk = false;
-    }
-  } else {
-    console.log(chalk.red('\n❌ Hooks 脚本目录: 不存在'));
-    allOk = false;
-  }
-
-  console.log('');
-  if (allOk) {
-    console.log(chalk.green('✅ 该环境下所有引擎Hooks验证通过!'));
-  } else {
-    console.log(chalk.red('❌ 部分验证失败，请运行: stdd hooks install --force'));
-  }
-
-  return allOk;
+  return results.every(r => r.status === 'active');
 }
 
 /**
@@ -342,6 +451,100 @@ function statusHooks(options) {
 }
 
 /**
+ * 检查项目是否使用 husky
+ */
+function hasHusky(cwd) {
+  const pkgPath = path.join(cwd || process.cwd(), 'package.json');
+  if (!fs.existsSync(pkgPath)) {
+    return false;
+  }
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    const deps = {
+      ...((pkg && pkg.dependencies) || {}),
+      ...((pkg && pkg.devDependencies) || {}),
+    };
+    return !!deps.husky;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * 安装 Git pre-commit hook
+ */
+function installGitHooks(options) {
+  const cwd = options.cwd || process.cwd();
+  const usesHusky = hasHusky(cwd);
+
+  console.log(chalk.bold('\n🔧 STDD Git Hook 安装\n'));
+
+  if (usesHusky) {
+    console.log(chalk.cyan('检测到 Husky，写入 .husky/pre-commit'));
+    const huskyDir = path.join(cwd, '.husky');
+    if (!fs.existsSync(huskyDir)) {
+      fs.mkdirSync(huskyDir, { recursive: true });
+    }
+    const hookPath = path.join(huskyDir, 'pre-commit');
+    fs.writeFileSync(hookPath, GIT_HOOK_SCRIPT);
+    fs.chmodSync(hookPath, 0o755);
+    console.log(chalk.green(`✅ Git Hook 已写入: ${hookPath}`));
+  } else {
+    console.log(chalk.cyan('未检测到 Husky，写入 .git/hooks/pre-commit'));
+    const gitHooksDir = path.join(cwd, '.git', 'hooks');
+    if (!fs.existsSync(gitHooksDir)) {
+      console.log(chalk.yellow('⚠️ .git/hooks 目录不存在，尝试初始化 git...'));
+      try {
+        execSync('git init', { cwd, stdio: 'pipe' });
+      } catch (error) {
+        console.log(chalk.red('❌ 无法初始化 git 仓库，请手动运行 git init'));
+        return false;
+      }
+    }
+    const hookPath = path.join(gitHooksDir, 'pre-commit');
+    fs.writeFileSync(hookPath, GIT_HOOK_SCRIPT);
+    fs.chmodSync(hookPath, 0o755);
+    console.log(chalk.green(`✅ Git Hook 已写入: ${hookPath}`));
+  }
+
+  console.log(chalk.bold('\n✅ Git Hook 安装完成!\n'));
+  return true;
+}
+
+/**
+ * 验证 Git pre-commit hook 是否存在
+ */
+function verifyGitHooks(options) {
+  const cwd = options.cwd || process.cwd();
+  const usesHusky = hasHusky(cwd);
+
+  console.log(chalk.bold('\n🔍 验证 STDD Git Hook\n'));
+
+  let hookPath;
+  if (usesHusky) {
+    hookPath = path.join(cwd, '.husky', 'pre-commit');
+  } else {
+    hookPath = path.join(cwd, '.git', 'hooks', 'pre-commit');
+  }
+
+  if (!fs.existsSync(hookPath)) {
+    console.log(chalk.red(`❌ Git Hook 不存在: ${hookPath}`));
+    console.log(chalk.yellow('请运行: stdd hooks install --git'));
+    return false;
+  }
+
+  const content = fs.readFileSync(hookPath, 'utf-8');
+  if (content.includes('stdd guard')) {
+    console.log(chalk.green(`✅ Git Hook 已安装: ${hookPath}`));
+    console.log(chalk.dim(`   内容包含 "stdd guard" 检查`));
+    return true;
+  } else {
+    console.log(chalk.yellow(`⚠️ Hook 文件存在但不包含 stdd guard: ${hookPath}`));
+    return false;
+  }
+}
+
+/**
  * 导出命令处理函数
  */
 module.exports = function(program) {
@@ -360,23 +563,40 @@ Examples:
     .description('自动嗅探并安装 STDD Hooks 到所有活跃引擎')
     .option('-g, --global', '安装到全局配置')
     .option('-f, --force', '强制覆盖现有配置')
+    .option('--git', '同时安装 Git pre-commit hook')
     .addHelpText('after', `
 Examples:
   stdd hooks install
   stdd hooks install --global
   stdd hooks install --force
+  stdd hooks install --git
 `)
-    .action((options) => installHooks(options));
+    .action((options) => {
+      installHooks(options);
+      if (options.git) {
+        installGitHooks(options);
+      }
+    });
 
   hooks.command('verify')
     .description('验证各个引擎内的 Hooks 安装')
     .option('-g, --global', '验证全局配置')
+    .option('--git', '同时验证 Git pre-commit hook')
     .addHelpText('after', `
 Examples:
   stdd hooks verify
   stdd hooks verify --global
+  stdd hooks verify --git
 `)
-    .action((options) => { process.exit(verifyHooks(options) ? 0 : 1); });
+    .action((options) => {
+      const aiOk = verifyHooks(options);
+      if (options.git) {
+        const gitOk = verifyGitHooks(options);
+        process.exit(aiOk && gitOk ? 0 : 1);
+      } else {
+        process.exit(aiOk ? 0 : 1);
+      }
+    });
 
   hooks.command('disable')
     .description('禁用选定范围内的 Hooks')
@@ -425,3 +645,10 @@ module.exports.verifyHooks = verifyHooks;
 module.exports.disableHooks = disableHooks;
 module.exports.enableHooks = enableHooks;
 module.exports.statusHooks = statusHooks;
+module.exports.extractScriptPath = extractScriptPath;
+module.exports.isSTDDHook = isSTDDHook;
+module.exports.verifySettingsFile = verifySettingsFile;
+module.exports.formatVerificationResult = formatVerificationResult;
+module.exports.hasHusky = hasHusky;
+module.exports.installGitHooks = installGitHooks;
+module.exports.verifyGitHooks = verifyGitHooks;

@@ -40,4 +40,21 @@ describe('CLI help output alignment', () => {
     expect(output).toContain('Priority: Blocking');
     expect(output).toContain('Enforcement: Hook 阻断');
   });
+
+  it('root help should not contain duplicate command registrations', () => {
+    const output = runCli(['--help']);
+    const commandNames = ['spec', 'api-spec', 'contract', 'mock', 'tdd:init'];
+
+    for (const commandName of commandNames) {
+      const matches = output.match(new RegExp(`^  ${commandName.replace(':', '\\:')}\\b`, 'gm')) || [];
+      expect(matches).toHaveLength(1);
+    }
+  });
+
+  it('contract help should include consumer and provider options', () => {
+    const output = runCli(['contract', '--help']);
+
+    expect(output).toContain('--consumer <name>');
+    expect(output).toContain('--provider <name>');
+  });
 });

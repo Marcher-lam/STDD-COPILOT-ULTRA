@@ -372,44 +372,34 @@
       alert('Graph analysis would show:\n- Critical path\n- Parallel opportunities\n- Bottlenecks\n- Estimated time');
     }
 
-    // Initialize
-    mermaid.initialize({ startOnLoad: true, theme: 'default' });
-
     updateStatus();
     renderSkillList();
 
-    // Sample Mermaid diagram
-    const graphDefinition = `
-      graph TD
-        A[stdd-init] --> B[stdd-propose]
-        B --> C[stdd-clarify]
-        C --> D[stdd-confirm]
-        D --> E[stdd-spec]
-        E --> F[stdd-plan]
-        F --> G[stdd-execute]
-        G --> H[stdd-mutation]
-        G --> I[stdd-validate]
-        H --> J[stdd-final-doc]
-        I --> J
-        J --> K[stdd-commit]
-
-        style A fill:#dcfce7
-        style B fill:#dcfce7
-        style C fill:#dcfce7
-        style D fill:#dcfce7
-        style E fill:#dcfce7
-        style F fill:#dcfce7
-        style G fill:#fef3c7
-        style H fill:#fee2e2
-        style I fill:#fee2e2
-        style J fill:#f8fafc
-        style K fill:#f8fafc
-    `;
+    // STDD Graph diagram
+    // MERMAID_CODE_START
+    const graphDefinition = `{{MERMAID_CODE}}`;
+    // MERMAID_CODE_END
 
     const graphElement = document.getElementById('graph');
-    mermaid.render('skillGraph', graphDefinition, (svgCode) => {
-      graphElement.innerHTML = svgCode;
-    });
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+
+    // Try modern mermaid.render API (returns Promise), fallback to callback API
+    try {
+      const renderPromise = mermaid.render('skillGraph', graphDefinition);
+      if (renderPromise && typeof renderPromise.then === 'function') {
+        renderPromise.then(function(result) {
+          graphElement.innerHTML = result.svg;
+        }).catch(function(err) {
+          graphElement.innerHTML = '<pre>' + graphDefinition + '</pre>';
+        });
+      } else {
+        mermaid.render('skillGraph', graphDefinition, function(svgCode) {
+          graphElement.innerHTML = svgCode;
+        });
+      }
+    } catch (err) {
+      graphElement.innerHTML = '<pre>' + graphDefinition + '</pre>';
+    }
   </script>
 </body>
 </html>

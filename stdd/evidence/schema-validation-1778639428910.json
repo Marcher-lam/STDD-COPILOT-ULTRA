@@ -1,0 +1,11 @@
+{
+  "type": "schema-validation",
+  "timestamp": 1778639428910,
+  "unixTimestamp": 1778639428910,
+  "directory": "schemas/spec-driven",
+  "files": 1,
+  "validFiles": 1,
+  "invalidFiles": 0,
+  "errors": [],
+  "status": "pass"
+}

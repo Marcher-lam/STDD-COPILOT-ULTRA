@@ -65,7 +65,7 @@ cd /path/to/your/project
 2. 创建 `stdd/` 工作目录结构 (specs/, changes/, memory/, graph/)
 3. 生成 `stdd/config.yaml` 项目配置
 4. 生成 `stdd/memory/foundation.md` 项目基础约束
-5. 复制 `.claude/commands/stdd/` 命令文件 (19 个)
+5. 复制 `.claude/commands/stdd/` 命令文件 (20 个)
 6. 复制 `schemas/` 规格模板和 Constitution 条例
 
 ## 4. 初始化选项

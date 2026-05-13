@@ -52,6 +52,82 @@ describe('GraphExecutor (反向图级自愈引擎)', () => {
   });
 });
 
+describe('GraphExecutor (可插拔节点执行器)', () => {
+  it('应该优先调用自定义 executeNode，并将输出合并进上下文', async () => {
+    const executeNode = jest.fn(async (nodeName, inputs, meta) => ({
+      success: true,
+      [`${nodeName}:seenScope`]: inputs.scope,
+      [`${nodeName}:hasMeta`]: Boolean(meta.graph && meta.node && meta.adapter),
+    }));
+    const executor = new GraphExecutor('feature', 'test-executor-plugin-1', { executeNode });
+    executor.cache.clear();
+
+    const finalState = await executor.runUntil('stdd-plan', { scope: 'billing' });
+
+    expect(executeNode).toHaveBeenCalledTimes(2);
+    expect(executeNode.mock.calls[0][0]).toBe('stdd-propose');
+    expect(executeNode.mock.calls[0][2]).toEqual(expect.objectContaining({
+      graph: executor.graph,
+      node: executor.graph.skills['stdd-propose'],
+      adapter: executor.adapter,
+    }));
+    expect(finalState['stdd-propose:seenScope']).toBe('billing');
+    expect(finalState['stdd-spec:hasMeta']).toBe(true);
+  });
+
+  it('应该按节点名称调用 executors object 中的执行器', async () => {
+    const executors = {
+      'stdd-propose': jest.fn(async () => ({ proposed: true })),
+      'stdd-spec': jest.fn(async (_nodeName, inputs) => ({ specSawProposal: inputs.proposed })),
+    };
+    const executor = new GraphExecutor('feature', 'test-executor-plugin-2', { executors });
+    executor.cache.clear();
+
+    const finalState = await executor.runUntil('stdd-plan', {});
+
+    expect(executors['stdd-propose']).toHaveBeenCalledTimes(1);
+    expect(executors['stdd-spec']).toHaveBeenCalledTimes(1);
+    expect(finalState.proposed).toBe(true);
+    expect(finalState.specSawProposal).toBe(true);
+  });
+
+  it('没有执行器时应该保留旧 fallback 模拟行为', async () => {
+    const executor = new GraphExecutor('feature', 'test-executor-plugin-3');
+    executor.cache.clear();
+
+    const finalState = await executor.runUntil('stdd-spec', { scope: 'checkout' });
+
+    expect(finalState.success).toBe(true);
+    expect(finalState.generator).toBe('stdd-propose');
+    expect(finalState.scope).toBe('checkout');
+  });
+
+  it('自定义执行器抛错时应该触发既有 rollback/self-healing 行为', async () => {
+    const failed = new Set();
+    const executeNode = jest.fn(async (nodeName, inputs) => {
+      if (nodeName === 'stdd-apply' && !inputs.rollbackEvidence && !failed.has(nodeName)) {
+        failed.add(nodeName);
+        throw new Error('Custom executor transient failure');
+      }
+
+      return { success: true, generator: nodeName };
+    });
+    const executor = new GraphExecutor('feature', 'test-executor-plugin-4', { executeNode });
+    executor.cache.clear();
+
+    const finalState = await executor.runUntil('stdd-verify', { scope: 'checkout' });
+
+    expect(executeNode).toHaveBeenCalledWith(
+      'stdd-plan',
+      expect.objectContaining({ rollbackEvidence: expect.any(Object) }),
+      expect.objectContaining({ node: executor.graph.skills['stdd-plan'] })
+    );
+    expect(finalState.success).toBe(true);
+    expect(finalState.generator).toBe('stdd-apply');
+    expect(finalState._healingMeta.originalFailure).toBe('stdd-apply');
+  });
+});
+
 describe('GraphExecutor (异构并行执行)', () => {
   it('应该初始化异构适配器和并行执行器', () => {
     const executor = new GraphExecutor('feature', 'test-heterogeneous');

@@ -1,0 +1,24 @@
+{
+  "type": "schema-validation",
+  "timestamp": 1778606126108,
+  "unixTimestamp": 1778606126108,
+  "directory": "schemas",
+  "files": 4,
+  "validFiles": 2,
+  "invalidFiles": 2,
+  "errors": [
+    {
+      "file": "schemas/constitution/constitution.yaml",
+      "error": "end of the stream or a document separator is expected (13:1)\n\n 10 | ## 9 篇条例\n 11 | \n 12 | ### Article 1: Library-First De ...\n 13 | - **核心**: 优先使用成熟库，而非从头实现\n------^\n 14 | - **强制**: 在 `stdd-design` 阶段检查\n 15 | - **文档**: [articles/01-library- ...",
+      "line": 13,
+      "strict": false
+    },
+    {
+      "file": "schemas/hooks/hooks.yaml",
+      "error": "end of the stream or a document separator is expected (14:1)\n\n 11 | \n 12 | ### 1. PreToolUse (工具执行前)\n 13 | \n 14 | 在工具执行前拦截，用于：\n------^\n 15 | - 阻止违规操作\n 16 | - 验证前置条件",
+      "line": 14,
+      "strict": false
+    }
+  ],
+  "status": "fail"
+}

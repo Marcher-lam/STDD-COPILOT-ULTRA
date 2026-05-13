@@ -6,6 +6,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const chalk = require('chalk');
+const { resolveChangeDir } = require('../../utils/change-utils');
 
 class StatusCommand {
   async execute(changeName, options = {}) {
@@ -76,9 +77,9 @@ class StatusCommand {
   }
 
   async showChangeStatus(stddDir, changeName, options) {
-    const changeDir = path.join(stddDir, 'changes', changeName);
+    const changeDir = resolveChangeDir(stddDir, changeName);
 
-    if (!await this.exists(changeDir)) {
+    if (!changeDir || !await this.exists(changeDir)) {
       throw new Error(`Change '${changeName}' not found.`);
     }
 

@@ -6,6 +6,8 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { getPackageRoot } = require('../../utils/path-resolver');
+const { TechStackDetector } = require('../../utils/tech-stack-detector');
+const { detectWorkspaces } = require('../../utils/workspace-detector');
 const chalk = require('chalk');
 
 // Template files
@@ -49,14 +51,49 @@ STDD Copilot (Spec + Test Driven Development) 是一个融合了 SDD 和 TDD 最
 详见: https://github.com/Marcher-lam/STDD-COPILOT
 `;
 
-function buildConfigYamlTemplate(projectName) {
+function formatWorkspaceRegistry(workspaces, targetPath) {
+  if (!workspaces.length) return '';
+
+  const lines = [
+    '',
+    '# Monorepo Workspace Registry',
+    'workspaces:',
+    '  enabled: true',
+    '  items:'
+  ];
+
+  for (const workspace of workspaces) {
+    const root = normalizeRelativePath(targetPath, workspace.root);
+    const sourceRoot = normalizeRelativePath(targetPath, workspace.sourceDir);
+    const packageJson = normalizeRelativePath(targetPath, workspace.packageJsonPath);
+    lines.push(`    - name: "${workspace.name}"`);
+    lines.push(`      root: "${root}"`);
+    lines.push(`      source_root: "${sourceRoot}"`);
+    lines.push(`      package_json: "${packageJson}"`);
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
+function normalizeRelativePath(basePath, absolutePath) {
+  return path.relative(basePath, absolutePath).replace(/\\/g, '/');
+}
+
+function buildConfigYamlTemplate(projectName, techStack = {}, workspaces = [], targetPath = process.cwd()) {
+  const language = techStack.language === 'unknown' ? '${LANGUAGE:-typescript}' : techStack.language;
+  const testCommand = techStack.testCommand || '${TEST_COMMAND:-npm test}';
   return `# STDD Copilot Configuration
 version: "1.0"
 name: "${projectName}"
 
 project:
-  type: "\${PROJECT_TYPE:-node}"
-  language: "\${LANGUAGE:-typescript}"
+  type: "\${PROJECT_TYPE:-${language}}"
+  language: "${language}"
+
+# Test Configuration
+test:
+  command: "${testCommand}"
+  runner: "${techStack.testRunner || 'unknown'}"
 
 # Graph Configuration
 graph:
@@ -91,13 +128,15 @@ defense:
 memory:
   enabled: true
   persist: true
-`;
+${formatWorkspaceRegistry(workspaces, targetPath)}`;
 }
 
 const GITIGNORE_ENTRIES = `
 # STDD Copilot
 stdd/graph/cache/
 stdd/memory/*.bin
+stdd/evidence/
+stdd/changes/*/evidence/
 `;
 
 const enginesConfig = require('../../config/engines.json');
@@ -134,6 +173,15 @@ class InitCommand {
     if (stddExists && !options.force) {
       throw new Error('STDD already initialized. Use --force to overwrite.');
     }
+
+    // Detect tech stack
+    this.spinner.text = 'Detecting tech stack...';
+    const techStack = TechStackDetector.analyze(targetPath);
+    if (techStack.language !== 'unknown') {
+      this.spinner.text = `Detected: ${this.formatTechStack(techStack)}`;
+    }
+
+    const workspaces = detectWorkspaces(targetPath, { refresh: true });
 
     const SUPPORTED_AGENTS = enginesConfig.engines;
 
@@ -179,7 +227,11 @@ class InitCommand {
 
     // Create stdd/config.yaml
     this.spinner.text = 'Creating config.yaml...';
-    await this.createConfigYaml(targetPath);
+    await this.createConfigYaml(targetPath, techStack, workspaces);
+
+    // Create memory/foundation.md
+    this.spinner.text = 'Creating foundation.md...';
+    await this.createFoundationMd(targetPath, techStack, workspaces);
 
     // Copy Engine commands
     this.spinner.text = 'Copying Claude commands...';
@@ -197,12 +249,20 @@ class InitCommand {
     this.spinner.text = 'Copying schemas...';
     await this.copySchemas(targetPath);
 
+    // Copy hooks
+    this.spinner.text = 'Copying hooks...';
+    await this.copyHooks(targetPath, selectedAgents);
+
     // Update .gitignore
     this.spinner.text = 'Updating .gitignore...';
     await this.updateGitignore(targetPath, selectedAgents);
 
+    // Create GitHub templates
+    this.spinner.text = 'Creating GitHub templates...';
+    await this.copyGitHubTemplates(targetPath, workspaces);
+
     // Print next steps
-    this.printNextSteps();
+    this.printNextSteps(selectedAgents, techStack);
   }
 
   async exists(path) {
@@ -242,36 +302,91 @@ class InitCommand {
     );
   }
 
-  async createConfigYaml(targetPath) {
+  async createConfigYaml(targetPath, techStack = {}, workspaces = []) {
     const projectName = path.basename(path.resolve(targetPath)) || 'project';
     await fs.writeFile(
       path.join(targetPath, 'stdd', 'config.yaml'),
-      buildConfigYamlTemplate(projectName)
+      buildConfigYamlTemplate(projectName, techStack, workspaces, targetPath)
+    );
+  }
+
+  async createFoundationMd(targetPath, techStack = {}, workspaces = []) {
+    const langLabel = techStack.language === 'unknown' ? 'Unknown language' : techStack.language;
+    const fwLabel = techStack.framework !== 'unknown' ? ` using ${techStack.framework} framework` : '';
+    const trLabel = techStack.testRunner !== 'unknown' ? ` with ${techStack.testRunner}` : '';
+    const workspaceSection = workspaces.length > 0 ? `
+## Monorepo/Workspaces
+
+Detected ${workspaces.length} workspace(s):
+
+${workspaces.map(workspace => `- ${workspace.name}: ${normalizeRelativePath(targetPath, workspace.root)}`).join('\n')}
+` : '';
+    const content = `# Project Foundation
+
+## Tech Stack
+
+Detected: ${langLabel}${fwLabel}${trLabel}.
+
+## Language
+
+${techStack.language === 'node' ? 'Node.js (JavaScript/TypeScript)' : techStack.language === 'python' ? 'Python' : techStack.language === 'rust' ? 'Rust' : techStack.language === 'go' ? 'Go' : 'Not detected'}
+
+## Framework
+
+${techStack.framework !== 'unknown' ? techStack.framework : 'Not detected'}
+
+## Test Runner
+
+${techStack.testCommand || 'Not detected'}
+${workspaceSection}
+`;
+    await fs.writeFile(
+      path.join(targetPath, 'stdd', 'memory', 'foundation.md'),
+      content
     );
   }
 
   
   
   async copySkills(targetPath, selectedAgents) {
-    const sourceDir = path.join(getPackageRoot(), enginesConfig.engines.find(e => e.checked)?.value || enginesConfig.engines[0].value, 'skills');
-    
-    // Copy the entire skills directory recursively
+    const sourceDir = path.join(getPackageRoot(), 'src', 'templates', 'skills');
+
     for (const agent of selectedAgents) {
       const targetDir = path.join(targetPath, agent, 'skills');
       if (await this.exists(sourceDir)) {
         await fs.mkdir(targetDir, { recursive: true });
-        await require('fs').promises.cp(sourceDir, targetDir, { recursive: true });
+        await fs.cp(sourceDir, targetDir, { recursive: true });
       }
     }
   }
 
   async copyClaudeCommands(targetPath, selectedAgents) {
-    const defaultEngine = enginesConfig.engines.find(e => e.checked) || enginesConfig.engines[0];
-    const sourceDir = path.join(getPackageRoot(), defaultEngine.value, 'commands', 'stdd');
+    const sourceDir = path.join(getPackageRoot(), 'src', 'templates', 'commands');
 
     for (const agent of selectedAgents) {
       const targetDir = path.join(targetPath, agent, 'commands', 'stdd');
       await this.copyDirContents(sourceDir, targetDir);
+    }
+  }
+
+  async copyHooks(targetPath, selectedAgents) {
+    const sourceDir = path.join(getPackageRoot(), 'src', 'templates', 'hooks');
+
+    if (!await this.exists(sourceDir)) {
+      return;
+    }
+
+    for (const agent of selectedAgents) {
+      const targetHookDir = path.join(targetPath, agent, 'hooks');
+      await fs.mkdir(targetHookDir, { recursive: true });
+
+      const files = await fs.readdir(sourceDir);
+      for (const file of files) {
+        if (file.endsWith('.js')) {
+          const content = await fs.readFile(path.join(sourceDir, file), 'utf-8');
+          await fs.writeFile(path.join(targetHookDir, file), content);
+        }
+      }
     }
   }
 
@@ -338,13 +453,88 @@ class InitCommand {
     }
   }
 
-  printNextSteps() {
+  formatAffectedWorkspaces(workspaces = [], targetPath = process.cwd()) {
+    if (!workspaces.length) {
+      return [
+        '- [ ] packages/api',
+        '- [ ] apps/web',
+        '- [ ] root/shared'
+      ].join('\n');
+    }
+
+    return workspaces
+      .map(workspace => `- [ ] ${normalizeRelativePath(targetPath, workspace.root)}`)
+      .join('\n');
+  }
+
+  renderGitHubTemplate(content, targetPath, workspaces = []) {
+    const workspaceBlock = this.formatAffectedWorkspaces(workspaces, targetPath);
+    return content.replace(
+      /(<!-- STDD:WORKSPACES:start -->)([\s\S]*?)(<!-- STDD:WORKSPACES:end -->)/,
+      `$1\n${workspaceBlock}\n$3`
+    );
+  }
+
+  async copyGitHubTemplates(targetPath, workspaces = []) {
+    const sourceDir = path.join(getPackageRoot(), 'src', 'templates', 'github');
+
+    if (!await this.exists(sourceDir)) {
+      return;
+    }
+
+    const targetDir = path.join(targetPath, '.github');
+    const self = this;
+
+    async function copyRecursive(src, dest) {
+      await fs.mkdir(dest, { recursive: true });
+      const entries = await fs.readdir(src, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+          await copyRecursive(srcPath, destPath);
+        } else {
+          if (!await self.exists(destPath)) {
+            const content = await fs.readFile(srcPath, 'utf-8');
+            await fs.writeFile(destPath, self.renderGitHubTemplate(content, targetPath, workspaces));
+          }
+        }
+      }
+    }
+
+    await copyRecursive(sourceDir, targetDir);
+  }
+
+  formatTechStack(techStack) {
+    const lang = techStack.language === 'node' ? 'Node.js' : techStack.language === 'python' ? 'Python' : techStack.language === 'rust' ? 'Rust' : techStack.language === 'go' ? 'Go' : techStack.language;
+    let desc = `${lang} project`;
+    if (techStack.framework !== 'unknown') {
+      desc += ` using ${techStack.framework} framework`;
+    }
+    if (techStack.testRunner !== 'unknown') {
+      desc += ` with ${techStack.testRunner}`;
+    }
+    return desc;
+  }
+
+  printNextSteps(selectedAgents = [], techStack = {}) {
     console.log(chalk.green('\n✅ STDD Copilot initialized!\n'));
     console.log(chalk.bold('Next steps:\n'));
-    console.log('  1. In Claude Code, run:');
+
+    if (techStack.language !== 'unknown') {
+      console.log(chalk.dim(`Tech stack: ${this.formatTechStack(techStack)}\n`));
+    }
+
+    if (selectedAgents.length > 0) {
+      console.log(chalk.dim(`Enabled engines: ${selectedAgents.join(', ')}\n`));
+    }
+
+    console.log('  1. Start a new change:');
     console.log(chalk.cyan('     /stdd:new your-first-feature\n'));
-    console.log('  2. Or start with exploration:');
-    console.log(chalk.cyan('     /stdd:explore\n'));
+    console.log('  2. Or explore an existing codebase:');
+    console.log(chalk.cyan('     /stdd:explore understand the codebase\n'));
     console.log('  3. View all commands:');
     console.log(chalk.cyan('     stdd commands\n'));
     console.log(chalk.dim('Documentation: https://github.com/Marcher-lam/STDD-COPILOT'));

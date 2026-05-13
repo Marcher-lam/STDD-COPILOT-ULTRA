@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * EvidenceCapture - 结构化错误证据采集器
@@ -30,13 +32,50 @@ class EvidenceCapture {
       },
       inputSnapshot: this._safeSnapshot(context.inputs || {}),
       partialOutput: this._safeSnapshot(context.partialOutput || null),
-      // 决策辅助字段：该节点在 DAG 中的阶段信息
       phase: context.phase || null,
       retriesSoFar: context.retriesSoFar || 0,
     };
 
     this.chain.push(evidence);
     return evidence;
+  }
+
+  /**
+   * 截取一次 verify/guard 验证结果的结构化证据
+   * @param {string} type       'verify' | 'guard'
+   * @param {object} results    { tasks, tests, lint, constitution, ... }
+   * @param {object} metadata   { changeName, os, nodeVersion, etc. }
+   * @returns {object} 结构化证据报告
+   */
+  captureVerify(type, results, metadata = {}) {
+    return {
+      type,
+      id: crypto.createHash('sha256').update(JSON.stringify({ type, ts: Date.now(), results })).digest('hex').slice(0, 16),
+      timestamp: new Date().toISOString(),
+      unixTimestamp: Date.now(),
+      results,
+      metadata,
+      status: this._determineStatus(results, type),
+    };
+  }
+
+  /**
+   * 将证据报告保存到文件系统
+   * @param {object} report      证据报告对象
+   * @param {string} targetDir   目标目录
+   * @param {string} prefix      文件名前缀 (e.g. 'verify', 'guard')
+   * @returns {string} 保存的文件路径
+   */
+  saveToFile(report, targetDir, prefix) {
+    const evidenceDir = path.join(targetDir, 'evidence');
+    if (!fs.existsSync(evidenceDir)) {
+      fs.mkdirSync(evidenceDir, { recursive: true });
+    }
+    const timestamp = report.unixTimestamp || Date.now();
+    const fileName = `${prefix}-${timestamp}.json`;
+    const filePath = path.join(evidenceDir, fileName);
+    fs.writeFileSync(filePath, JSON.stringify(report, null, 2), 'utf-8');
+    return filePath;
   }
 
   /**
@@ -54,7 +93,6 @@ class EvidenceCapture {
         ts: e.timestamp,
       })),
       fullChain: this.chain,
-      // 给策划节点的自然语言摘要
       instruction: this._synthesizeInstruction(),
     };
   }
@@ -88,7 +126,7 @@ class EvidenceCapture {
       if (str.length > 4096) {
         return { __truncated: true, preview: str.slice(0, 2048), originalSize: str.length };
       }
-      return JSON.parse(str); // deep clone
+      return JSON.parse(str);
     } catch {
       return { __unserializable: true };
     }
@@ -110,6 +148,25 @@ class EvidenceCapture {
     }
     parts.push('Please revise the upstream strategy based on these failure patterns.');
     return parts.join(' ');
+  }
+
+  /**
+   * 根据验证结果判断整体状态
+   */
+  _determineStatus(results, type) {
+    if (type === 'verify') {
+      const tasksOk = results.tasks && results.tasks.allDone;
+      const testsOk = results.tests && (results.tests.passed === true || results.tests.passed === null);
+      const constOk = results.constitution && results.constitution.status === 'pass';
+      const lintOk = results.lint === null || (results.lint && results.lint.passed !== false);
+      if (tasksOk && testsOk && constOk && lintOk) return 'pass';
+      return 'fail';
+    }
+    if (type === 'guard') {
+      const overall = Object.values(results).every(r => r.status === 'pass' || r.status === 'skip' || r.status === 'warn');
+      return overall ? 'pass' : 'fail';
+    }
+    return 'unknown';
   }
 }
 

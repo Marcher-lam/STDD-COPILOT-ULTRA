@@ -1,0 +1,9 @@
+[project]
+name = "{{name}}"
+version = "0.1.0"
+description = "A Python project with STDD"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v"

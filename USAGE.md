@@ -2,11 +2,13 @@
 
 STDD Copilot 提供双入口设计：CLI 命令行工具 (`stdd`) 和 Claude Code 斜杠命令 (`/stdd:*`)。
 
+当前 CLI 已覆盖日常工程闭环：`stdd ff/spec/api-spec/apply/continue/mutation/verify/archive/commit`、`stdd issue/turbo/explore`、`stdd constitution check/status/fix/audit/waive`、`stdd guard/hooks`、`stdd graph run/history/recommend`、`stdd workspace`、`stdd metrics/context/ci/starters/update`、`stdd validate --spec-guardian`、`stdd learn scan`、`stdd roles party/adversarial`、`stdd story`、`stdd user-test`、`stdd pipeline`、`stdd schema create/fork/validate`、`stdd extensions` 和 **`stdd runtime agent/sudo`**。
+
 ## 核心概念
 
 | 概念 | 路径 | 说明 |
 |------|------|------|
-| **Commands** | `.claude/commands/stdd/` | 19 个 `/stdd:*` 斜杠命令 |
+| **Commands** | `.claude/commands/stdd/` | 20 个 `/stdd:*` 斜杠命令模板初始化后的副本 |
 | **Skills** | `.claude/skills/` | 38 个可被命令调用的技能模块 |
 | **Changes** | `stdd/changes/` | 变更管理 (提案→规格→实现→归档) |
 | **Specs** | `stdd/specs/` | BDD 规格文件 (Source of Truth) |
@@ -80,6 +82,104 @@ STDD Copilot 提供双入口设计：CLI 命令行工具 (`stdd`) 和 Claude Cod
 ---
 
 ## 完整实战流
+
+### CLI Workflow: 单项目 Feature
+
+```bash
+cd ~/projects/my-app
+stdd init
+stdd ff "add markdown export for todo items" --change-name add-markdown-export
+stdd spec add-markdown-export
+stdd api-spec add-markdown-export
+stdd tdd init
+stdd apply add-markdown-export --test-command "npm test"
+stdd continue add-markdown-export --test-command "npm test"
+stdd mutation add-markdown-export
+stdd verify add-markdown-export --lint
+stdd guard --strict
+stdd archive add-markdown-export
+stdd commit add-markdown-export
+```
+
+说明：`stdd apply` 是最小 TDD runner，会选择待办任务、运行测试、更新 `tasks.md`，并在可识别测试框架时注入 STDD Reporter 以保留更好的 evidence。`stdd mutation` 建议在 `apply` 后、`verify` 前运行，用 quick 启发式 mutation score / anti-fake-green 或 Stryker 真实 mutation 生成 Article 2 evidence。`stdd commit` 生成 Conventional Commit 风格提交信息，不会自动执行 `git commit`。
+
+### CLI Workflow: Bugfix
+
+```bash
+stdd issue "login page crashes when password is empty" --severity high --title "Fix empty password crash"
+stdd spec fix-empty-password-crash
+stdd apply fix-empty-password-crash --task TASK-001 --test-command "npm test"
+stdd mutation fix-empty-password-crash --mode quick
+stdd verify fix-empty-password-crash --no-constitution
+stdd constitution check
+stdd archive fix-empty-password-crash
+```
+
+说明：`stdd issue` 会生成包含复现步骤、期望/实际行为和 Red/Green/Blue 任务结构的 bugfix change。失败测试先行和最小修复仍需要开发者或外部 AI 编码器根据任务执行。
+
+### CLI Workflow: Monorepo Workspace
+
+```bash
+cd ~/projects/platform
+stdd init
+stdd workspace repair
+stdd workspace list
+stdd workspace validate
+
+stdd ff "add billing webhook retry" --workspace packages/api --change-name add-billing-webhook-retry
+stdd spec add-billing-webhook-retry --workspace packages/api
+stdd api-spec add-billing-webhook-retry --workspace packages/api
+stdd apply add-billing-webhook-retry --workspace packages/api
+stdd mutation add-billing-webhook-retry --workspace packages/api
+stdd verify add-billing-webhook-retry --workspace packages/api --lint
+stdd metrics add-billing-webhook-retry --workspace packages/api
+stdd graph recommend --workspace packages/api
+stdd archive add-billing-webhook-retry
+```
+
+说明：workspace registry 写入 `stdd/config.yaml` 的 `workspaces.items`。多数实现类 CLI 支持 `--workspace <path-or-package>`，测试和 mutation 命令会优先在对应包目录解析并执行，例如 `stdd mutation add-billing-webhook-retry --workspace packages/api`。
+
+### CLI Workflow: Constitution / Guard
+
+```bash
+stdd constitution status
+stdd constitution check
+stdd constitution fix --article 2 --dry-run
+stdd constitution fix --article 2
+stdd constitution waive 2 --reason "Legacy migration" --days 7
+stdd constitution audit
+stdd hooks install
+stdd hooks verify
+stdd guard --strict
+stdd ci github
+```
+
+说明：`constitution check` 直接扫描源码、测试、依赖、CI、风格和安全规则；Article 2 现在包含测试文件存在、覆盖率 gate 和 mutation evidence gate；`fix` 只修复/生成可安全自动化的部分；`audit` 聚合 `mutation`/`verify`/`guard` 保存的 evidence；`guard` 适合 Git hooks 和 CI 质量门禁。
+
+### Mutation Gate
+
+```bash
+stdd apply add-dark-mode
+stdd mutation add-dark-mode
+stdd mutation add-dark-mode --mode quick
+stdd mutation add-dark-mode --mode stryker
+stdd mutation add-dark-mode --workspace packages/api
+stdd verify add-dark-mode
+```
+
+`stdd mutation [change]` 会写入 mutation evidence，供 `stdd verify`、Article 2 和 `stdd constitution audit` 使用。quick 模式通过启发式 mutation score、断言质量、跳过测试、空测试和 anti-fake-green 信号评估测试有效性；stryker 模式仅在项目安装并可运行 Stryker 时执行真实 mutation testing。该命令支持 `--workspace <path-or-package>`，在 monorepo 中按包解析源码、测试和执行目录。
+
+### Coverage / Metrics / Guard
+
+```bash
+stdd metrics
+stdd metrics --json
+stdd metrics --workspace packages/api
+stdd guard
+stdd guard --workspace packages/api
+```
+
+`metrics` 提供文件数、源码/测试行数、测试比率、复杂度、lint 状态、Constitution 健康度和 workspace 统计。`guard` 是 coverage report-aware 的质量门禁：当前实现会估算测试文件覆盖比例、检测测试命令覆盖，并在 `verify`/`guard` 中通过 reporter injection 捕获更完整证据；如项目测试框架产生覆盖报告，可由外部 CI 或后续 reporter 扩展纳入同一 evidence/audit 流。
 
 ### 1. 初始化项目 (首次使用)
 
@@ -255,8 +355,41 @@ stdd/changes/change-YYYYMMDD-HHMMSS/
 | `stdd update [path]` | 更新 STDD 文件 (`--force` 强制更新) |
 | `stdd list` / `stdd ls` | 列出变更 (`--specs`, `--archived`, `--json`) |
 | `stdd status [change]` | 查看变更状态 (`--json`) |
+| `stdd ff <description>` | 快速创建 change、proposal、tasks 和 specs 目录 (`--workspace`, `--change-name`) |
+| `stdd spec <change>` | 从 tasks 生成 BDD feature (`--merge`, `--workspace`) |
+| `stdd api-spec [change]` | 从 BDD feature 生成 OpenAPI (`--format`, `--workspace`) |
+| `stdd apply [change]` | 执行下一个任务并运行测试 (`--task`, `--test-command`, `--workspace`, `--dry-run`, `--delegate`, `--e2e-command`) |
+| `stdd continue [change]` | 从最近任务状态继续 (`--force`, `--test-command`, `--dry-run`) |
+| `stdd mutation [change]` | 生成 mutation evidence (`--mode quick|stryker`, `--workspace`) |
+| `stdd verify [change]` | 验证任务、测试、Constitution 和 evidence (`--lint`, `--workspace`, `--no-constitution`) |
+| `stdd archive [change]` | 归档完成变更并合并 delta specs 到主 specs |
+| `stdd commit [change]` | 生成提交信息 (`--format json`, `--tdd`, `--phase`, `--issue`, `--require-issue`) |
+| `stdd issue <description>` | 创建 bugfix TDD 变更 (`--severity`, `--workspace`) |
+| `stdd turbo <description>` | 一键 FF + spec + TDD scaffold (`--workspace`, `--no-spec`) |
+| `stdd explore [scope]` | 只读探索架构、测试缺口和建议 (`--json`, `--output`) |
 | `stdd new change <name>` | 创建新变更 (`--title`, `--description`) |
 | `stdd new spec <domain>` | 创建新规格 |
+| `stdd tdd init` | 为缺失测试生成脚手架 (`--source-dir`, `--dry-run`) |
+| `stdd guard` | 全局质量门禁 (`--strict`, `--workspace`, `--no-constitution`) |
+| `stdd metrics [change]` | 项目/变更质量指标 (`--json`, `--workspace`) |
+| `stdd context [layer]` | 预览/导出 memory context (`--export`, `--workspace`) |
+| `stdd ci [platform]` | 生成 CI 配置，默认 GitHub Actions |
+| `stdd starters list/create` | 管理项目 starter 模板 |
+| `stdd workspace list/validate/repair` | 管理 monorepo workspace registry |
+| `stdd depcheck [path]` | 检测未使用的 dependencies (支持 workspace，集成于 Article 1) |
+| `stdd schema validate [file]` | 验证 JSON/YAML schemas 语法 (集成于 Article 9) |
+| `stdd schema create <name>` | 创建 workflow schema |
+| `stdd schema fork <source> <name>` | fork 现有 workflow schema |
+| `stdd contract generate [change]` | 从 API 规格生成消费者驱动契约 (SDD 增强) |
+| `stdd contract verify [change]` | 验证契约与规格一致性 (SDD 增强) |
+| `stdd validate [change]` | 验证规格一致性和 Spec Guardian 泄漏检测 (`--spec-guardian`, `--fix`) |
+| `stdd mock [change]` | 生成 Mock 数据和 Stubs (SDD 增强) |
+| `stdd story create/bdd` | 创建 Story Mapping YAML，并可生成 BDD feature |
+| `stdd user-test [change]` | 生成人工/AI 双模式用户测试脚本 |
+| `stdd pipeline [change]` | 从 specs 生成 parser IR 与 acceptance test skeleton |
+| `stdd extensions list/install/validate/publish` | 管理 extension catalog、本地安装与发布校验 |
+| `stdd graph run/history/recommend` | CLI Graph 执行、历史和推荐 |
+| `stdd recommend [change]` | 基于当前状态推荐下一步 |
 | `stdd skills` | 列出所有技能 (`--phase <1-5>`) |
 | `stdd commands` | 列出 Claude Code 斜杠命令 |
 | `stdd hooks install` | 安装 AI Code 引擎 Hooks |
@@ -267,6 +400,12 @@ stdd/changes/change-YYYYMMDD-HHMMSS/
 | `stdd constitution` | 查看所有条例 |
 | `stdd constitution show 2` | 查看指定条例详情 |
 | `stdd constitution check` | 触发 CLI 侧 Constitution 检查入口 |
+| `stdd constitution status` | 输出合规健康状态 (`--json`, `--workspace`) |
+| `stdd constitution fix` | 自动修复/生成部分合规产物 (`--article`, `--dry-run`, `--workspace`) |
+| `stdd constitution audit` | 聚合 evidence 审计趋势 (`--json`, `--workspace`) |
+| `stdd constitution waive <article>` | 添加临时豁免 (`--reason`, `--days`, `--force`) |
+| `stdd runtime agent` | 管理多 Agent 交互模拟 (启动/推进/停止) |
+| `stdd runtime sudo` | 解析 SudoLang 并生成 STDD 产物 |
 
 可直接复制的示例与 `README.md` 保持同步：
 
@@ -283,8 +422,64 @@ stdd list --json             # JSON 格式
 stdd status                  # 整体状态
 stdd status add-dark-mode    # 特定变更状态
 
+stdd ff "add dark mode"      # 快速创建 proposal/tasks/specs 基础产物
+stdd spec add-dark-mode      # 从 tasks.md 生成 BDD feature
+stdd api-spec add-dark-mode  # 从 feature 生成 OpenAPI 规范
+stdd apply add-dark-mode     # 执行下一个任务并运行测试
+stdd apply add-dark-mode --delegate              # 失败时记录跨模型委托 evidence
+stdd apply add-dark-mode --e2e-command "npm run e2e"  # 运行 E2E probe
+stdd mutation add-dark-mode  # quick 启发式 mutation score / anti-fake-green，并保存 evidence
+stdd continue add-dark-mode  # 从最近任务状态继续
+stdd verify add-dark-mode    # 验证任务、测试、Constitution、证据
+stdd archive add-dark-mode   # 归档完成变更并合并 delta specs
+stdd commit add-dark-mode --tdd --phase red --issue 42  # 生成 TDG 阶段提交信息
+
+stdd issue "login crashes"   # 创建 bugfix TDD 变更
+stdd turbo "add login"       # FF + spec + TDD scaffold
+stdd explore auth            # 只读探索并输出建议
+
 stdd new change add-dark-mode      # 创建新变更
 stdd new spec auth                 # 创建新规格
+
+stdd tdd init                # 为缺失测试生成脚手架
+stdd guard                   # 全局质量门禁，含 coverage report-aware 测试比率估计
+stdd metrics                 # 项目/变更质量指标
+stdd context --export        # 导出 STDD 上下文
+stdd ci                      # 生成 CI 配置并集成 guard
+stdd starters list           # 列出 starter 模板
+stdd starters create my-app --type typescript
+
+stdd workspace list          # 列出 workspace registry 或动态检测结果
+stdd workspace validate      # 校验 monorepo workspace registry
+stdd workspace repair        # 刷新 stdd/config.yaml workspace registry
+
+stdd depcheck [path]         # 检测未使用的 dependencies (支持 workspace)
+stdd depcheck packages/api   # 检测指定包的未使用依赖
+stdd schema validate         # 验证所有 JSON/YAML schemas
+stdd schema validate schemas/spec-driven/  # 验证指定目录的 schemas
+stdd schema create custom-flow
+stdd schema fork schemas/spec-driven/schema.yaml custom-flow
+
+stdd contract generate add-dark-mode   # 从 API 规格生成消费者契约
+stdd contract verify add-dark-mode     # 验证契约与规格一致性
+stdd validate add-dark-mode --spec-guardian --fix  # 规格一致性 + 泄漏检测
+stdd mock add-dark-mode                # 生成 Mock 数据和 Stubs
+
+stdd story create checkout-flow
+stdd story bdd stdd/journeys/checkout-flow.yaml
+stdd user-test add-dark-mode
+stdd pipeline add-dark-mode
+stdd extensions list
+stdd extensions install ./my-extension
+stdd extensions validate
+stdd runtime agent start "Design Auth" --rounds 3
+stdd runtime agent next
+stdd runtime sudo design.sudo --generate
+
+stdd graph run feature       # 基于动态 DAG 执行 workflow
+stdd graph history           # 查看 graph 执行历史
+stdd graph recommend         # 推荐下一步
+stdd recommend               # CLI 侧下一步推荐
 
 stdd skills                  # 列出所有技能
 stdd skills --phase 4        # 按阶段筛选
@@ -293,6 +488,10 @@ stdd commands                # 列出 Claude Code 斜杠命令
 stdd constitution            # 查看所有条例
 stdd constitution show 2     # 查看 Article 2 详情
 stdd constitution check      # 触发 CLI 侧合规检查入口
+stdd constitution status     # 查看合规健康状态
+stdd constitution fix        # 自动修复/生成部分合规产物
+stdd constitution audit      # 聚合 evidence 审计趋势
+stdd constitution waive 2 --reason "Legacy migration" --days 7
 stdd hooks install           # 安装 Hooks
 stdd hooks verify            # 验证 Hooks
 stdd hooks status            # 查看 Hooks 状态
@@ -342,6 +541,10 @@ stdd hooks enable            # 恢复 Hooks
 | `/stdd:schema` | 类型规范先行 (JSON Schema/Zod) |
 | `/stdd:contract` | 契约测试 (5 种消息模式) |
 | `/stdd:validate` | 规范验证 + Spec Guardian |
+| `stdd contract generate [change]` | 从 API 规格生成消费者驱动契约 |
+| `stdd contract verify [change]` | 验证契约与规格一致性 |
+| `stdd validate [change]` | 验证规格一致性 (tasks vs specs) |
+| `stdd mock [change]` | 生成 Mock 数据和 Stubs |
 
 ### TDD 增强
 
@@ -361,6 +564,7 @@ stdd hooks enable            # 恢复 Hooks
 | TDD 守护 | `/stdd:guard` | TDD 守护钩子 + Anti-Bypass 防绕过 |
 | Constitution | `/stdd:constitution` | Constitution 管理 (9 篇条例 + 豁免) |
 | PRP 规划 | `/stdd:prp` | PRP 结构化规划 (What/Why/How/Success) |
+| Design | `/stdd:design` | 生成技术设计文档 (ADR 记录) |
 | Supervisor | `/stdd:supervisor` | 多 Agent 协调器 (Supervisor 模式) |
 | Context | `/stdd:context` | 三层文档架构 (渐进式加载) |
 | Iterate | `/stdd:iterate` | 自主迭代循环 (Plan-Execute-Reflect) |

@@ -1,4 +1,10 @@
 {
+  "rules": [
+    {
+      "if": { "has_file": "tsconfig.json" },
+      "then": { "inject_node": "stdd-type-check", "after": "stdd-apply" }
+    }
+  ],
   "evaluators": {
     "file_exists": {
       "type": "filesystem",

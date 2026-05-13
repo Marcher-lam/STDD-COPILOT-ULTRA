@@ -5,11 +5,13 @@ const HeterogeneousAdapter = require('./heterogeneous-adapter');
 const ParallelExecutor = require('./parallel-executor');
 
 class GraphExecutor {
-  constructor(intent = 'feature', projectId = 'default') {
+  constructor(intent = 'feature', projectId = 'default', options = {}) {
     this.router = new DynamicGraphRouter();
     this.graph = this.router.compile(intent);
     this.cache = new GraphCacheManager(projectId);
     this.maxRollbacks = this.graph.config.retry_count || 3;
+    this.executeNode = options.executeNode;
+    this.executors = options.executors || {};
 
     // 异构算力横向拓扑
     this.adapter = new HeterogeneousAdapter();
@@ -20,12 +22,30 @@ class GraphExecutor {
   }
 
   /**
-   * 模拟节点执行的打桩函数
+   * 执行单个图节点。优先使用外部注入的执行器，未配置时使用兼容 fallback。
    * @param {string} nodeName
    * @param {object} inputs
    */
   async _executeNode(nodeName, inputs) {
-    // 真实场景下这会调用大模型或底层 Bash，此处通过预置标志位处理
+    const meta = {
+      graph: this.graph,
+      node: this.graph.skills[nodeName],
+      adapter: this.adapter,
+    };
+
+    if (typeof this.executeNode === 'function') {
+      return this.executeNode(nodeName, inputs, meta);
+    }
+
+    const nodeExecutor = this.executors instanceof Map
+      ? this.executors.get(nodeName)
+      : this.executors[nodeName];
+
+    if (typeof nodeExecutor === 'function') {
+      return nodeExecutor(nodeName, inputs, meta);
+    }
+
+    // 兼容旧测试与演示流程：无执行器时用预置标志位模拟节点结果。
     if (inputs.shouldFailOn === nodeName) {
       throw new Error(`Execution failed at ${nodeName}: Target environment restriction.`);
     }

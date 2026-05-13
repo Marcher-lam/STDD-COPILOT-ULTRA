@@ -1,0 +1,6 @@
+[
+  {
+    "name": "User",
+    "properties": "id: string\nemail: string"
+  }
+]
