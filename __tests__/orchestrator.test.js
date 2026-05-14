@@ -141,4 +141,73 @@ describe('Orchestrator', () => {
     expect(rec.reason).toBeDefined();
     expect(rec.command).toBe('/stdd:new');
   });
+
+  it('should return brownfield intent for getPlan', () => {
+    const plan = orchestrator.getPlan('brownfield');
+    expect(plan[0]).toBe('explore');
+    expect(plan).toContain('init');
+    expect(plan).toContain('new');
+  });
+});
+
+describe('Orchestrator Brownfield Detection', () => {
+  let projectDir;
+
+  afterEach(() => {
+    if (projectDir) fs.rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('should detect greenfield when directory is empty', () => {
+    projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-green-'));
+    const orch = new Orchestrator(projectDir);
+    expect(orch.detectProjectType()).toBe('greenfield');
+  });
+
+  it('should detect brownfield when src/ directory exists but no stdd config', () => {
+    projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-brown-'));
+    fs.mkdirSync(path.join(projectDir, 'src'), { recursive: true });
+    const orch = new Orchestrator(projectDir);
+    expect(orch.detectProjectType()).toBe('brownfield');
+  });
+
+  it('should detect brownfield when package.json exists but no stdd config', () => {
+    projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-brown2-'));
+    fs.writeFileSync(path.join(projectDir, 'package.json'), '{"name":"test"}');
+    const orch = new Orchestrator(projectDir);
+    expect(orch.detectProjectType()).toBe('brownfield');
+  });
+
+  it('should detect initialized when stdd/config.yaml exists', () => {
+    projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-init-'));
+    fs.mkdirSync(path.join(projectDir, 'stdd'), { recursive: true });
+    fs.writeFileSync(path.join(projectDir, 'stdd', 'config.yaml'), 'version: "1.0"');
+    const orch = new Orchestrator(projectDir);
+    expect(orch.detectProjectType()).toBe('initialized');
+  });
+
+  it('should recommend analyze action for brownfield project', () => {
+    projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-brown-rec-'));
+    fs.mkdirSync(path.join(projectDir, 'src'), { recursive: true });
+    const orch = new Orchestrator(projectDir);
+    const rec = orch.recommend();
+    expect(rec.action).toBe('analyze');
+    expect(rec.command).toBe('/stdd:explore');
+    expect(rec.projectType).toBe('brownfield');
+    expect(rec.readingList).toBeDefined();
+    expect(Array.isArray(rec.readingList)).toBe(true);
+  });
+
+  it('should generate reading list for package.json project', () => {
+    projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-brown-read-'));
+    fs.mkdirSync(path.join(projectDir, 'src', 'components'), { recursive: true });
+    fs.writeFileSync(path.join(projectDir, 'package.json'), '{"name":"test"}');
+    fs.writeFileSync(path.join(projectDir, 'README.md'), '# Test');
+    fs.writeFileSync(path.join(projectDir, 'tsconfig.json'), '{}');
+    const orch = new Orchestrator(projectDir);
+    const list = orch.getBrownfieldReadingList();
+    expect(list).toContain('package.json');
+    expect(list).toContain('README.md');
+    expect(list).toContain('tsconfig.json');
+    expect(list).toContain('src/components/');
+  });
 });

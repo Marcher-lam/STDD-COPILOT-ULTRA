@@ -80,6 +80,120 @@ Agent: [读取 Skill Graph] → [检测状态] → [自动推进全流程]
 
 ---
 
+## 双场景支持：从0到1 + 接手已有项目
+
+STDD Copilot 支持 **两种项目场景**，Agent 根据项目状态自动选择：
+
+### 场景 1：从 0 到 1（Greenfield）
+
+**触发条件**：空目录或全新项目，用户执行 `stdd init` 后开始
+
+**行为**：标准 STDD 工作流
+
+```
+stdd init → new → propose → clarify → confirm → spec → plan → apply → verify → archive
+```
+
+### 场景 2：接手已有项目（Brownfield）
+
+**触发条件**：目录中已有代码（src/、package.json 等），但无 `stdd/` 配置
+
+**行为**：深度阅读 → 理解架构 → 用户交互确认意图 → 初始化 STDD → 按需修改
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Brownfield 工作流                          │
+│                                                              │
+│  Step 1: 深度阅读项目                                         │
+│  ├── 读取 package.json → 了解技术栈                           │
+│  ├── 读取目录结构 → 理解项目组织                               │
+│  ├── 读取关键入口文件 → 理解核心逻辑                           │
+│  └── 读取已有测试 → 了解测试覆盖                              │
+│                                                              │
+│  Step 2: 生成项目理解报告                                     │
+│  ├── 技术栈总结                                               │
+│  ├── 模块依赖图                                               │
+│  ├── 已有测试覆盖情况                                         │
+│  └── 潜在风险点                                               │
+│                                                              │
+│  Step 3: 与用户交互确认意图 ⚠️ 确认门                         │
+│  ├── "我看到这是一个 React + Express 项目..."                  │
+│  ├── "你想做什么修改？"                                       │
+│  └── 确认修改范围和影响                                       │
+│                                                              │
+│  Step 4: 初始化 STDD                                          │
+│  └── stdd init → 创建 stdd/ 目录结构                          │
+│                                                              │
+│  Step 5: 执行标准 STDD 工作流                                  │
+│  └── new → propose → clarify → confirm → spec → plan          │
+│      → apply → verify → archive                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Brownfield 自动检测规则
+
+| 检测条件 | 项目类型 | Agent 行为 |
+|---------|---------|-----------|
+| 有 `src/` 但无 `stdd/config.yaml` | Brownfield | 先阅读项目，再交互确认 |
+| 有 `package.json` 但无 `stdd/config.yaml` | Brownfield | 先阅读项目，再交互确认 |
+| 无任何代码文件 | Greenfield | 直接开始标准 STDD 工作流 |
+| 有 `stdd/config.yaml` | 已初始化 | 根据状态推进工作流 |
+
+### Brownfield 阅读清单
+
+Agent 进入已有项目时，必须阅读以下内容：
+
+```bash
+# 1. 项目元信息
+cat package.json                    # 技术栈、脚本、依赖
+cat README.md                       # 项目说明
+cat tsconfig.json 2>/dev/null       # TypeScript 配置（如有）
+
+# 2. 项目结构
+ls -la src/                         # 源码目录
+find src -name "*.ts" -o -name "*.js" | head -30  # 源文件列表
+find . -name "*.test.*" -o -name "*.spec.*" | head -20  # 测试文件
+
+# 3. 关键入口
+cat src/index.ts 2>/dev/null || cat src/index.js 2>/dev/null || cat src/main.ts 2>/dev/null
+cat src/App.tsx 2>/dev/null || cat src/App.jsx 2>/dev/null
+
+# 4. 已有测试
+cat jest.config.js 2>/dev/null || cat vitest.config.ts 2>/dev/null
+npm test -- --listTests 2>/dev/null || npx vitest --list 2>/dev/null
+```
+
+### Brownfield 交互示例
+
+```
+用户: "帮我在这个项目里添加用户权限管理"
+
+Agent: [自动检测到这是 Brownfield 项目]
+       正在阅读项目...
+       
+       📊 项目理解报告
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       🏗️  技术栈:   React 18 + Express + PostgreSQL
+       📁 模块:     src/components/ (12 个)
+                   src/services/ (5 个)
+                   src/api/ (3 个路由)
+       🧪 测试:     23 个测试文件，覆盖率 ~65%
+       🔑 入口:     src/index.tsx → src/App.tsx
+       ⚠️  注意:    已有 auth middleware (src/api/middleware/auth.ts)
+                   已有 User model (src/models/User.ts)
+       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       
+       💬 根据项目现状，我建议：
+       1. 扩展已有 User model 添加角色字段
+       2. 在 auth middleware 基础上增加权限检查
+       3. 创建 PermissionGuard 组件用于前端路由守卫
+       
+       ⚠️ 确认门: 以上理解是否正确？是否按此方向推进？
+       回复 "确认" 继续，或提出修改意见。
+```
+
+---
+
 ## Agent 自主编排协议
 
 ### Phase 过渡规则
@@ -124,11 +238,16 @@ Agent: [读取 Skill Graph] → [检测状态] → [自动推进全流程]
 
 ## Skill Graph 路径选择
 
-根据用户意图，自动选择对应的 Skill Graph 路径：
+根据用户意图和项目状态，自动选择对应的 Skill Graph 路径：
 
-### 新功能开发（默认）
+### 新功能开发（默认，从0到1）
 ```
 init → new → propose → clarify → confirm → spec → plan → apply → verify → archive
+```
+
+### 接手已有项目（Brownfield）
+```
+探索阅读 → 理解报告 → 用户确认 → init → new → propose → clarify → confirm → spec → plan → apply → verify → archive
 ```
 
 ### 快速修复（用户说 "修复xx bug"）

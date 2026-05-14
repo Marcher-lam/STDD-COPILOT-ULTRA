@@ -26,10 +26,22 @@ const SKILL_GRAPH = {
 // Intent-based shortcuts
 const INTENT_MAP = {
   feature: ['init', 'new', 'propose', 'clarify', 'confirm', 'spec', 'plan', 'apply', 'verify', 'archive'],
+  brownfield: ['explore', 'init', 'new', 'propose', 'clarify', 'confirm', 'spec', 'plan', 'apply', 'verify', 'archive'],
   hotfix: ['init', 'issue', 'apply', 'verify', 'archive'],
   turbo: ['init', 'new', 'propose', 'spec', 'plan', 'apply', 'verify', 'archive'],
   explore: ['init', 'explore', 'brainstorm', 'final-doc'],
 };
+
+// Brownfield detection: project has source code but no STDD config
+const BROWN_FIELD_INDICATORS = [
+  { path: 'src', type: 'dir' },
+  { path: 'package.json', type: 'file' },
+  { path: 'tsconfig.json', type: 'file' },
+  { path: 'go.mod', type: 'file' },
+  { path: 'Cargo.toml', type: 'file' },
+  { path: 'requirements.txt', type: 'file' },
+  { path: 'pom.xml', type: 'file' },
+];
 
 // Files that indicate completion of each phase
 const PHASE_COMPLETION_MARKERS = {
@@ -98,6 +110,44 @@ class Orchestrator {
   }
 
   /**
+   * Detect project type: greenfield, brownfield, or initialized
+   * @returns {string} 'greenfield' | 'brownfield' | 'initialized'
+   */
+  detectProjectType() {
+    if (fs.existsSync(path.join(this.cwd, 'stdd', 'config.yaml'))) {
+      return 'initialized';
+    }
+    for (const indicator of BROWN_FIELD_INDICATORS) {
+      const fullPath = path.join(this.cwd, indicator.path);
+      if (indicator.type === 'dir' && fs.existsSync(fullPath) && fs.statSync(fullPath).isDirectory()) {
+        return 'brownfield';
+      }
+      if (indicator.type === 'file' && fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+        return 'brownfield';
+      }
+    }
+    return 'greenfield';
+  }
+
+  /**
+   * Get key files to read for brownfield analysis
+   * @returns {string[]} ordered list of files to read
+   */
+  getBrownfieldReadingList() {
+    const files = [];
+    const cwd = this.cwd;
+    if (fs.existsSync(path.join(cwd, 'package.json'))) files.push('package.json');
+    if (fs.existsSync(path.join(cwd, 'README.md'))) files.push('README.md');
+    if (fs.existsSync(path.join(cwd, 'tsconfig.json'))) files.push('tsconfig.json');
+    if (fs.existsSync(path.join(cwd, 'src'))) {
+      for (const entry of fs.readdirSync(path.join(cwd, 'src'), { withFileTypes: true })) {
+        if (entry.isDirectory()) files.push(`src/${entry.name}/`);
+      }
+    }
+    return files;
+  }
+
+  /**
    * Determine current phase of a change
    * @param {string} changeName
    * @returns {string|null}
@@ -127,7 +177,22 @@ class Orchestrator {
    * @returns {object} { action, command, reason, phase, nextPhase }
    */
   recommend() {
+    const projectType = this.detectProjectType();
     const change = this.getActiveChange();
+    
+    // Brownfield project → need to analyze first
+    if (projectType === 'brownfield') {
+      return {
+        action: 'analyze',
+        command: '/stdd:explore',
+        reason: '检测到已有项目代码，需要先深入理解项目再制定修改方案。',
+        phase: 'brownfield',
+        progress: '0/8',
+        instructions: 'Step 1: 阅读 package.json、README、目录结构。Step 2: 生成项目理解报告。Step 3: 与用户确认意图。Step 4: stdd init 初始化。',
+        projectType: 'brownfield',
+        readingList: this.getBrownfieldReadingList(),
+      };
+    }
     
     // No change yet → create one
     if (!change) {
@@ -138,6 +203,7 @@ class Orchestrator {
         phase: 'init',
         progress: '0/8',
         instructions: '向用户询问需求描述，然后执行 /stdd:new <需求描述>',
+        projectType: 'greenfield',
       };
     }
 

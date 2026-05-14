@@ -9,6 +9,7 @@ class DynamicGraphRouter {
     this.intentPathways = {
       'hotfix': ['stdd-propose', 'stdd-apply', 'stdd-verify', 'stdd-commit'],
       'feature': ['stdd-propose', 'stdd-spec', 'stdd-plan', 'stdd-outside-in', 'stdd-apply', 'stdd-verify'],
+      'brownfield': ['stdd-explore', 'stdd-init', 'stdd-propose', 'stdd-spec', 'stdd-plan', 'stdd-apply', 'stdd-verify'],
       'repair': ['stdd-fix-packet', 'stdd-apply', 'stdd-verify'],
       'research': ['stdd-explore', 'stdd-brainstorm', 'stdd-final-doc'],
     };

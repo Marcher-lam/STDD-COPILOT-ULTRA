@@ -21,7 +21,7 @@ auto_orchestration:
   # 主要工作流路径
   intents:
     feature:
-      description: "新功能开发（默认）"
+      description: "新功能开发（从0到1）"
       phases:
         - skill: stdd-init
           auto_advance: true
@@ -50,6 +50,35 @@ auto_orchestration:
           auto_advance: false
           gate: human_approval
           prompt: "展示验证结果，等待用户确认归档"
+    
+    brownfield:
+      description: "接手已有项目，深度阅读后按需修改"
+      phases:
+        - skill: stdd-explore
+          auto_advance: true
+          prompt: "深度阅读项目代码，理解架构、技术栈、模块依赖"
+        - skill: stdd-init
+          auto_advance: true
+          prompt: "初始化 STDD 工作区"
+        - skill: stdd-new
+          auto_advance: true
+        - skill: stdd-propose
+          auto_advance: true
+        - skill: stdd-confirm
+          auto_advance: false
+          gate: human_approval
+          prompt: "展示修改方案和影响分析，等待用户确认"
+        - skill: stdd-spec
+          auto_advance: true
+        - skill: stdd-plan
+          auto_advance: true
+        - skill: stdd-apply
+          auto_advance: true
+        - skill: stdd-verify
+          auto_advance: true
+        - skill: stdd-archive
+          auto_advance: false
+          gate: human_approval
     
     hotfix:
       description: "快速修复 Bug"
