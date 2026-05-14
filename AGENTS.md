@@ -181,16 +181,79 @@ Agent: [自动检测到这是 Brownfield 项目]
        🔑 入口:     src/index.tsx → src/App.tsx
        ⚠️  注意:    已有 auth middleware (src/api/middleware/auth.ts)
                    已有 User model (src/models/User.ts)
+                   未检测到 DESIGN.md（前端设计规范缺失）
        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        
        💬 根据项目现状，我建议：
        1. 扩展已有 User model 添加角色字段
        2. 在 auth middleware 基础上增加权限检查
        3. 创建 PermissionGuard 组件用于前端路由守卫
+       4. ⚠️ 建议先生成 DESIGN.md 统一前端设计规范
        
        ⚠️ 确认门: 以上理解是否正确？是否按此方向推进？
        回复 "确认" 继续，或提出修改意见。
 ```
+
+---
+
+## 前端设计能力：DESIGN.md
+
+STDD Copilot 集成了 Google Stitch 的 [DESIGN.md](https://github.com/VoltAgent/awesome-design-md) 设计系统规范。
+
+### 什么是 DESIGN.md
+
+`DESIGN.md` 是一个纯文本设计系统文档，AI Agent 读取后即可生成一致的前端 UI。它是前端项目的"视觉宪法"。
+
+**核心原则**：
+- 纯 Markdown 格式，AI 无需解析 Figma 或 JSON
+- 定义颜色、字体、间距、组件样式、响应式行为
+- 放在项目根目录，AI 编码助手自动读取
+
+### 内置设计预设
+
+STDD 提供 3 套设计预设，Agent 根据项目类型自动选择：
+
+| 预设 | 风格 | 适用于 |
+|------|------|--------|
+| `modern` | 蓝色主调 SaaS 风格 | 企业应用、管理后台 |
+| `dark` | 暗色主题、绿色点缀 | 开发者工具、终端风格 |
+| `minimal` | 极简黑白、精确排版 | 内容网站、文档站 |
+
+### 自动检测与生成
+
+Agent 在以下时机自动处理 DESIGN.md：
+
+1. **Brownfield 项目** — 检测到前端代码（React/Vue/HTML）但无 DESIGN.md → 提示用户生成
+2. **新项目** — `stdd init` 检测到前端框架 → 自动生成
+3. **手动触发** — 用户说 "生成设计规范" 或 `stdd design`
+
+```
+用户: "帮我创建一个 React 管理后台"
+
+Agent: [检测到前端项目，无 DESIGN.md]
+       建议使用 modern 预设生成设计规范...
+       ✅ DESIGN.md 已生成，包含:
+          🎨 10 个语义颜色 Token
+          📝 9 级字体层级
+          📐 7 级间距系统
+          🧩 按钮/输入框/卡片/导航组件
+          📱 3 个响应式断点
+```
+
+### DESIGN.md 结构
+
+| 章节 | 内容 |
+|------|------|
+| Visual Theme & Atmosphere | 视觉风格、密度、设计哲学 |
+| Colors | 语义颜色 Token + 十六进制值 |
+| Typography | 字体栈 + 9 级层级表 |
+| Spacing | 7 级间距系统 |
+| Border Radius | 5 级圆角 |
+| Components | 按钮、输入框、卡片、导航 |
+| Layout Principles | 最大宽度、网格、空白哲学 |
+| Responsive Behavior | 断点、触摸目标、折叠策略 |
+| Do's and Don'ts | 设计护栏和反模式 |
+| Agent Prompt Guide | AI 快速参考和提示词 |
 
 ---
 
