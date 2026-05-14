@@ -1,13 +1,13 @@
 /**
  * SessionProgress — Real-time progress recording for STDD commands.
  *
- * Writes JSONL to stdd/progress.jsonl. Survives terminal close, crash, SIGINT.
+ * Writes JSONL to stdd/progress.jsonl and records normal completion,
+ * non-zero exits, SIGINT, and SIGTERM for active commands.
  * All methods are silent no-ops if stdd/ is not initialized.
  */
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
 
 const FILENAME = 'progress.jsonl';
@@ -131,6 +131,7 @@ function progress(cwd) {
 
 function active() { return _activeEntry; }
 function setActive(e) { _activeEntry = e; }
+function clearActive() { _activeEntry = null; }
 
 function installSignals() {
   const mark = (sig) => { if (_activeEntry) progress().interrupt(_activeEntry.id, sig); };
@@ -138,4 +139,4 @@ function installSignals() {
   process.on('SIGTERM', () => { mark('SIGTERM'); process.exit(143); });
 }
 
-module.exports = { SessionProgress, progress, active, setActive, installSignals, FILENAME };
+module.exports = { SessionProgress, progress, active, setActive, clearActive, installSignals, FILENAME };

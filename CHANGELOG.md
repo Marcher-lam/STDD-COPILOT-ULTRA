@@ -27,13 +27,23 @@ All notable changes to STDD Copilot will be documented in this file.
 
 ### Changed
 - **apply.js/verify.js**: Extracted `getConfigTestCommand()` to shared module (`test-command-resolver.js`)
-- **graph-executor.js**: Restored noop fallback with `shouldFailOn` simulation support
+- **graph-executor.js**: Restored noop fallback with `shouldFailOn` simulation support, aligned comments with actual fallback behavior
+- **config.yaml**: Calibrated test framework defaults from `vitest` to `jest` (3 locations)
+- **cli.js**: Removed duplicate base program configuration (`--version`, `--no-color`, help footer)
 - **CI/CD**: Added Node.js 18/20/22 matrix testing
 
 ### Fixed
 - Graph executor self-healing now preserves `_healingMeta` during rollback
 - Integration tests aligned with actual CLI error messages
 - `new change` now creates valid tasks.md with sample tasks
+- **Progress tracking**: `stdd progress` no longer records itself in progress log (read-only observability)
+- **Progress tracking**: Non-zero `process.exitCode` now recorded as `fail` instead of `complete`
+- **Progress tracking**: `stdd progress --clear` no longer leaves dangling `complete` entry
+- **Progress tracking**: `--resume` hints narrowed to resumable workflow commands only (apply/verify/archive/continue)
+- **Verify test**: Renamed stale test name `'lint failure is a warning, not fatal'` → `'lint failure makes verification fail'`
+
+### Removed
+- `stdd/graph/cache/*` and `stdd/progress.jsonl` removed from git tracking; added to `.gitignore`
 
 ### Security
 - Path traversal protection in change name validation

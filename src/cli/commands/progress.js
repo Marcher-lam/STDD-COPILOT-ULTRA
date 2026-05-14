@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
-const { SessionProgress, FILENAME } = require('../../utils/session-progress');
+const { SessionProgress } = require('../../utils/session-progress');
 
 class ProgressCommand {
   execute(options = {}) {
@@ -48,10 +48,24 @@ class ProgressCommand {
     console.log(`  Started:  ${ctx.start.ts}`);
     if (ctx.start.args) console.log(`  Args:     ${JSON.stringify(ctx.start.args)}`);
     if (ctx.failed) console.log(chalk.red(`  ❌ Failed: ${ctx.failureDetail?.err || 'unknown'}`));
-    const c = ctx.start.args?.change || ctx.start.args?.changeName;
-    const suffix = c ? ` ${c}` : '';
-    console.log(chalk.cyan(`\n  → stdd continue${suffix}`));
+    const hint = this._resumeHint(ctx);
+    if (hint) {
+      console.log(chalk.cyan(`\n  → ${hint}`));
+    } else {
+      console.log(chalk.yellow('\n  No automatic resume command is available for this command.'));
+      console.log(chalk.dim('  Inspect the command output and rerun the appropriate command manually.'));
+    }
     console.log();
+  }
+
+  _resumeHint(ctx) {
+    const command = ctx.start.cmd;
+    const args = ctx.start.args || {};
+    const change = args.change || args.changeName;
+    if (['apply', 'verify', 'archive', 'continue'].includes(command)) {
+      return `stdd continue${change ? ` ${change}` : ''}`;
+    }
+    return null;
   }
 
   _history(p, opts) {

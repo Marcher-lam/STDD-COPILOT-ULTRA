@@ -4,7 +4,7 @@
 
 A **Skill Graph**-based full-lifecycle automation development framework that deeply integrates **Spec-First** with **TDD**.
 
-Current baseline: **66 test suites, 827 tests passed, zero npm audit vulnerabilities**.
+Current baseline: **67 test suites, 831 tests passed, zero npm audit vulnerabilities**.
 
 ## Quick Start
 

@@ -1020,7 +1020,7 @@ browserCmd.command('doctor')
   });
 
 // ─── Session Progress: real-time command tracking for breakpoint resume ───
-const { progress, active, setActive, installSignals } = require('./src/utils/session-progress');
+const { progress, active, setActive, clearActive, installSignals } = require('./src/utils/session-progress');
 const { ProgressCommand } = require('./src/cli/commands/progress');
 
 installSignals();
@@ -1042,6 +1042,7 @@ program.hook('preAction', (thisCmd, actionCmd) => {
     const p = progress();
     if (!p._active) return;
     const cmd = actionCmd.name();
+    if (cmd === 'progress') return;
     const opts = actionCmd.opts() || {};
     const args = {};
     const operands = actionCmd.args || [];
@@ -1051,7 +1052,7 @@ program.hook('preAction', (thisCmd, actionCmd) => {
     if (opts.workspace) args.workspace = opts.workspace;
     if (opts.mode) args.mode = opts.mode;
     if (cmd === 'change' || cmd === 'new') args._sub = 'new change';
-    if (operands[0] && cmd !== 'progress') args.change = operands[0];
+    if (operands[0]) args.change = operands[0];
     setActive(p.start(cmd, args));
   } catch { /* never block the main flow */ }
 });
@@ -1059,7 +1060,15 @@ program.hook('preAction', (thisCmd, actionCmd) => {
 program.hook('postAction', () => {
   try {
     const e = active();
-    if (e) { progress().complete(e.id); progress().truncate(); }
+    if (!e) return;
+    const p = progress();
+    if (process.exitCode && process.exitCode !== 0) {
+      p.fail(e.id, `Command exited with code ${process.exitCode}`);
+    } else {
+      p.complete(e.id);
+    }
+    p.truncate();
+    clearActive();
   } catch { /* never block the main flow */ }
 });
 
