@@ -13,6 +13,118 @@ config:
   retry_count: 3
   on_failure: "rollback"
 
+# 自动编排配置 (Agent 读取后自主推进工作流)
+auto_orchestration:
+  enabled: true
+  description: "Agent 读取此配置后，应自主推进工作流，无需用户记住每个命令"
+  
+  # 主要工作流路径
+  intents:
+    feature:
+      description: "新功能开发（默认）"
+      phases:
+        - skill: stdd-init
+          auto_advance: true
+          prompt: "用户需要新功能时"
+        - skill: stdd-propose
+          auto_advance: true
+        - skill: stdd-clarify
+          auto_advance: true
+        - skill: stdd-confirm
+          auto_advance: false
+          gate: human_approval
+          prompt: "展示澄清结果，等待用户确认"
+        - skill: stdd-spec
+          auto_advance: true
+        - skill: stdd-plan
+          auto_advance: true
+        - skill: stdd-apply
+          auto_advance: true
+          loop: true
+        - skill: stdd-verify
+          auto_advance: true
+        - skill: stdd-mutation
+          auto_advance: true
+          condition: "mutation_enabled"
+        - skill: stdd-archive
+          auto_advance: false
+          gate: human_approval
+          prompt: "展示验证结果，等待用户确认归档"
+    
+    hotfix:
+      description: "快速修复 Bug"
+      phases:
+        - skill: stdd-issue
+          auto_advance: true
+        - skill: stdd-apply
+          auto_advance: true
+        - skill: stdd-verify
+          auto_advance: true
+        - skill: stdd-archive
+          auto_advance: false
+          gate: human_approval
+    
+    turbo:
+      description: "一键全流程（仅在确认点和归档点暂停）"
+      phases:
+        - skill: stdd-propose
+          auto_advance: true
+        - skill: stdd-confirm
+          auto_advance: false
+          gate: human_approval
+        - skill: stdd-spec
+          auto_advance: true
+        - skill: stdd-plan
+          auto_advance: true
+        - skill: stdd-apply
+          auto_advance: true
+        - skill: stdd-verify
+          auto_advance: true
+        - skill: stdd-archive
+          auto_advance: false
+          gate: human_approval
+    
+    explore:
+      description: "探索分析"
+      phases:
+        - skill: stdd-explore
+          auto_advance: true
+        - skill: stdd-brainstorm
+          auto_advance: true
+        - skill: stdd-final-doc
+          auto_advance: true
+
+  # 自动触发的辅助技能（Agent 在合适时机自动调用）
+  auto_triggers:
+    - skill: stdd-guard
+      trigger: "每次 apply 完成后"
+    - skill: stdd-mutation
+      trigger: "验证前"
+    - skill: stdd-metrics
+      trigger: "每完成 5 个 task"
+    - skill: stdd-api-spec
+      trigger: "检测到 API 需求时"
+    - skill: stdd-schema
+      trigger: "检测到类型需求时"
+    - skill: stdd-constitution
+      trigger: "归档前"
+  
+  # Agent 进度汇报模板
+  progress_template: |
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    📍 Phase {current}/{total}: {phase_label}
+    ✅ 上一阶段: {last_result}
+    🔜 下一阶段: {next_phase}
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # 失败处理策略
+  failure_handling:
+    max_retries: 3
+    strategies:
+      - retry_same    # 第 1 次：重试
+      - fix_packet    # 第 2 次：读取 fix-packet 降级
+      - circuit_break # 第 3 次：熔断，汇报用户
+
 # 条件变量
 variables:
   project_type: "${PROJECT_TYPE:-node}"

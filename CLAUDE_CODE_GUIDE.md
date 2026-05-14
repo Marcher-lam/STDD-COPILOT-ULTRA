@@ -13,6 +13,10 @@
 
 注意：不要假定 command 模板与 Skill 模板一一对应；当前入口由 20 个 command 模板和 38 个 Skill 模板共同组成，去重后提供 45 个 `/stdd:*` 会话入口。
 
+## Agent 自主编排
+
+STDD Copilot 2.0 支持 Agent 自主编排工作流。Agent 应主动读取 Skill Graph（`stdd/graph/skills.yaml`），根据当前变更状态自动推进工作流，仅在关键确认点（Confirm Gate）暂停等待用户输入。用户无需记住全部 65+ 个命令。
+
 ## 最近更新 (2026-05-14)
 
 - 测试基线: 61 套件, 764 测试, 全通过, npm audit 零漏洞
