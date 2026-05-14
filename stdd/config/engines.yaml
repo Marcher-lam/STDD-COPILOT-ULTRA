@@ -1,6 +1,6 @@
 # STDD Copilot AI 引擎注册表
 # 定义所有支持的 AI 代码助手及其适配配置
-# 由 /stdd-init 读取并生成 stdd/memory/registry.json
+# 由 /stdd:init 读取并生成 stdd/memory/registry.json
 
 # ─── Tier 1: 完整适配（深度集成，全部 Skill 可用）───
 

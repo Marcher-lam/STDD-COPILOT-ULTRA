@@ -1,6 +1,7 @@
 /**
  * Apply Command
- * Minimal TDD runner: pick a task, run tests, update status, log result
+ * TDD runner with Red → Green → Refactor phase enforcement
+ * Each task must pass through all three phases before completion.
  */
 
 const fs = require('fs');
@@ -10,23 +11,57 @@ const yaml = require('js-yaml');
 const chalk = require('chalk');
 const { findActiveChange, parseTasks } = require('../../utils/change-utils');
 const { injectReporter } = require('../../utils/reporter-injector');
-const { resolveTestCommands } = require('../../utils/test-command-resolver');
+const { resolveTestCommands, getConfigTestCommand } = require('../../utils/test-command-resolver');
 const { commandToWorkspaceScope, resolveWorkspaceScope } = require('../../utils/workspace-scope');
 const { runCommand: runParsedCommand } = require('../../utils/command-runner');
 const { FixPacketCommand } = require('./fix-packet');
 
-function getConfigTestCommand(cwd) {
-  const configPath = path.join(cwd, 'stdd', 'config.yaml');
-  if (!fs.existsSync(configPath)) {
+// TDD Phase State Machine
+const TDD_PHASES = {
+  RED: 'red',
+  GREEN: 'green',
+  REFACTOR: 'refactor',
+  DONE: 'done',
+};
+
+const PHASE_LABELS = {
+  red: '🔴 RED - Write failing test first',
+  green: '🟢 GREEN - Minimal implementation',
+  refactor: '🔵 REFACTOR - Improve code structure',
+  done: '✅ DONE - Task complete',
+};
+
+const PHASE_ORDER = [TDD_PHASES.RED, TDD_PHASES.GREEN, TDD_PHASES.REFACTOR, TDD_PHASES.DONE];
+
+function getCurrentPhase(taskPhase) {
+  if (!taskPhase || !PHASE_ORDER.includes(taskPhase)) {
     return null;
   }
-  try {
-    const config = yaml.load(fs.readFileSync(configPath, 'utf-8'));
-    return (config && config.test && config.test.command) || null;
-  } catch {
-    return null;
-  }
+  return taskPhase;
 }
+
+function getNextPhase(currentPhase) {
+  const idx = PHASE_ORDER.indexOf(currentPhase);
+  if (idx < 0 || idx >= PHASE_ORDER.length - 1) {
+    return TDD_PHASES.DONE;
+  }
+  return PHASE_ORDER[idx + 1];
+}
+
+function getPhaseForTask(task) {
+  const phaseMatch = task.description.match(/\[phase:(\w+)\]/);
+  if (phaseMatch) {
+    return phaseMatch[1];
+  }
+  return getCurrentPhase(task.tddPhase);
+}
+
+function getTaskPhaseFromLine(taskLine) {
+  const match = taskLine.match(/\[phase:(\w+)\]/);
+  return match ? match[1] : null;
+}
+
+// getConfigTestCommand is imported from test-command-resolver module
 
 const TASK_PATTERN = /^(\s*- )\[([ ~x✓✓])\]\s*(.*)$/;
 
@@ -47,7 +82,24 @@ function updateTaskLine(filePath, task, newStatus) {
   if (!oldLine) {
     return;
   }
-  lines[task.index] = oldLine.replace(/\[([ ~x✓✓])\]/, `[${newStatus}]`);
+  const updatedLine = oldLine.replace(/\[([ ~x✓✓])\]/, `[${newStatus}]`);
+  lines[task.index] = updatedLine;
+  fs.writeFileSync(filePath, lines.join('\n'));
+}
+
+function updateTaskPhase(filePath, taskIndex, newPhase) {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
+  const oldLine = lines[taskIndex];
+  if (!oldLine) return;
+
+  let updatedLine = oldLine;
+  if (/\[phase:\w+\]/.test(oldLine)) {
+    updatedLine = oldLine.replace(/\[phase:\w+\]/, `[phase:${newPhase}]`);
+  } else {
+    updatedLine = oldLine.replace(/\]\s*/, `] [phase:${newPhase}] `);
+  }
+  lines[taskIndex] = updatedLine;
   fs.writeFileSync(filePath, lines.join('\n'));
 }
 
@@ -118,8 +170,41 @@ class ApplyCommand {
       return;
     }
 
-    console.log(chalk.bold(`\n📌 Applying task in ${changeNameActual}:\n`));
+    // Determine current TDD phase for this task
+    const taskPhase = getTaskPhaseFromLine(selectedTask.line) || getCurrentPhase(selectedTask.tddPhase);
+    const requestedPhase = options.phase;
+
+    // If no phase specified in task or request, use legacy mode (direct test-and-mark)
+    const useLegacyMode = !taskPhase && !requestedPhase;
+
+    if (useLegacyMode) {
+      return this._executeLegacyMode(changeDir, changeNameActual, tasksPath, selectedTask, options, requestedWorkspace);
+    }
+
+    // If user requested a specific phase, validate the transition
+    if (requestedPhase) {
+      if (!PHASE_ORDER.includes(requestedPhase)) {
+        throw new Error(`Invalid phase '${requestedPhase}'. Valid phases: ${PHASE_ORDER.join(', ')}`);
+      }
+
+      const currentIdx = PHASE_ORDER.indexOf(taskPhase);
+      const requestedIdx = PHASE_ORDER.indexOf(requestedPhase);
+
+      if (requestedIdx < currentIdx) {
+        throw new Error(`Cannot go back to phase '${requestedPhase}'. Current phase is '${taskPhase}'.`);
+      }
+
+      if (requestedIdx > currentIdx + 1) {
+        throw new Error(`Cannot skip phase(s). Must complete '${taskPhase}' first before '${requestedPhase}'.`);
+      }
+    }
+
+    // Determine the phase to execute
+    const phase = requestedPhase || taskPhase;
+
+    console.log(chalk.bold(`\n📌 Applying task in ${changeNameActual}:`));
     console.log(`  ${chalk.cyan(selectedTask.description)}`);
+    console.log(`  ${PHASE_LABELS[phase]}\n`);
 
     if (options.dryRun) {
       const testCommands = resolveTestCommands(cwd, {
@@ -127,7 +212,7 @@ class ApplyCommand {
         configCommand: getConfigTestCommand(cwd),
         workspace: options.workspace,
       });
-      console.log(`\n  ${chalk.yellow('Dry run mode')} — no commands will execute.`);
+      console.log(`  ${chalk.yellow('Dry run mode')} — no commands will execute.`);
       if (testCommands.length > 0) {
         for (const testCommand of testCommands) {
           const rel = path.relative(cwd, testCommand.cwd) || '.';
@@ -139,24 +224,70 @@ class ApplyCommand {
       return;
     }
 
+    // RED Phase: Tests MUST fail before implementation
+    if (phase === TDD_PHASES.RED) {
+      return this._executeRedPhase(changeDir, changeNameActual, tasksPath, selectedTask, options, requestedWorkspace);
+    }
+
+    // GREEN Phase: Minimal implementation to make tests pass
+    if (phase === TDD_PHASES.GREEN) {
+      return this._executeGreenPhase(changeDir, changeNameActual, tasksPath, selectedTask, options, requestedWorkspace);
+    }
+
+    // REFACTOR Phase: Improve code structure while keeping tests green
+    if (phase === TDD_PHASES.REFACTOR) {
+      return this._executeRefactorPhase(changeDir, changeNameActual, tasksPath, selectedTask, options, requestedWorkspace);
+    }
+  }
+
+  async _executeLegacyMode(changeDir, changeName, tasksPath, task, options, workspace) {
+    const cwd = process.cwd();
     const testCommands = resolveTestCommands(cwd, {
       testCommand: options.testCommand,
       configCommand: getConfigTestCommand(cwd),
-      workspace: options.workspace,
+      workspace: workspace,
     });
 
     const e2eEvidence = options.e2eCommand ? this.runE2EProbe(options.e2eCommand, cwd, changeDir) : null;
 
-    // Mark task as in progress
-    updateTaskLine(tasksPath, selectedTask, '~');
+    console.log(chalk.bold(`\n📌 Applying task in ${changeName}:`));
+    console.log(`  ${chalk.cyan(task.description)}`);
+
+    if (options.dryRun) {
+      console.log(`  ${chalk.yellow('Dry run mode')} — no commands will execute.`);
+      if (testCommands.length > 0) {
+        for (const testCommand of testCommands) {
+          const rel = path.relative(cwd, testCommand.cwd) || '.';
+          console.log(`  Test command would run (${testCommand.workspaceName}, ${rel}): ${chalk.cyan(testCommand.command)}`);
+        }
+      } else {
+        console.log(`  ${chalk.dim('No test command configured.')}`);
+      }
+      return;
+    }
+
+    updateTaskLine(tasksPath, task, '~');
 
     let resultStatus;
     const testResults = [];
     if (testCommands.length === 0) {
-      console.log(chalk.yellow(`  No test command configured. Skipping test execution.`));
-      resultStatus = 'skipped';
+      // P0-1 Fix: In TDD mode, no test command should not silently complete.
+      // Mark as failed and exit with error to enforce TDD discipline.
+      console.log(chalk.red(`\n❌ No test command configured. TDD requires tests to run.`));
+      console.log(chalk.yellow(`  Please configure a test command in stdd/config.yaml or pass --test-command`));
+      updateTaskLine(tasksPath, task, ' ');  // Keep task pending
+      writeLog(changeDir, {
+        change: changeName,
+        task: task.description,
+        command: '(none)',
+        workspaces: [],
+        status: 'failed',
+        error: 'No test command configured. TDD requires tests to run.',
+      });
+      process.exitCode = 1;
+      return;
     } else {
-      console.log(`\n  📡 STDD Reporter linked for better evidence`);
+      console.log(`\n  ${chalk.dim('📡 STDD Reporter linked for better evidence')}`);
 
       for (const testCommand of testCommands) {
         const injected = injectReporter(testCommand.command, testCommand.cwd);
@@ -189,56 +320,246 @@ class ApplyCommand {
     }
 
     if (resultStatus === 'passed') {
-      updateTaskLine(tasksPath, selectedTask, 'x');
+      updateTaskLine(tasksPath, task, 'x');
       console.log(chalk.green(`\n✅ Task passed tests`));
     } else if (resultStatus === 'failed') {
-      updateTaskLine(tasksPath, selectedTask, ' ');
+      updateTaskLine(tasksPath, task, ' ');
       console.log(chalk.red(`\n✗ Task failed tests — reverted to pending`));
-      const fixPacket = new FixPacketCommand(cwd).execute(changeNameActual, {
-        task: selectedTask.description,
-        testCommand: testCommands.map(testCommand => testCommand.command).join(' && '),
+      const fixPacket = new FixPacketCommand(cwd).execute(changeName, {
+        task: task.description,
+        testCommand: testCommands.map(tc => tc.command).join(' && '),
         silent: true,
       });
       console.log(chalk.yellow(`  Fix packet: ${fixPacket.output}`));
     } else {
-      updateTaskLine(tasksPath, selectedTask, 'x');
+      updateTaskLine(tasksPath, task, 'x');
       console.log(chalk.dim(`\n  Task marked complete (tests skipped)`));
     }
 
     const workspaceResults = testResults.map(result => result.workspace).filter(Boolean);
     const logEntry = {
-      change: changeNameActual,
-      task: selectedTask.description,
-      command: testCommands.length > 0 ? testCommands.map(testCommand => testCommand.command).join(' && ') : '(none)',
+      change: changeName,
+      task: task.description,
+      command: testCommands.length > 0 ? testCommands.map(tc => tc.command).join(' && ') : '(none)',
       workspaces: testResults,
       status: resultStatus,
     };
-    if (requestedWorkspace) {
-      logEntry.workspace = requestedWorkspace;
-    } else if (workspaceResults.length === 1) {
-      logEntry.workspace = workspaceResults[0];
-    } else if (workspaceResults.length > 1) {
-      logEntry.workspaceScopes = workspaceResults;
-    }
+    if (workspace) logEntry.workspace = workspace;
+    else if (workspaceResults.length === 1) logEntry.workspace = workspaceResults[0];
+    else if (workspaceResults.length > 1) logEntry.workspaceScopes = workspaceResults;
+
     const delegation = delegationPlan(resultStatus, testResults, options);
     if (delegation) {
       logEntry.delegation = delegation;
       const evidencePath = writeEvidence(changeDir, 'delegation', {
         status: 'recommend',
-        change: changeNameActual,
-        task: selectedTask.description,
+        change: changeName,
+        task: task.description,
         delegation,
       });
       console.log(chalk.yellow(`  Delegation evidence: ${path.relative(cwd, evidencePath)}`));
     }
-    if (e2eEvidence) {
-      logEntry.e2e = e2eEvidence;
-    }
+    if (e2eEvidence) logEntry.e2e = e2eEvidence;
     writeLog(changeDir, logEntry);
 
     if (resultStatus === 'failed') {
       process.exit(1);
     }
+  }
+
+  async _executeRedPhase(changeDir, changeName, tasksPath, task, options, workspace) {
+    const cwd = process.cwd();
+    const testCommands = resolveTestCommands(cwd, {
+      testCommand: options.testCommand,
+      configCommand: getConfigTestCommand(cwd),
+      workspace: workspace,
+    });
+
+    if (testCommands.length === 0) {
+      console.log(chalk.red(`\n❌ RED Phase requires test commands to be configured.`));
+      console.log(chalk.yellow(`  Please add a test command in stdd/config.yaml or pass --test-command`));
+      process.exit(1);
+    }
+
+    // Run tests - they MUST fail in RED phase
+    const testResults = await this._runTests(testCommands, cwd);
+    const allFailed = testResults.every(r => !r.passed);
+
+    if (!allFailed) {
+      const passedTests = testResults.filter(r => r.passed);
+      console.log(chalk.red(`\n❌ RED Phase Violation: ${passedTests.length} test(s) passed when they should fail!`));
+      console.log(chalk.yellow(`  TDD requires tests to fail first before implementation.`));
+      console.log(chalk.yellow(`  Please write a failing test for the new behavior.`));
+      process.exit(1);
+    }
+
+    console.log(chalk.green(`\n✅ Tests failed as expected (RED phase)`));
+    updateTaskPhase(tasksPath, task.index, TDD_PHASES.GREEN);
+    writeLog(changeDir, {
+      change: changeName,
+      task: task.description,
+      phase: TDD_PHASES.RED,
+      status: 'passed',
+      message: 'Tests failed as expected, advancing to GREEN phase',
+    });
+  }
+
+  async _executeGreenPhase(changeDir, changeName, tasksPath, task, options, workspace) {
+    const cwd = process.cwd();
+    const testCommands = resolveTestCommands(cwd, {
+      testCommand: options.testCommand,
+      configCommand: getConfigTestCommand(cwd),
+      workspace: workspace,
+    });
+
+    const e2eEvidence = options.e2eCommand ? this.runE2EProbe(options.e2eCommand, cwd, changeDir) : null;
+
+    if (testCommands.length === 0) {
+      console.log(chalk.yellow(`  No test command configured. Skipping test execution.`));
+      updateTaskPhase(tasksPath, task.index, TDD_PHASES.REFACTOR);
+      writeLog(changeDir, {
+        change: changeName,
+        task: task.description,
+        phase: TDD_PHASES.GREEN,
+        status: 'skipped',
+      });
+      return;
+    }
+
+    console.log(`\n  ${chalk.dim('📡 STDD Reporter linked for better evidence')}`);
+
+    const testResults = await this._runTests(testCommands, cwd);
+    const allPassed = testResults.every(r => r.passed);
+
+    if (allPassed) {
+      console.log(chalk.green(`\n✅ Tests passed (GREEN phase)`));
+      updateTaskPhase(tasksPath, task.index, TDD_PHASES.REFACTOR);
+
+      const logEntry = {
+        change: changeName,
+        task: task.description,
+        phase: TDD_PHASES.GREEN,
+        command: testCommands.map(tc => tc.command).join(' && '),
+        workspaces: testResults,
+        status: 'passed',
+      };
+      if (workspace) logEntry.workspace = workspace;
+      if (e2eEvidence) logEntry.e2e = e2eEvidence;
+      writeLog(changeDir, logEntry);
+    } else {
+      const failedTests = testResults.filter(r => !r.passed);
+      console.log(chalk.red(`\n❌ ${failedTests.length} test(s) still failing (GREEN phase)`));
+      console.log(chalk.yellow(`  Implement the minimum code to make tests pass.`));
+
+      const fixPacket = new FixPacketCommand(cwd).execute(changeName, {
+        task: task.description,
+        testCommand: testCommands.map(tc => tc.command).join(' && '),
+        silent: true,
+      });
+      console.log(chalk.yellow(`  Fix packet: ${fixPacket.output}`));
+
+      const delegation = delegationPlan('failed', testResults, options);
+      if (delegation) {
+        const evidencePath = writeEvidence(changeDir, 'delegation', {
+          status: 'recommend',
+          change: changeName,
+          task: task.description,
+          phase: TDD_PHASES.GREEN,
+          delegation,
+        });
+        console.log(chalk.yellow(`  Delegation evidence: ${path.relative(cwd, evidencePath)}`));
+      }
+
+      writeLog(changeDir, {
+        change: changeName,
+        task: task.description,
+        phase: TDD_PHASES.GREEN,
+        command: testCommands.map(tc => tc.command).join(' && '),
+        workspaces: testResults,
+        status: 'failed',
+      });
+      process.exit(1);
+    }
+  }
+
+  async _executeRefactorPhase(changeDir, changeName, tasksPath, task, options, workspace) {
+    const cwd = process.cwd();
+    const testCommands = resolveTestCommands(cwd, {
+      testCommand: options.testCommand,
+      configCommand: getConfigTestCommand(cwd),
+      workspace: workspace,
+    });
+
+    console.log(`\n  ${chalk.dim('📡 STDD Reporter linked for better evidence')}`);
+
+    const testResults = await this._runTests(testCommands, cwd);
+    const allPassed = testResults.every(r => r.passed);
+
+    if (allPassed) {
+      console.log(chalk.green(`\n✅ Tests still passing after refactoring (REFACTOR phase)`));
+      updateTaskLine(tasksPath, task, 'x');
+      updateTaskPhase(tasksPath, task.index, TDD_PHASES.DONE);
+
+      const logEntry = {
+        change: changeName,
+        task: task.description,
+        phase: TDD_PHASES.REFACTOR,
+        command: testCommands.map(tc => tc.command).join(' && '),
+        workspaces: testResults,
+        status: 'passed',
+      };
+      if (workspace) logEntry.workspace = workspace;
+      writeLog(changeDir, logEntry);
+
+      console.log(chalk.green(`  Task marked as complete!`));
+    } else {
+      const failedTests = testResults.filter(r => !r.passed);
+      console.log(chalk.red(`\n❌ ${failedTests.length} test(s) failing after refactoring!`));
+      console.log(chalk.yellow(`  Refactoring must not change behavior. Revert and try again.`));
+
+      writeLog(changeDir, {
+        change: changeName,
+        task: task.description,
+        phase: TDD_PHASES.REFACTOR,
+        command: testCommands.map(tc => tc.command).join(' && '),
+        workspaces: testResults,
+        status: 'failed',
+      });
+      process.exit(1);
+    }
+  }
+
+  async _runTests(testCommands, cwd) {
+    const testResults = [];
+
+    for (const testCommand of testCommands) {
+      const injected = injectReporter(testCommand.command, testCommand.cwd);
+      const testCmd = injected.command;
+      const testEnv = injected.env;
+      const label = testCommand.source === 'workspace'
+        ? `${testCommand.workspaceName} (${path.relative(cwd, testCommand.cwd)})`
+        : testCommand.workspaceName;
+
+      console.log(`  Running ${chalk.cyan(label)}: ${chalk.cyan(testCmd)}\n`);
+
+      let result = runCommand(testCmd, testCommand.cwd, testEnv);
+
+      if (result.status !== 0 && injected.command !== testCommand.command) {
+        console.log(chalk.dim(`  Reporter injection failed, retrying without reporter...`));
+        result = runCommand(testCommand.command, testCommand.cwd);
+      }
+
+      testResults.push({
+        workspaceName: testCommand.workspaceName,
+        source: testCommand.source,
+        cwd: testCommand.cwd,
+        command: testCommand.command,
+        passed: result.status === 0,
+        workspace: commandToWorkspaceScope(cwd, testCommand),
+      });
+    }
+
+    return testResults;
   }
 
   runE2EProbe(command, cwd, changeDir) {

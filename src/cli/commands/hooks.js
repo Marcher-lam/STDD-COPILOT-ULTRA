@@ -74,10 +74,17 @@ function writeSettings(settingsPath, settings) {
  * 获取 STDD hooks 脚本路径 (全局同一入口)
  */
 function getSTDDHooksPath() {
+  const packageRoot = getPackageRoot();
+
   const possiblePaths = [
-    ...enginesConfig.engines.map(e => path.join(getPackageRoot(), e.value, 'hooks')), // 源码目录
-    ...enginesConfig.engines.map(e => path.join(process.cwd(), e.value, 'hooks')),               // 项目目录兼容
-    ...enginesConfig.engines.map(e => path.join(os.homedir(), 'stdd-copilot', e.value, 'hooks')) // 全局链接兼容
+    // Source tree (development)
+    path.join(packageRoot, 'src', 'templates', 'hooks'),
+    path.join(packageRoot, 'stdd', 'hooks'),
+    ...enginesConfig.engines.map(e => path.join(packageRoot, e.value, 'hooks')),
+    // Project tree (runtime)
+    ...enginesConfig.engines.map(e => path.join(process.cwd(), e.value, 'hooks')),
+    // Global install fallback
+    ...enginesConfig.engines.map(e => path.join(os.homedir(), 'stdd-copilot', e.value, 'hooks')),
   ];
 
   for (const p of possiblePaths) {

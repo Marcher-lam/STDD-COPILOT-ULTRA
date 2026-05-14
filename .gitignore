@@ -4,6 +4,7 @@ node_modules/
 # Logs
 *.log
 npm-debug.log*
+stdd/logs/
 
 # OS files
 .DS_Store
@@ -18,3 +19,35 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Secrets & credentials
+*.pem
+*.key
+*.crt
+credentials.json
+secrets.yaml
+
+# Test artifacts
+stdd/changes/archive/
+stdd/evidence/
+stdd/runtime/agent-state.json
+stdd/runtime/agent-turns.jsonl
+
+# Benchmark results
+benchmark-results.json
+
+# Docker
+docker-compose.override.yml
+
+# OS generated files
+**/.DS_Store
+._*

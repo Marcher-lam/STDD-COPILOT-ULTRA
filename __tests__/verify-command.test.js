@@ -252,9 +252,8 @@ describe('verify CLI command', () => {
     const result = runCli(['verify', 'demo', '--test-command', 'true', '--lint-command', 'npm run lint'], projectPath);
 
     expect(result.stdout).toContain('Lint:');
-    expect(result.stdout).toContain('WARN');
-    expect(result.stdout).toContain('Verification passed');
-    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('FAIL');
+    expect(result.status).toBe(1);
   });
 
   it('fails when tests pass but TDD constitution is violated (missing test file)', () => {

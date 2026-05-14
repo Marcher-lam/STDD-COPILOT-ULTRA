@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 const { detectWorkspaces, resolveWorkspace } = require('./workspace-detector');
 
 function readPackageJson(root) {
@@ -29,6 +30,24 @@ function hasTestScript(pkg) {
 
 function createCommand(command, cwd, workspaceName, source) {
   return { command, cwd, workspaceName, source };
+}
+
+/**
+ * 从 stdd/config.yaml 读取测试命令配置
+ * @param {string} cwd - 项目根目录
+ * @returns {string|null} 配置的测试命令，如果没有则返回 null
+ */
+function getConfigTestCommand(cwd) {
+  const configPath = path.join(cwd, 'stdd', 'config.yaml');
+  if (!fs.existsSync(configPath)) {
+    return null;
+  }
+  try {
+    const config = yaml.load(fs.readFileSync(configPath, 'utf-8'));
+    return (config && config.test && config.test.command) || null;
+  } catch {
+    return null;
+  }
 }
 
 function resolveTestCommands(cwd, options = {}) {
@@ -85,5 +104,6 @@ function detectTestCommand(cwd) {
 module.exports = {
   resolveTestCommands,
   detectTestCommand,
+  getConfigTestCommand,
   _detectPackageManager: detectPackageManager,
 };

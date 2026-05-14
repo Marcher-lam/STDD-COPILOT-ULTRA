@@ -16,4 +16,10 @@ module.exports = {
     '<rootDir>/stdd/templates/starters',
   ],
   verbose: true,
+  collectCoverageFrom: [
+    'src/**/*.js',
+    '!src/**/*.test.js',
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
 };

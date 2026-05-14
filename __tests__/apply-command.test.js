@@ -245,15 +245,17 @@ describe('apply CLI command', () => {
     expect(result.status).toBe(1);
   });
 
-  it('skips test execution when no test command configured', () => {
+  it('errors when no test command configured', () => {
     const projectPath = createTempProject('no-cmd-project');
     const result = runCli(['apply', 'demo'], projectPath);
 
     expect(result.stdout).toContain('No test command configured');
-    expect(result.stdout).toContain('skipped');
+    // P0-1 Fix: TDD mode now fails when no test command is configured
+    expect(result.status).toBe(1);
 
     const tasksPath = path.join(projectPath, 'stdd', 'changes', 'demo', 'tasks.md');
     const tasksContent = fs.readFileSync(tasksPath, 'utf-8');
-    expect(tasksContent).toContain('- [x] TASK-001');
+    // Task should remain pending (not marked as done)
+    expect(tasksContent).toContain('- [ ] TASK-001');
   });
 });

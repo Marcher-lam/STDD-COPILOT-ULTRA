@@ -12,3 +12,11 @@
 核心入口包括 `init`、`new`、`ff`、`continue`、`explore`、`graph` 以及 `apply`、`verify`、`archive` 等。
 
 注意：不要假定 command 模板与 Skill 模板一一对应；当前入口由 20 个 command 模板和 38 个 Skill 模板共同组成，去重后提供 45 个 `/stdd:*` 会话入口。
+
+## 最近更新 (2026-05-14)
+
+- 测试基线: 61 套件, 764 测试, 全通过, npm audit 零漏洞
+- CI/CD: 矩阵测试 Node.js 18/20/22, 覆盖率收集
+- 新增模块: error-handler, logger, security, command-registry, command-loader, types
+- 新增文件: Dockerfile, docker-compose.yml, CHANGELOG.md, EvoRL.md
+- npm 脚本: test:all, test:coverage, test:benchmark, audit, premerge

@@ -1,0 +1,32 @@
+# Docker Compose for STDD Copilot
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  stdd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: stdd-copilot:latest
+    container_name: stdd-copilot
+    volumes:
+      # Mount project directory for development
+      - ./:/workspace:delegated
+      # Exclude node_modules from mount
+      - /workspace/node_modules
+    environment:
+      - NODE_ENV=production
+      - STDD_LOG_LEVEL=INFO
+      - STDD_LOG_DIR=/workspace/stdd/logs
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    command: ["--help"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "stdd", "--version"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

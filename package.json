@@ -9,8 +9,16 @@
   "scripts": {
     "start": "node cli.js",
     "test": "jest",
+    "test:all": "jest --runInBand",
     "test:docs": "jest --runInBand __tests__/docs-taxonomy-consistency.test.js __tests__/docs-cli-examples-consistency.test.js",
-    "premerge": "npm run test:docs && jest --runInBand --testPathIgnorePatterns=__tests__/docs-taxonomy-consistency.test.js --testPathIgnorePatterns=__tests__/docs-cli-examples-consistency.test.js"
+    "test:coverage": "jest --coverage --runInBand",
+    "test:benchmark": "node test-support/benchmark.js",
+    "premerge": "npm run audit && npm run test:docs && jest --runInBand --testPathIgnorePatterns=__tests__/docs-taxonomy-consistency.test.js --testPathIgnorePatterns=__tests__/docs-cli-examples-consistency.test.js",
+    "audit": "npm audit --audit-level=high",
+    "lint": "echo 'Lint not configured yet'",
+    "build": "echo 'No build step required'",
+    "clean": "rm -rf node_modules coverage benchmark-results.json stdd/logs",
+    "prepublishOnly": "npm run premerge"
   },
   "repository": {
     "type": "git",

@@ -293,14 +293,17 @@ class ConstitutionChecker {
   }
 
   _buildDepModuleMap(pkgJsonPath) {
-    const depModuleNames = new Map();
-    const dir = path.dirname(pkgJsonPath);
-    const nodeModulesPath = path.join(dir, 'node_modules');
-
-    for (const depName of Object.keys(depModuleNames)) {
-      // handled separately
+    // Parse package.json to extract dependency information
+    try {
+      const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+      const allDeps = {
+        ...((pkgJson && pkgJson.dependencies) || {}),
+        ...((pkgJson && pkgJson.devDependencies) || {}),
+      };
+      return new Map(Object.entries(allDeps).map(([name, version]) => [name, version]));
+    } catch (_) {
+      return new Map();
     }
-    return depModuleNames;
   }
 
   _findUsedDepsInSource() {
@@ -374,6 +377,7 @@ class ConstitutionChecker {
       return;
     }
 
+    // Check 1: Every source file must have a corresponding test file
     for (const { file: sf, srcDir } of sourceFiles) {
       const testFile = this.findTestFileForSource(sf, srcDir);
       if (!testFile) {
@@ -386,8 +390,150 @@ class ConstitutionChecker {
       }
     }
 
+    // Check 2: Verify test execution status (not just file existence)
+    this.checkArticle2TestExecution();
+
+    // Check 3: Verify TDD phase compliance
+    this.checkArticle2PhaseCompliance();
+
+    // Check 4: Coverage gate
     this.checkArticle2CoverageGate();
+
+    // Check 5: Mutation gate
     this.checkArticle2MutationGate();
+  }
+
+  checkArticle2TestExecution() {
+    // Check if there's a test command configured
+    const config = this.loadConfig();
+    const testCommand = (config && config.test && config.test.command) || null;
+
+    if (!testCommand) {
+      // Check package.json for test script
+      const pkgPath = path.join(this.cwd, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        try {
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+          if (!pkg.scripts || !pkg.scripts.test) {
+            this.issues.warning.push({
+              article: 2,
+              name: 'TDD',
+              message: 'No test command configured in stdd/config.yaml or package.json',
+            });
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    // Check for common anti-patterns in test files
+    const sourceDirs = this.getSourceDirs();
+    for (const srcDir of sourceDirs) {
+      const testFiles = this._findTestFiles(srcDir);
+      for (const testFile of testFiles) {
+        this._checkTestFileAntiPatterns(testFile);
+      }
+    }
+  }
+
+  checkArticle2PhaseCompliance() {
+    // Check active changes for TDD phase compliance
+    const stddDir = path.join(this.cwd, 'stdd');
+    if (!fs.existsSync(stddDir)) return;
+
+    const changesDir = path.join(stddDir, 'changes');
+    if (!fs.existsSync(changesDir)) return;
+
+    const entries = fs.readdirSync(changesDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name === 'archive') continue;
+
+      const changeDir = path.join(changesDir, entry.name);
+      const tasksPath = path.join(changeDir, 'tasks.md');
+
+      if (!fs.existsSync(tasksPath)) continue;
+
+      const tasksContent = fs.readFileSync(tasksPath, 'utf8');
+      const lines = tasksContent.split('\n');
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.match(/-\s*\[/)) continue;
+
+        // Check if task has phase marker
+        const hasPhase = /\[phase:(\w+)\]/.test(line);
+        const isPending = /\[\s*~?\s*\]/.test(line);
+
+        if (isPending && !hasPhase) {
+          this.issues.warning.push({
+            article: 2,
+            name: 'TDD',
+            message: `Task without phase marker in ${entry.name}/tasks.md:${i + 1} (should have [phase:red|green|refactor])`,
+          });
+        }
+      }
+    }
+  }
+
+  _findTestFiles(srcDir) {
+    const testFiles = [];
+    if (!fs.existsSync(srcDir)) return testFiles;
+
+    const walkDir = (dir) => {
+      if (!fs.existsSync(dir)) return;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) {
+            walkDir(fullPath);
+          }
+        } else if (entry.isFile()) {
+          if (/\.(test|spec)\.(js|jsx|ts|tsx)$/.test(entry.name) ||
+              /^test_\w+\.py$/.test(entry.name)) {
+            testFiles.push(fullPath);
+          }
+        }
+      }
+    };
+
+    walkDir(srcDir);
+    return testFiles;
+  }
+
+  _checkTestFileAntiPatterns(testFile) {
+    try {
+      const content = fs.readFileSync(testFile, 'utf8');
+      const relPath = path.relative(this.cwd, testFile);
+
+      // Pattern 1: Skipped tests (describe.skip, it.skip, test.skip, xdescribe, xit, xtest)
+      const skipPattern = /(?:describe|it|test)\.skip|x(?:describe|it|test)/g;
+      const skipMatches = content.match(skipPattern);
+      if (skipMatches && skipMatches.length > 0) {
+        this.issues.warning.push({
+          article: 2,
+          name: 'TDD',
+          message: `Skipped test found: ${relPath} (${skipMatches.length} skipped)`,
+          file: relPath,
+        });
+      }
+
+      // Pattern 2: Empty test blocks - only flag if file has NO assertions at all
+      const hasAnyAssertion = /(?:expect|assert|should|toBe|toEqual|toBeTruthy|toBeFalsy|toContain|toMatch|toThrow)/.test(content);
+      const hasEmptyDescribe = /describe\s*\([^)]*\)\s*(?:=>\s*)?\{[\s\n]*\}/g.test(content);
+      
+      if (hasEmptyDescribe && !hasAnyAssertion) {
+        this.issues.warning.push({
+          article: 2,
+          name: 'TDD',
+          message: `Test file with no assertions: ${relPath}`,
+          file: relPath,
+        });
+      }
+    } catch {
+      // ignore read errors
+    }
   }
 
   checkArticle2MutationGate() {
@@ -645,7 +791,7 @@ class ConstitutionChecker {
     return content.substring(0, index).split('\n').length;
   }
 
-  checkArticle7Security() {
+   checkArticle7Security() {
     if (this.isWaived(7)) {
       this.issues.skipped.push({ article: 7, name: 'Security', reason: 'Waived' });
       return;
@@ -659,16 +805,28 @@ class ConstitutionChecker {
       /secret\s*=\s*['"][^"']+['"]/gi,
     ];
 
+    // P0-2 Fix: Skip directories that should never be scanned to prevent performance bomb
+    const SKIP_DIRS = new Set([
+      'node_modules', '.git', 'dist', 'build', 'coverage', '.next', '.nuxt',
+      '.cache', 'out', 'vendor', 'target', 'bin', 'obj', '.parcel-cache',
+    ]);
+
     const scanDir = (dir) => {
       if (!fs.existsSync(dir)) return;
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) {
-            scanDir(fullPath);
+          // Skip known heavy directories to prevent performance bomb
+          if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) {
+            continue;
           }
+          scanDir(fullPath);
         } else if (entry.isFile() && /\.(js|ts|py|rb|yaml|yml|json|env|cfg|ini|conf)$/.test(entry.name)) {
+          // Skip lock files and generated files
+          const skipFiles = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'Cargo.lock', 'Gemfile.lock'];
+          if (skipFiles.includes(entry.name)) continue;
+
           try {
             const content = fs.readFileSync(fullPath, 'utf8');
             for (const pattern of patterns) {
@@ -957,37 +1115,37 @@ class ConstitutionChecker {
           });
         }
 
-        // 2a. Deeply nested loops (for/forEach nested > 1 level)
+        // 2a. Nested loops detection using brace tracking
         const lines = content.split('\n');
         let nestingDepth = 0;
+        let loopStack = [];
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
-          if (/\b(for\s*\(|forEach\s*\()/.test(line)) {
+          // Detect loop openings
+          const loopStarts = [...line.matchAll(/(?<!\w)(?:for\s*\(|forEach\s*\()/g)];
+          for (const _ of loopStarts) {
             nestingDepth++;
-            if (nestingDepth >= 2) {
-              this.issues.warning.push({
-                article: 8,
-                name: 'Performance',
-                message: `Detected potential performance issue: Nested loop at ${relPath}:${i + 1}. Consider optimizing with Map/Set or early exit.`
-              });
-            }
+            loopStack.push(i + 1);  // track which line the loop started
           }
-          if (/\b(for\s*\(|forEach\s*\()/.test(line)) {
-            // already counted above
+          // Report deeply nested loops
+          if (nestingDepth >= 2) {
+            this.issues.warning.push({
+              article: 8,
+              name: 'Performance',
+              message: `Detected potential performance issue: Nested loop at ${relPath}:${i + 1} (depth: ${nestingDepth}). Consider optimizing with Map/Set or early exit.`
+            });
           }
-          // Simple heuristic: closing braces reduce nesting for loop patterns
-          // Count only the loop-level closings (not every brace)
-          const loopOpenInLine = (line.match(/\b(for\s*\(|forEach\s*\()/g) || []).length;
-          // closing braces that correspond to loop blocks
+          // Detect loop closings (lines with just closing braces)
           const strippedLine = line.replace(/\/\/.*/, '').trim();
-          if (strippedLine === '}' || strippedLine === '});' || strippedLine.endsWith('});') || strippedLine === '}') {
-            if (nestingDepth > 0) {
-              // Only decrement if this line looks like a loop block close
-              const loopCloseCandidates = /\b(for|forEach)\b/;
-              // Conservative: only reduce if we saw opens nearby
+          // Count closing braces that are on their own line or end with });
+          if ((strippedLine === '}' || strippedLine.endsWith('});')) && nestingDepth > 0) {
+            // Heuristic: if there's no loop start on this line and we see closing braces,
+            // we're likely closing a loop body
+            if (loopStarts.length === 0) {
+              nestingDepth--;
+              loopStack.pop();
             }
           }
-          nestingDepth = Math.max(0, nestingDepth);
         }
 
         // 2b. while loops without break or yield

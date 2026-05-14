@@ -2,9 +2,9 @@
 
 STDD Copilot 提供双入口设计：CLI 命令行工具 (`stdd`) 和 Claude Code 斜杠命令 (`/stdd:*`)。
 
-当前 CLI 已覆盖日常工程闭环：`stdd ff/spec/api-spec/apply/continue/mutation/verify/archive/commit`、`stdd issue/turbo/explore`、`stdd constitution check/status/fix/audit/waive`、`stdd guard/hooks`、`stdd graph run/history/recommend`、`stdd workspace`、`stdd metrics/context/ci/starters/update`、`stdd validate --spec-guardian`、`stdd learn scan`、`stdd roles party/adversarial`、`stdd story`、`stdd user-test`、`stdd pipeline`、`stdd schema create/fork/validate`、`stdd extensions` 和 **`stdd runtime agent/sudo`**。
+当前 CLI 已覆盖日常工程闭环：`stdd ff/spec/api-spec/apply/continue/mutation/verify/archive/commit`、`stdd issue/turbo/explore`、`stdd constitution check/status/fix/audit/waive`、`stdd guard/hooks`、`stdd graph run/history/recommend`、`stdd workspace`、`stdd metrics/context/ci/starters/update`、`stdd validate --spec-guardian`、`stdd learn scan`、`stdd roles party/adversarial`、`stdd story`、`stdd user-test`、`stdd pipeline`、`stdd schema create/fork/validate`、`stdd extensions` 和 **`stdd runtime agent/sudo`**。也支持 **Docker 部署**：`docker build -t stdd-copilot .` 然后 `docker-compose up -d`。
 
-最新补强：`stdd fix-packet [change]` 会生成 Golden Packet 风格失败修复上下文，`stdd outside-in init/scaffold/status` 会生成 layer registry 与分层 TDD 骨架；Skill Graph 的 feature intent 已包含 `stdd-outside-in`，repair intent 已包含 `stdd-fix-packet → stdd-apply → stdd-verify`。完整测试验证：`npm test -- --runInBand`，60 个测试套件、757 个测试通过。
+最新补强：`stdd fix-packet [change]` 会生成 Golden Packet 风格失败修复上下文，`stdd outside-in init/scaffold/status` 会生成 layer registry 与分层 TDD 骨架；Skill Graph 的 feature intent 已包含 `stdd-outside-in`，repair intent 已包含 `stdd-fix-packet → stdd-apply → stdd-verify`。完整测试验证：`npm test`，61 个测试套件、764 个测试通过，npm audit 零漏洞。
 
 ## 核心概念
 
@@ -616,6 +616,8 @@ stdd hooks enable            # 恢复 Hooks
 9. **监控质量** — 定期运行 `/stdd:metrics` 查看质量指标
 10. **使用 Graph 引擎** — `/stdd:graph recommend` 获取智能推荐
 11. **配置 HITL 粒度** — 在 `stdd/config.yaml` 调整人机交互频率
+12. **Docker 部署** — 使用 `docker-compose up -d` 一键启动容器化环境
+13. **npm 脚本** — `npm run audit` 安全审计, `npm run test:coverage` 生成覆盖率报告, `npm run test:benchmark` 性能基准, `npm run premerge` 合并前全检
 
 ---
 

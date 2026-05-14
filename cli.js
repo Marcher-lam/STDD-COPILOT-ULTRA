@@ -135,6 +135,29 @@ Common examples:
 For Claude Code slash commands: stdd commands
 `);
 
+// ─── Base Configuration ───
+program
+  .name('stdd')
+  .description('STDD Copilot - Spec + Test Driven Development Framework')
+  .version(packageJson.version)
+  .option('--no-color', 'Disable color output');
+
+program.addHelpText('after', `
+Common examples:
+  stdd init
+  stdd new change add-dark-mode
+  stdd list --archived
+  stdd status --json
+
+For Claude Code slash commands: stdd commands
+`);
+
+// ─── Dynamic Command Loading ───
+// TODO: Migrate all commands to use CommandLoader for dynamic registration
+// const { CommandLoader } = require('./src/cli/registry/command-loader');
+// const commandLoader = new CommandLoader(program);
+// commandLoader.registerAll();
+
 // ─── Core Commands ───
 program
   .command('init [path]')
@@ -807,7 +830,7 @@ program
 
 // TDD Init
 program
-  .command('tdd:init [path]')
+  .command('tdd-init [path]')
   .description('Initialize test scaffolds')
   .option('--source-dir <dir>')
   .option('--dry-run')

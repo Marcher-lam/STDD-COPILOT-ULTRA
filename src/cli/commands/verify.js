@@ -14,23 +14,12 @@ const { findActiveChange, checkTasksCompletion } = require('../../utils/change-u
 const { ConstitutionChecker } = require('./constitution-checker');
 const EvidenceCapture = require('../../utils/evidence-capture');
 const { injectReporter } = require('../../utils/reporter-injector');
-const { resolveTestCommands } = require('../../utils/test-command-resolver');
+const { resolveTestCommands, getConfigTestCommand } = require('../../utils/test-command-resolver');
 const { commandToWorkspaceScope, resolveWorkspaceScope } = require('../../utils/workspace-scope');
 const { findLatestMutationEvidence } = require('./mutation');
 const { runCommand: runParsedCommand } = require('../../utils/command-runner');
 
-function getConfigTestCommand(cwd) {
-  const configPath = path.join(cwd, 'stdd', 'config.yaml');
-  if (!fs.existsSync(configPath)) {
-    return null;
-  }
-  try {
-    const config = yaml.load(fs.readFileSync(configPath, 'utf-8'));
-    return (config && config.test && config.test.command) || null;
-  } catch {
-    return null;
-  }
-}
+// getConfigTestCommand is now imported from test-command-resolver
 
 function runCommand(cmd, cwd, additionalEnv) {
   const env = additionalEnv ? { ...process.env, ...additionalEnv } : undefined;
@@ -212,7 +201,9 @@ class VerifyCommand {
       if (result.status === 0) {
         console.log(`  ${chalk.green('✓')} Lint: passed`);
       } else {
-        console.log(`  ${chalk.yellow('⚠')} Lint: issues found (warning only)`);
+        // P0-4 Fix: Lint failure should affect verification health
+        console.log(`  ${chalk.red('✗')} Lint: failed`);
+        healthy = false;
       }
     } else {
       console.log(`\n  ${chalk.dim('Lint: skipped (use --lint to run "npm run lint")')}`);
@@ -235,7 +226,7 @@ class VerifyCommand {
     }
     console.log(`  Constitution: ${report.constitution.status === 'pass' ? chalk.green('PASS') : chalk.red('FAIL')}`);
     if (report.lint !== null) {
-      console.log(`  Lint:        ${report.lint.passed ? chalk.green('PASS') : chalk.yellow('WARN')}`);
+      console.log(`  Lint:        ${report.lint.passed ? chalk.green('PASS') : chalk.red('FAIL')}`);
     }
 
     console.log('');

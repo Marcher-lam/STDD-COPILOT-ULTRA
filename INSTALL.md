@@ -24,6 +24,25 @@ stdd --help
 
 注意：如果发布者的 npm 账号开启了 2FA，发布时需要提供 `--otp` 或使用允许 bypass 2FA 的 granular token。
 
+## 2.2 Docker 部署
+
+支持多阶段生产构建和容器编排：
+
+```bash
+# 克隆仓库
+git clone https://github.com/Marcher-lam/STDD-COPILOT.git ~/stdd-copilot
+cd ~/stdd-copilot
+
+# 构建镜像
+docker build -t stdd-copilot .
+
+# 使用 docker-compose 启动
+docker-compose up -d
+
+# 进入容器使用 CLI
+docker exec -it stdd-copilot stdd --help
+```
+
 ### 第一步：克隆仓库
 
 ```bash

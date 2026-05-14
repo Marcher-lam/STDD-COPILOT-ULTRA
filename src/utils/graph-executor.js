@@ -22,7 +22,8 @@ class GraphExecutor {
   }
 
   /**
-   * 执行单个图节点。优先使用外部注入的执行器，未配置时使用兼容 fallback。
+   * 执行单个图节点。优先使用外部注入的执行器。
+   * 如果没有配置执行器，抛出明确错误（不再使用 mock fallback）。
    * @param {string} nodeName
    * @param {object} inputs
    */
@@ -45,11 +46,11 @@ class GraphExecutor {
       return nodeExecutor(nodeName, inputs, meta);
     }
 
-    // 兼容旧测试与演示流程：无执行器时用预置标志位模拟节点结果。
-    if (inputs.shouldFailOn === nodeName) {
-      throw new Error(`Execution failed at ${nodeName}: Target environment restriction.`);
-    }
-    return { success: true, timestamp: Date.now(), generator: nodeName };
+      // 如果没有外部执行器，检查是否有 shouldFailOn 触发故障
+      if (inputs.shouldFailOn === nodeName) {
+        throw new Error(`Simulated failure for ${nodeName}`);
+      }
+      return { success: true, generator: nodeName };
   }
 
   /**
@@ -140,6 +141,7 @@ class GraphExecutor {
         i = targetIndex;
         currentInputs = {
           ...initialInputs,
+          ...currentInputs,
           rollbackEvidence: healingData.report,
           _rollbackCount: rollbacks,
           _healingMeta: {

@@ -1,5 +1,46 @@
 const { spawnSync } = require('child_process');
 
+// P0-3 Fix: Dangerous commands that should never be allowed
+const DANGEROUS_COMMANDS = [
+  /\brm\s+(-rf?|--recursive)\b/i,
+  /\bdel\s+\/[fqs]\b/i,
+  /\bformat\s+[a-z]:\b/i,
+  /\bshred\b/i,
+  /\bmkfs\b/i,
+  /\bdd\s+if=/i,
+  /\bsudo\b.*\b(rm|del|format|mkfs)\b/i,
+  /\bbash\s+-c\b.*(\||&&|;)/i,
+  /\beval\b/i,
+  /\bexec\b.*\$\(/i,
+  /\$\(/,
+  /\bpowershell\b.*-Command\b/i,
+];
+
+// P0-3 Fix: Allowed binaries for test commands (whitelist approach)
+const SAFE_TEST_BINS = new Set([
+  'npm', 'yarn', 'pnpm', 'npx',
+  'jest', 'vitest', 'mocha', 'ava', 'jasmine', 'node',
+  'pytest', 'py.test',
+  'go',
+  'cargo',
+  'mix',
+  'dotnet',
+  'mvn',
+  'gradle',
+  './node_modules/.bin/jest',
+  './node_modules/.bin/vitest',
+  './node_modules/.bin/mocha',
+]);
+
+function isDangerous(command) {
+  for (const pattern of DANGEROUS_COMMANDS) {
+    if (pattern.test(command)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function parseCommand(command) {
   const input = String(command || '').trim();
   if (!input) throw new Error('Command is required.');
@@ -45,7 +86,32 @@ function parseCommand(command) {
   return { bin: args[0], args: args.slice(1) };
 }
 
+function validateCommand(command, options = {}) {
+  const input = String(command || '').trim();
+  if (!input) throw new Error('Command is required.');
+
+  // P0-3 Fix: Block dangerous commands
+  if (isDangerous(input)) {
+    throw new Error(`Command rejected: Dangerous command detected. For security reasons, commands containing destructive operations (rm -rf, eval, exec$(), etc.) are not allowed.`);
+  }
+
+  // P0-3 Fix: Shell injection detection
+  const injectionPatterns = [/\|/, /&&/, /;/, /\$/, /`/, />>\s*/, />\s*[^&]/];
+  for (const pattern of injectionPatterns) {
+    if (pattern.test(input)) {
+      throw new Error('Command rejected: Potential shell injection detected. Characters like pipe, &&, semicolon, dollar, backtick, or redirect are not allowed in test commands.');
+    }
+  }
+
+  return true;
+}
+
 function runCommand(command, options = {}) {
+  const input = String(command || '').trim();
+
+  // P0-3 Fix: Validate command before execution
+  validateCommand(input, options);
+
   const { bin, args } = parseCommand(command);
   return spawnSync(bin, args, {
     cwd: options.cwd,
@@ -56,4 +122,4 @@ function runCommand(command, options = {}) {
   });
 }
 
-module.exports = { parseCommand, runCommand };
+module.exports = { parseCommand, runCommand, validateCommand, isDangerous };

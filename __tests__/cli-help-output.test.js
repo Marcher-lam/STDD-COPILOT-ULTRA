@@ -43,7 +43,7 @@ describe('CLI help output alignment', () => {
 
   it('root help should not contain duplicate command registrations', () => {
     const output = runCli(['--help']);
-    const commandNames = ['spec', 'api-spec', 'contract', 'mock', 'tdd:init'];
+    const commandNames = ['spec', 'api-spec', 'contract', 'mock', 'tdd-init'];
 
     for (const commandName of commandNames) {
       const matches = output.match(new RegExp(`^  ${commandName.replace(':', '\\:')}\\b`, 'gm')) || [];

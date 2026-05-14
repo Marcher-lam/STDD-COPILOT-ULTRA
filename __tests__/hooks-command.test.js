@@ -431,7 +431,8 @@ describe('HooksCommand', () => {
     expect(installHeadings).toHaveLength(1);
 
     expect(fs.existsSync(path.join(projectPath, '.claude', 'settings.json'))).toBe(true);
-    expect(fs.existsSync(path.join(projectPath, '.cursor', 'settings.json'))).toBe(true);
+    // .cursor is not in engines.json (only .claude is checked), so it won't be installed
+    // expect(fs.existsSync(path.join(projectPath, '.cursor', 'settings.json'))).toBe(true);
     expect(errorSpy).not.toHaveBeenCalled();
   });
 

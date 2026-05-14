@@ -183,11 +183,13 @@ class InitCommand {
 
     const workspaces = detectWorkspaces(targetPath, { refresh: true });
 
-    const SUPPORTED_AGENTS = enginesConfig.engines;
+    const SUPPORTED_AGENTS = enginesConfig.engines.map(e => ({ ...e }));
+    // Add a disabled "Exit" option at the bottom
+    SUPPORTED_AGENTS.push({ name: '── Exit (no engines) ──', value: '__exit__', disabled: true });
 
     let selectedAgents = this.getDefaultSelectedAgents();
 
-    // In interactive mode, prompt user for extensions
+    // In interactive mode, prompt user for engines
     if (this.shouldPromptForAgents(options)) {
       try {
         const inquirer = require('inquirer');
@@ -199,22 +201,22 @@ class InitCommand {
             message: 'Select the AI CLI engines you want to support:',
             name: 'agents',
             choices: SUPPORTED_AGENTS,
-            validate(answer) {
-              if (answer.length < 1) {
-                return 'You must choose at least one CLI engine.';
-              }
-              return true;
-            },
+            loop: false,
+            pageSize: 10,
           },
         ]);
-        selectedAgents = answers.agents;
+        // Filter out the exit placeholder
+        selectedAgents = (answers.agents || []).filter(v => v !== '__exit__');
       } finally {
         if (this.spinner.start) this.spinner.start();
       }
     }
 
+    // If user made no selection, exit gracefully without initializing anything
     if (!Array.isArray(selectedAgents) || selectedAgents.length === 0) {
-      throw new Error('No AI CLI engine selected. Please configure at least one engine.');
+      console.log(chalk.yellow('\n  No AI engine selected. Initialization cancelled.'));
+      console.log(chalk.dim('  Run `stdd init -y` to initialize with default engine.\n'));
+      return;
     }
 
     // Create directory structure

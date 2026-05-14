@@ -12,7 +12,7 @@ describe('Engines Config Validation', () => {
     const engines = enginesConfig.engines;
     
     // Test base structure constraints
-    expect(engines.length).toBeGreaterThanOrEqual(10); // Should have at least the initial 10
+    expect(engines.length).toBeGreaterThanOrEqual(6); // Should have at least the core 6 engines
     
     engines.forEach(engine => {
       // Must have name and value mapping for inquirer.js

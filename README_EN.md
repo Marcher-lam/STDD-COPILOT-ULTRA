@@ -2,7 +2,24 @@
 
 **Specification & Test-Driven Development Copilot**
 
-CLI Commands:
+A **Skill Graph**-based full-lifecycle automation development framework that deeply integrates **Spec-First** with **TDD**.
+
+Current baseline: **61 test suites, 764 tests passed, zero npm audit vulnerabilities**.
+
+## Quick Start
+
+```bash
+npm install -g @marcher-lam/stdd-copilot@latest
+cd your-project
+stdd init
+stdd new change add-dark-mode
+stdd apply add-dark-mode --test-command "npm test"
+stdd verify add-dark-mode
+stdd archive add-dark-mode
+```
+
+## CLI Commands
+
 stdd init
 stdd init /path/to/project
 stdd init --force
@@ -29,16 +46,29 @@ stdd hooks status
 stdd hooks disable
 stdd hooks enable
 
+## Installation
+
+### npm Global (Recommended)
+
+```bash
+npm install -g @marcher-lam/stdd-copilot@latest
+```
+
+### Docker
+
+```bash
+docker build -t stdd-copilot .
+docker run --rm -v $(pwd):/workspace stdd-copilot init
+```
+
 ## Documentation
+
 [English Docs Index](./docs/en/README.md) | English documentation hub and entry-point map
+
 [Getting Started](./docs/en/getting-started.md) | First-run workflow and quick CLI reference
+
 [CLI Guide](./docs/en/cli-guide.md) | Full CLI command reference
 
-## TDD Gap Enhancements
-`stdd fix-packet [change]` generates a Golden Packet style failure context with specs, tasks, evidence, runtime artifacts, and fix rules. `stdd apply` now writes one automatically when tests fail.
+## License
 
-`stdd outside-in init` creates `stdd/tdd-registry.yaml`; `stdd outside-in scaffold <change>` generates an outside-in plan plus E2E, integration, and unit test skeletons.
-
-The dynamic Skill Graph now includes `stdd-outside-in` in the feature intent and adds a repair intent: `stdd-fix-packet → stdd-apply → stdd-verify`.
-
-Current verification baseline: `npm test -- --runInBand` passes 60 test suites and 757 tests.
+MIT
