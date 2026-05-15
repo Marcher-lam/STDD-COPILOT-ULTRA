@@ -37,7 +37,7 @@ Completes and archives a change, merging delta specs into main specs. The change
 - Delta specs validated with no merge conflicts
 
 ## Referenced Skill
-- `/stdd-skills/5-verification`
+- `/stdd:archive`
 
 ## Output
 - Updated main specs with merged delta changes

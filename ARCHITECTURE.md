@@ -5,7 +5,7 @@ last_updated: "2026-05-14"
 
 ## 概述
 
-STDD Copilot 是一套基于 **Skill Graph（技能图谱）** 的全链路自动化开发框架，将 **Spec-First (需求规范优先)** 与 **TDD (测试驱动开发)** 深度融合。包含 38 个 Skills、12 个 Agent 角色、9 篇 Constitution 条例、Hook Enforcement System，以及已 CLI 化的 change/spec/apply/verify/archive、Constitution、Graph、workspace、metrics、context、CI 和 starter 工作流。
+STDD Copilot 是一套基于 **Skill Graph（技能图谱）** 的全链路自动化开发框架，将 **Spec-First (需求规范优先)** 与 **TDD (测试驱动开发)** 深度融合。包含 47 个 Skills、12 个 Agent 角色、9 篇 Constitution 条例、Hook Enforcement System，以及已 CLI 化的 change/spec/apply/verify/archive、Constitution、Graph、workspace、metrics、context、CI 和 starter 工作流。
 
 架构边界：CLI 负责产物生成、测试执行、mutation evidence、证据采集、质量门禁和工作区编排；真实 AI 自动编码、多 Agent runtime、contract/mock/factory 等仍由 Skill 和外部 AI 执行器承载。quick mutation 是启发式 anti-fake-green 检查；真实 mutation 依赖项目安装并配置 Stryker，STDD 不宣称内置完整跨语言 mutation 引擎。
 

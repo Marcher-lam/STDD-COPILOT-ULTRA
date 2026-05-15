@@ -226,35 +226,29 @@ Examples:
 program
   .command('skills')
   .description('List all available STDD skills')
-  .option('--phase <phase>', 'Filter by phase (1-5)')
   .addHelpText('after', `
 Examples:
   stdd skills
-  stdd skills --phase 4
 
-Valid phases: 1, 2, 3, 4, 5
+Lists all skills from src/templates/skills/stdd/{name}/SKILL.md
 `)
-  .action(async (options = {}) => {
+  .action(async () => {
     try {
-      const skillsPath = path.join(__dirname, '.claude', 'skills');
-      const stddSkillsPath = path.join(__dirname, 'src', 'stdd-skills');
+      const skillsDir = path.join(__dirname, 'src', 'templates', 'skills', 'stdd');
       console.log(chalk.bold('\n📚 STDD Copilot Skills\n'));
-      console.log(chalk.cyan('Core Skills:'));
-      const coreSkillsConfig = path.join(__dirname, 'src', 'config', 'core-skills-module.yaml');
-      if (fs.existsSync(coreSkillsConfig)) {
-        console.log(`  • core-skills (${coreSkillsConfig})`);
+      if (fs.existsSync(skillsDir)) {
+        const skills = fs.readdirSync(skillsDir).filter(f =>
+          fs.statSync(path.join(skillsDir, f)).isDirectory()
+        );
+        skills.sort().forEach(skill => {
+          const skillFile = path.join(skillsDir, skill, 'SKILL.md');
+          const exists = fs.existsSync(skillFile);
+          console.log(`  ${chalk.cyan(skill.padEnd(24))} ${exists ? '✓' : '✗'}`);
+        });
+        console.log(chalk.dim(`\n${skills.length} skills available`));
+      } else {
+        console.log(chalk.yellow('  No skills directory found'));
       }
-      console.log(chalk.cyan('\nPhase-based Skills:'));
-      [1, 2, 3, 4, 5].forEach(phase => {
-        const stddSkills = fs.existsSync(stddSkillsPath)
-          ? fs.readdirSync(stddSkillsPath).filter(f => f.startsWith(`${phase}-`))
-          : [];
-        if (stddSkills.length > 0) {
-          const phaseNames = { 1: 'Proposal', 2: 'Specification', 3: 'Design', 4: 'Implementation', 5: 'Verification' };
-          console.log(`  ${chalk.yellow(`Phase ${phase}`)} (${phaseNames[phase]}):`);
-          stddSkills.forEach(skill => console.log(`    • ${skill}`));
-        }
-      });
       console.log(chalk.dim('\nUse in Claude Code: /stdd:<skill-name>'));
     } catch (error) {
       console.error(chalk.red(error.message)); process.exit(1);

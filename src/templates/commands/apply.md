@@ -42,7 +42,7 @@ Executes tasks defined in `tasks.md`, following the Ralph Loop TDD cycle. Each t
 If a task fails 3 consecutive times, the fuse triggers and manual intervention is recommended.
 
 ## Referenced Skill
-- `/stdd-skills/4-implementation`
+- `/stdd:apply`
 
 ## Output
 - Updated task status in `tasks.md`

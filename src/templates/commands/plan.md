@@ -33,7 +33,7 @@ Evaluates architecture changes and generates a fine-grained micro-task checklist
 - Tasks are ordered by dependency
 
 ## Referenced Skill
-- `/stdd-skills/3-design`
+- `/stdd:plan`
 
 ## Output
 - `stdd/changes/<change>/tasks.md` with micro-task checklist

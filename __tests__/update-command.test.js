@@ -244,8 +244,8 @@ describe('UpdateCommand', () => {
     it('should not modify any files in dry-run mode', async () => {
       const projectPath = createTempProject('dryrun-project');
 
-      const existingSkillsDir = path.join(projectPath, '.claude', 'skills');
-      const existingSkillDir = path.join(existingSkillsDir, 'stdd-init');
+      const existingSkillsDir = path.join(projectPath, '.claude', 'skills', 'stdd');
+      const existingSkillDir = path.join(existingSkillsDir, 'init');
       fs.mkdirSync(existingSkillDir, { recursive: true });
 
       const updateCommand = new UpdateCommand(silentSpinner);

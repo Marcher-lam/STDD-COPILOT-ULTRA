@@ -22,9 +22,7 @@ stdd list --json
 stdd status
 stdd status add-dark-mode
 stdd new change add-dark-mode
-stdd new spec auth
 stdd skills
-stdd skills --phase 4
 stdd commands
 stdd fix-packet add-dark-mode
 stdd outside-in init

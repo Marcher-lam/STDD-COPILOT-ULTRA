@@ -11,9 +11,7 @@ stdd list --json
 stdd status
 stdd status add-dark-mode
 stdd new change add-dark-mode
-stdd new spec auth
 stdd skills
-stdd skills --phase 4
 stdd commands
 stdd constitution
 stdd constitution show 2
@@ -28,11 +26,9 @@ stdd progress --summary
 stdd progress --resume
 stdd progress --json
 stdd progress --clear
-stdd new change add-dark-mode
-stdd new spec auth
 
 ## 斜杠命令清单
-/stdd:init /stdd:new /stdd:propose /stdd:clarify /stdd:confirm /stdd:spec /stdd:plan /stdd:apply /stdd:execute /stdd:verify /stdd:archive /stdd:final-doc /stdd:brainstorm /stdd:issue /stdd:constitution /stdd:ff /stdd:continue /stdd:explore /stdd:graph /stdd:turbo /stdd:api-spec /stdd:certainty /stdd:commit /stdd:complexity /stdd:context /stdd:contract /stdd:design /stdd:factory /stdd:guard /stdd:help /stdd:iterate /stdd:learn /stdd:memory /stdd:metrics /stdd:mock /stdd:mutation /stdd:outside-in /stdd:parallel /stdd:product-proposal /stdd:prp /stdd:roles /stdd:schema /stdd:supervisor /stdd:user-test /stdd:validate /stdd:vision
+/stdd:init /stdd:new /stdd:propose /stdd:clarify /stdd:confirm /stdd:spec /stdd:plan /stdd:apply /stdd:execute /stdd:verify /stdd:archive /stdd:final-doc /stdd:brainstorm /stdd:issue /stdd:constitution /stdd:ff /stdd:continue /stdd:explore /stdd:graph /stdd:turbo /stdd:api-spec /stdd:apply /stdd:archive /stdd:brainstorm /stdd:certainty /stdd:commit /stdd:complexity /stdd:confirm /stdd:constitution /stdd:context /stdd:continue /stdd:contract /stdd:design /stdd:execute /stdd:explore /stdd:factory /stdd:ff /stdd:final-doc /stdd:fix-packet /stdd:graph /stdd:guard /stdd:help /stdd:init /stdd:issue /stdd:iterate /stdd:learn /stdd:memory /stdd:metrics /stdd:mock /stdd:mutation /stdd:new /stdd:outside-in /stdd:parallel /stdd:plan /stdd:product-proposal /stdd:propose /stdd:prp /stdd:roles /stdd:schema /stdd:spec /stdd:supervisor /stdd:turbo /stdd:user-test /stdd:validate /stdd:verify /stdd:vision
 
 ## Graph Runtime 补强
 

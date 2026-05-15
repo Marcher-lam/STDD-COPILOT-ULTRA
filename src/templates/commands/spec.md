@@ -37,7 +37,7 @@ Translates confirmed requirements into structured BDD (Behavior-Driven Developme
 | **MAY** | Optional |
 
 ## Referenced Skill
-- `/stdd-skills/2-specification`
+- `/stdd:spec`
 
 ## Output
 - `stdd/changes/<change>/specs/{domain}/spec.md` with BDD scenarios

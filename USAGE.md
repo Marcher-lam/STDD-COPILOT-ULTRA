@@ -4,14 +4,14 @@ STDD Copilot 提供双入口设计：CLI 命令行工具 (`stdd`) 和 Claude Cod
 
 当前 CLI 已覆盖日常工程闭环：`stdd ff/spec/api-spec/apply/continue/mutation/verify/archive/commit`、`stdd issue/turbo/explore`、`stdd constitution check/status/fix/audit/waive`、`stdd guard/hooks`、`stdd graph run/history/recommend`、`stdd workspace`、`stdd metrics/context/ci/starters/update`、`stdd validate --spec-guardian`、`stdd learn scan`、`stdd roles party/adversarial`、`stdd story`、`stdd user-test`、`stdd pipeline`、`stdd schema create/fork/validate`、`stdd extensions` 和 **`stdd runtime agent/sudo`**。也支持 **Docker 部署**：`docker build -t stdd-copilot .` 然后 `docker-compose up -d`。
 
-最新补强：`stdd fix-packet [change]` 会生成 Golden Packet 风格失败修复上下文，`stdd outside-in init/scaffold/status` 会生成 layer registry 与分层 TDD 骨架；Skill Graph 的 feature intent 已包含 `stdd-outside-in`，repair intent 已包含 `stdd-fix-packet → stdd-apply → stdd-verify`。新增实时进度追踪：`stdd progress` 自动记录所有命令执行到 `stdd/progress.jsonl`，终端关闭/崩溃后可通过 `stdd progress --resume` 断点续传。完整测试验证：`npm test`，80 个测试套件、893 个测试通过，npm audit 零漏洞。
+最新补强：`stdd fix-packet [change]` 会生成 Golden Packet 风格失败修复上下文，`stdd outside-in init/scaffold/status` 会生成 layer registry 与分层 TDD 骨架；Skill Graph 的 feature intent 已包含 `stdd-outside-in`，repair intent 已包含 `stdd-fix-packet → stdd-apply → stdd-verify`。新增实时进度追踪：`stdd progress` 自动记录所有命令执行到 `stdd/progress.jsonl`，终端关闭/崩溃后可通过 `stdd progress --resume` 断点续传。完整测试验证：`npm test`，77 个测试套件、863 个测试通过，npm audit 零漏洞。
 
 ## 核心概念
 
 | 概念 | 路径 | 说明 |
 |------|------|------|
 | **Commands** | `.claude/commands/stdd/` | 20 个 `/stdd:*` 斜杠命令模板初始化后的副本 |
-| **Skills** | `.claude/skills/` | 38 个可被命令调用的技能模块 |
+| **Skills** | `.claude/skills/stdd/` | 47 个可被命令调用的技能模块 |
 | **Changes** | `stdd/changes/` | 变更管理 (提案→规格→实现→归档) |
 | **Specs** | `stdd/specs/` | BDD 规格文件 (Source of Truth) |
 | **Memory** | `stdd/memory/` | 持久化记忆库 |
@@ -370,7 +370,6 @@ stdd/changes/change-YYYYMMDD-HHMMSS/
 | `stdd turbo <description>` | 一键 FF + spec + TDD scaffold (`--workspace`, `--no-spec`) |
 | `stdd explore [scope]` | 只读探索架构、测试缺口和建议 (`--json`, `--output`) |
 | `stdd new change <name>` | 创建新变更 (`--title`, `--description`) |
-| `stdd new spec <domain>` | 创建新规格 |
 | `stdd tdd init` | 为缺失测试生成脚手架 (`--source-dir`, `--dry-run`) |
 | `stdd guard` | 全局质量门禁 (`--strict`, `--workspace`, `--no-constitution`) |
 | `stdd metrics [change]` | 项目/变更质量指标 (`--json`, `--workspace`) |
@@ -444,7 +443,6 @@ stdd turbo "add login"       # FF + spec + TDD scaffold
 stdd explore auth            # 只读探索并输出建议
 
 stdd new change add-dark-mode      # 创建新变更
-stdd new spec auth                 # 创建新规格
 
 stdd tdd init                # 为缺失测试生成脚手架
 stdd guard                   # 全局质量门禁，含 coverage report-aware 测试比率估计
@@ -496,7 +494,6 @@ stdd progress --json         # JSON 输出
 stdd progress --clear        # 清空进度日志
 
 stdd skills                  # 列出所有技能
-stdd skills --phase 4        # 按阶段筛选
 
 stdd commands                # 列出 Claude Code 斜杠命令
 stdd constitution            # 查看所有条例
@@ -571,7 +568,7 @@ stdd hooks enable            # 恢复 Hooks
 
 ### 辅助功能 (Skill 驱动入口)
 
-> 本组能力多数由 Skill 实现驱动。为避免 taxonomy 混淆，下表统一使用用户可见的 `/stdd:*` 会话入口名；是否存在独立 command 文件，请以 `.claude/commands/stdd/` 与 `.claude/skills/` 的实际内容为准。
+> 本组能力多数由 Skill 实现驱动。为避免 taxonomy 混淆，下表统一使用用户可见的 `/stdd:*` 会话入口名；是否存在独立 command 文件，请以 `.claude/commands/stdd/` 与 `.claude/skills/stdd/` 的实际内容为准。
 
 | 功能 | 统一入口 | 说明 |
 |------|----------|------|
@@ -595,6 +592,7 @@ stdd hooks enable            # 恢复 Hooks
 | Help | `/stdd:help` | 上下文感知帮助系统 |
 | Final Doc | `/stdd:final-doc` | 生成最终文档 |
 | Commit | `/stdd:commit` | 原子化提交 (red:/green:/refactor: 前缀) |
+| Fix Packet | `/stdd:fix-packet` | 失败任务诊断修复包 (Golden Packet) |
 
 ---
 

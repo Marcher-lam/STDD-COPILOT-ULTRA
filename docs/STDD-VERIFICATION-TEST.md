@@ -3,7 +3,7 @@
 > **验证项目**: EvoAgent — 强化学习/遗传算法的可进化 Agent 框架
 > **验证日期**: 2026-05-14
 > **验证环境**: Claude Code
-> **覆盖范围**: 20 个命令模板 + 38 个 Skill + 53 个 CLI 命令 = 69 个唯一入口
+> **覆盖范围**: 20 个命令模板 + 47 个 Skill + 56 个 CLI 命令 = 47 个唯一入口
 > **测试用例数**: 109
 
 ---
@@ -97,7 +97,7 @@ git init && npm init -y
 - [ ] `stdd/` 下存在 `changes/`, `specs/`, `memory/`, `graph/`
 - [ ] `stdd/config.yaml` 存在且为合法 YAML
 - [ ] `.claude/commands/stdd/` 下有 20 个 `.md` 命令模板
-- [ ] `.claude/skills/` 下有技能定义目录
+- [ ] `.claude/skills/stdd/` 下有技能定义目录
 
 ### T02 — /stdd:vision
 ```
@@ -559,7 +559,7 @@ git init && npm init -y
 ```
 **预期产物**: Skill Graph 依赖图 (Mermaid 格式)
 **验证点**:
-- [ ] 显示 38 个 Skill 的 DAG 依赖关系
+- [ ] 显示 47 个 Skill 的 DAG 依赖关系
 - [ ] 当前阶段高亮
 
 ### T48 — /stdd:graph visualize --format=html
@@ -886,7 +886,7 @@ git init && npm init -y
 ### T83 — stdd skills / commands
 ```bash
 ! stdd skills
-! stdd skills --phase 4
+! stdd skills
 ! stdd commands
 ```
 **验证点**: Skills 和斜杠命令列表完整
@@ -1273,7 +1273,7 @@ git init && npm init -y
 - 辅助 CLI: 8 个 (T82-T89)
 - 进度追踪: 8 个 (T90-T97)
 - 补全 CLI: 12 个 (T98-T109)
-- 覆盖 20 个命令模板 + 38 个 Skill + 53 个 CLI 命令 + 进度追踪
+- 覆盖 20 个命令模板 + 47 个 Skill + 56 个 CLI 命令 + 进度追踪
 
 ---
 

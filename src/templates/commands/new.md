@@ -24,7 +24,7 @@ Creates a new STDD change proposal. The system guides you through requirement co
 6. Set status to Draft
 
 ## Referenced Skill
-- `/stdd-skills/1-proposal`
+- `/stdd:new`
 
 ## Output
 - `stdd/changes/change-YYYYMMDD-HHMMSS/proposal.md`

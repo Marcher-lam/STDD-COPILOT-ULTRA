@@ -11,12 +11,12 @@ describe('CLI help output alignment', () => {
     });
   }
 
-  it('skills help should include examples and valid phases', () => {
+  it('skills help should include examples', () => {
     const output = runCli(['skills', '--help']);
 
     expect(output).toContain('Examples:');
-    expect(output).toContain('stdd skills --phase 4');
-    expect(output).toContain('Valid phases: 1, 2, 3, 4, 5');
+    expect(output).toContain('stdd skills');
+    expect(output).toContain('src/templates/skills/stdd/{name}/SKILL.md');
   });
 
   it('commands help should clarify that it lists slash commands', () => {

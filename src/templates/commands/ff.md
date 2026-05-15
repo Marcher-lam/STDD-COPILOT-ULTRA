@@ -22,9 +22,9 @@ One-click generation of all artifacts (proposal, specs, design, tasks) in a sing
 6. Mark change as ready for implementation
 
 ## Referenced Skills
-- `/stdd-skills/1-proposal`
-- `/stdd-skills/2-specification`
-- `/stdd-skills/3-design`
+- `/stdd:propose`
+- `/stdd:spec`
+- `/stdd:plan`
 
 ## Output
 1. `proposal.md` - Requirement proposal

@@ -48,7 +48,7 @@ npm link
 
 ## 添加新的 Skill
 
-1. 在 `.claude/skills/` 下创建新目录
+1. 在 `src/templates/skills/stdd/` 下创建新目录（`stdd init` 会自动安装到 `.claude/skills/stdd/`）
 2. 添加 `SKILL.md` 文件，格式如下：
 
 ```yaml

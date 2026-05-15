@@ -29,10 +29,10 @@ proposal → specs → design → tasks → ready
 5. Report completion and next available steps
 
 ## Referenced Skills
-- `/stdd-skills/1-proposal` (for --proposal)
-- `/stdd-skills/2-specification` (for --specs)
-- `/stdd-skills/3-design` (for --design)
-- `/stdd-skills/4-implementation` (for --tasks)
+- `/stdd:propose` (for --proposal)
+- `/stdd:spec` (for --specs)
+- `/stdd:design` (for --design)
+- `/stdd:plan` (for --tasks)
 
 ## Output
 Depends on current state:

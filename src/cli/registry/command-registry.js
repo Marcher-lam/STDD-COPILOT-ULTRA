@@ -54,10 +54,8 @@ const commandRegistry = [
   {
     name: 'skills',
     description: 'List all available STDD skills',
-    options: [
-      { flags: '--phase <phase>', description: 'Filter by phase (1-5)' },
-    ],
-    helpText: `Examples:\n  stdd skills\n  stdd skills --phase 4\n\nValid phases: 1, 2, 3, 4, 5`,
+    options: [],
+    helpText: `Examples:\n  stdd skills\n\nLists all skills from src/templates/skills/stdd/{name}/SKILL.md`,
     action: 'SkillsCommand',
   },
   {

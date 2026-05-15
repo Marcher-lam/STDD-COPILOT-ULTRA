@@ -1,10 +1,10 @@
 # STDD Copilot - AI Agent Instructions
 
-> Version: 2.1 | Last Updated: 2026-05-14
+> Version: 2.2 | Last Updated: 2026-05-15
 
 ---
 
-## 全部能力入口 (46 个 = 20 Command 模板 + 46 Skill 模板，去重后)
+## 全部能力入口 (47 个 = 20 Command 模板 + 47 Skill 模板，去重后)
 
 ### Command 模板入口 (20)
 - `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm`

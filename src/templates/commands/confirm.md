@@ -23,7 +23,7 @@ User reviews and confirms the requirement, serving as the human-in-the-loop conf
 - `no` → Return to `/stdd:propose` for revision
 
 ## Referenced Skill
-- `/stdd-skills/1-proposal`
+- `/stdd:confirm`
 
 ## Output
 - Confirmation status recorded in `.status.yaml`

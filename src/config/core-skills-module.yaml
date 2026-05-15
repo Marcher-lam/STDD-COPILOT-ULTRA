@@ -6,8 +6,7 @@ version: "1.0.0"
 description: STDD Copilot Core Skills - 核心技能模块
 
 # 模块依赖
-dependencies:
-  - stdd-skills
+dependencies: []
 
 # 技能列表
 skills:

@@ -8,7 +8,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/tests-831%20passed-brightgreen.svg)](./CONTRIBUTING.md)
+[![Tests](https://img.shields.io/badge/tests-863%20passed-brightgreen.svg)](./CONTRIBUTING.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 [**简体中文**](./README.md) · [**English**](./README_EN.md)
@@ -21,7 +21,7 @@
 
 STDD Copilot 是一套基于 **Skill Graph（技能图谱）** 的全链路自动化开发框架。它将 **Spec-First (需求规范优先)** 与 **TDD (测试驱动开发)** 深度融合，通过文件化规格、CLI 工作流、Constitution 审计和外部 AI 代码助手协作，让开发过程从"模糊对话"转向"可验证工程"。
 
-**当前验证状态**: 80 个测试套件、893 个测试全部通过，npm audit 零漏洞。
+**当前验证状态**: 77 个测试套件、863 个测试全部通过，npm audit 零漏洞。
 
 ## 为什么选择 STDD Copilot?
 
@@ -49,9 +49,7 @@ stdd status                  # 整体状态
 stdd status add-dark-mode    # 特定变更状态
 
 stdd new change add-dark-mode
-stdd new spec auth
 stdd skills                  # 列出所有技能
-stdd skills --phase 4        # 按阶段筛选
 stdd commands                # 列出斜杠命令
 
 stdd ff "add dark mode"      # 快速生成所有产物
@@ -80,11 +78,11 @@ stdd progress --clear        # 清空进度
 
 ## 核心特性
 
-### 全部斜杠命令 (59 个)
+### 全部斜杠命令 (47 个)
 
 **Command 模板 (20)**: `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm` `/stdd:spec` `/stdd:plan` `/stdd:apply` `/stdd:execute` `/stdd:verify` `/stdd:archive` `/stdd:final-doc` `/stdd:brainstorm` `/stdd:issue` `/stdd:constitution` `/stdd:ff` `/stdd:continue` `/stdd:explore` `/stdd:graph` `/stdd:turbo`
 
-**Skill 模板 (46)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:brainstorm` `/stdd:certainty` `/stdd:clarify` `/stdd:commit` `/stdd:complexity` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:contract` `/stdd:design` `/stdd:execute` `/stdd:explore` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:graph` `/stdd:guard` `/stdd:help` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:plan` `/stdd:product-proposal` `/stdd:propose` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:spec` `/stdd:supervisor` `/stdd:turbo` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision`
+**Skill 模板 (47)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:brainstorm` `/stdd:certainty` `/stdd:clarify` `/stdd:commit` `/stdd:complexity` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:design` `/stdd:execute` `/stdd:explore` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:fix-packet` `/stdd:graph` `/stdd:guard` `/stdd:help` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:plan` `/stdd:product-proposal` `/stdd:propose` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:spec` `/stdd:supervisor` `/stdd:turbo` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision`
 
 | 特性 | 描述 |
 |------|------|
@@ -92,7 +90,7 @@ stdd progress --clear        # 清空进度
 | **Ralph Loop TDD** | 🔴红灯 (生成测试) → 静态检查 → 🟢绿灯 (实现) → 变异审查 → 🔵重构 |
 | **5 级防跑偏防御** | 人机确认门 · 微任务隔离 · 连续失败回滚 · 静态质检门 · 伪变异审查 |
 | **Constitution + Hook** | 9 篇开发条例 + Pre/Post Hook 自动执行 + 豁免审计追踪 |
-| **46 Skills + 12 Agent 角色** | 完整会话入口覆盖，从需求到提交 |
+| **47 Skills + 12 Agent 角色** | 完整会话入口覆盖，从需求到提交 |
 | **Skill Graph 引擎** | 动态 DAG 编排，意图自适应拓扑 (hotfix/feature/repair/research) |
 | **双入口设计** | CLI (`stdd`) + AI 编码工具斜杠命令 (`/stdd:*`) |
 | **实时进度追踪** | `stdd progress` 自动记录命令执行，崩溃后可断点续传 |
@@ -239,7 +237,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 ```bash
 # 核心流程
 stdd init / stdd init --force
-stdd new change <name> / stdd new spec <name>
+stdd new change <name>
 stdd ff <desc> / stdd turbo <desc> / stdd issue <desc>
 stdd spec <change> / stdd api-spec <change>
 stdd apply <change> [--phase] [--delegate] [--e2e-command "..."]
@@ -336,7 +334,7 @@ stdd-copilot/
 ├── src/templates/
 │   ├── skills/                  # 46 个 Skill 定义
 │   └── commands/                # 20 个斜杠命令模板
-├── __tests__/                   # 80 个测试套件
+├── __tests__/                   # 77 个测试套件
 ├── stdd/                        # 运行时工作目录
 │   ├── changes/                 # 变更管理
 │   ├── specs/                   # BDD 规格文件 (Source of Truth)

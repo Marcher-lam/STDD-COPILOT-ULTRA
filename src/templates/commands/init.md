@@ -26,7 +26,7 @@ Initializes the STDD project directory structure, creating the working directory
 4. Register project in engine configuration
 
 ## Referenced Skill
-- `/stdd-skills/1-proposal`
+- `/stdd:init`
 
 ## Output
 ```

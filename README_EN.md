@@ -4,7 +4,7 @@
 
 A **Skill Graph**-based full-lifecycle automation development framework that deeply integrates **Spec-First** with **TDD**.
 
-**Current baseline**: 80 test suites, 893 tests passed, zero npm audit vulnerabilities.
+**Current baseline**: 77 test suites, 863 tests passed, zero npm audit vulnerabilities.
 
 [**English**](./README_EN.md) · [**简体中文**](./README.md)
 
@@ -26,9 +26,7 @@ stdd status                  # Overall status
 stdd status add-dark-mode    # Specific change status
 
 stdd new change add-dark-mode
-stdd new spec auth
 stdd skills                  # List all skills
-stdd skills --phase 4        # Filter by phase
 stdd commands                # List slash commands
 
 stdd ff "add dark mode"      # Fast-forward
@@ -55,11 +53,11 @@ stdd progress --json         # JSON output
 stdd progress --clear        # Clear progress
 ```
 
-### All Slash Commands (58)
+### All Slash Commands (47)
 
 **Command Templates (20)**: `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm` `/stdd:spec` `/stdd:plan` `/stdd:apply` `/stdd:execute` `/stdd:verify` `/stdd:archive` `/stdd:final-doc` `/stdd:brainstorm` `/stdd:issue` `/stdd:constitution` `/stdd:ff` `/stdd:continue` `/stdd:explore` `/stdd:graph` `/stdd:turbo`
 
-**Skill Templates (38)**: `/stdd:api-spec` `/stdd:certainty` `/stdd:commit` `/stdd:complexity` `/stdd:context` `/stdd:contract` `/stdd:design` `/stdd:factory` `/stdd:guard` `/stdd:help` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:outside-in` `/stdd:parallel` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:supervisor` `/stdd:user-test` `/stdd:validate` `/stdd:vision`
+**Skill Templates (47)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:brainstorm` `/stdd:certainty` `/stdd:clarify` `/stdd:commit` `/stdd:complexity` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:design` `/stdd:execute` `/stdd:explore` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:fix-packet` `/stdd:graph` `/stdd:guard` `/stdd:help` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:plan` `/stdd:product-proposal` `/stdd:propose` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:spec` `/stdd:supervisor` `/stdd:turbo` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision`
 
 ---
 
@@ -104,7 +102,7 @@ stdd archive add-dark-mode
 init → new → propose → clarify → confirm → spec → plan → apply → verify → archive
   │                 │           │                                        │
   └── stdd ff ──────┘  AI clarifies  ──┘                              mutation
-                                                                       evidence
+                                                                        evidence
 ```
 
 | Scenario | Command Path |
@@ -122,7 +120,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | **Ralph Loop TDD** | 🔴 Red → Static Check → 🟢 Green → Mutation Review → 🔵 Refactor |
 | **5-Level Defense** | Confirm gates · Micro-task isolation · Failure rollback · Static quality · Pseudo-mutation |
 | **Constitution + Hook** | 9 articles + Pre/Post Hook auto-enforcement + Waiver tracking |
-| **38 Skills + 12 Agents** | Full session coverage from requirements to commit |
+| **47 Skills + 12 Agents** | Full session coverage from requirements to commit |
 | **Skill Graph** | Dynamic DAG orchestration with intent-adaptive topology |
 | **Dual Entry** | CLI (`stdd`) + AI tooling slash commands (`/stdd:*`) |
 | **Progress Tracking** | Real-time JSONL log, survives crashes, breakpoint resume |

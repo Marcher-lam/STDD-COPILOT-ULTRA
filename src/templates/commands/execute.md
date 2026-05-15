@@ -30,7 +30,7 @@ RED → CHECK → GREEN → MUTATION → REFACTOR
 If a task fails 3 consecutive times, the circuit breaker triggers and manual intervention is recommended.
 
 ## Referenced Skill
-- `/stdd-skills/4-implementation`
+- `/stdd:execute`
 
 ## Output
 - Implemented code files
