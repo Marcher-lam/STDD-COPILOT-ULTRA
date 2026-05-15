@@ -3,8 +3,8 @@
 > **验证项目**: EvoAgent — 强化学习/遗传算法的可进化 Agent 框架
 > **验证日期**: 2026-05-14
 > **验证环境**: Claude Code
-> **覆盖范围**: 20 个命令模板 + 37 个 Skill = 57 个斜杠命令入口
-> **测试用例数**: 89
+> **覆盖范围**: 20 个命令模板 + 38 个 Skill + 53 个 CLI 命令 = 69 个唯一入口
+> **测试用例数**: 109
 
 ---
 
@@ -1039,6 +1039,121 @@ git init && npm init -y
 
 ---
 
+# Part VIII: 补全 CLI 命令覆盖
+
+> 补全 12 个之前未覆盖的 CLI 命令：update / fix-packet / ci / starters / extensions / story / pipeline / tdd-init / audit / baby-steps / sudo run / start。
+
+### T98 — stdd update
+```bash
+! stdd update --dry-run
+```
+**预期产物**: 显示将要更新的文件列表，不实际写入
+**验证点**:
+- [ ] 输出 diff 列表或 "Already up to date"
+- [ ] `--dry-run` 模式未修改任何文件
+
+### T99 — stdd fix-packet
+```bash
+! stdd fix-packet
+```
+**预期产物**: 为当前变更生成 Golden Packet 风格的失败上下文
+**验证点**:
+- [ ] 检测当前活跃变更
+- [ ] 输出包含 task 描述、测试命令、环境信息
+
+### T100 — stdd ci
+```bash
+! stdd ci github
+```
+**预期产物**: 生成 `.github/workflows/ci.yml`
+**验证点**:
+- [ ] 文件存在且为合法 YAML
+- [ ] 包含 test、lint、verify 步骤
+
+### T101 — stdd starters
+```bash
+! stdd starters list
+```
+**预期产物**: 显示可用 starter 模板列表
+**验证点**:
+- [ ] 输出至少一个 starter 类型
+- [ ] 显示使用说明
+
+### T102 — stdd extensions
+```bash
+! stdd extensions list
+! stdd extensions validate
+```
+**预期产物**: 扩展列表 + 验证结果
+**验证点**:
+- [ ] `list` 显示已安装扩展 (可能为空)
+- [ ] `validate` 检查扩展结构合规
+
+### T103 — stdd story
+```bash
+! stdd story create evo-journey --persona "AI Researcher"
+```
+**预期产物**: `stdd/journeys/evo-journey.yaml` 故事映射文件
+**验证点**:
+- [ ] 生成 YAML 文件包含 persona、episodes、steps
+- [ ] 格式可被 `stdd story bdd` 解析
+
+### T104 — stdd pipeline
+```bash
+! stdd pipeline
+```
+**预期产物**: 从 specs 生成 parser IR 和验收测试骨架
+**验证点**:
+- [ ] 扫描活跃变更的 specs
+- [ ] 输出 pipeline IR 或测试骨架文件
+
+### T105 — stdd tdd-init
+```bash
+! stdd tdd-init --dry-run
+```
+**预期产物**: 显示将要生成的测试脚手架
+**验证点**:
+- [ ] 扫描 src/ 下的源文件
+- [ ] `--dry-run` 不写入文件
+
+### T106 — stdd audit
+```bash
+! stdd audit --json
+```
+**预期产物**: 历史合规审计报告 (JSON)
+**验证点**:
+- [ ] 输出合法 JSON
+- [ ] 包含 constitution 合规历史记录
+
+### T107 — stdd baby-steps
+```bash
+! stdd baby-steps "实现 Agent 通信总线"
+```
+**预期产物**: 交互式 TDD 小步引导
+**验证点**:
+- [ ] 检测到活跃变更
+- [ ] 输出 TDD 步骤提示 (或需要 TTY 交互)
+
+### T108 — stdd sudo run
+```bash
+! stdd sudo run evorl.sudo
+```
+**预期产物**: 执行 SudoLang 逻辑并返回验证结果
+**验证点**:
+- [ ] 文件不存在时输出错误信息
+- [ ] 文件存在时解析并执行伪代码逻辑
+
+### T109 — stdd start
+```bash
+! stdd start
+```
+**预期产物**: 非 TTY 环境输出帮助文本，TTY 环境启动交互向导
+**验证点**:
+- [ ] Claude Code 中 (`!` 前缀) 输出帮助文本
+- [ ] 终端中启动交互式 quick-start 向导
+
+---
+
 # 验证结果汇总
 
 | # | 命令 | 状态 | 备注 |
@@ -1140,12 +1255,25 @@ git init && npm init -y
 | T95 | `stdd progress --clear` | | |
 | T96 | 进度文件持久化验证 | | |
 | T97 | 中断恢复场景模拟 | | |
+| T98 | `stdd update --dry-run` | | |
+| T99 | `stdd fix-packet` | | |
+| T100 | `stdd ci github` | | |
+| T101 | `stdd starters list` | | |
+| T102 | `stdd extensions list/validate` | | |
+| T103 | `stdd story create` | | |
+| T104 | `stdd pipeline` | | |
+| T105 | `stdd tdd-init --dry-run` | | |
+| T106 | `stdd audit --json` | | |
+| T107 | `stdd baby-steps` | | |
+| T108 | `stdd sudo run` | | |
+| T109 | `stdd start` | | |
 
-**总计**: 97 个测试用例
+**总计**: 109 个测试用例
 - 斜杠命令: 81 个 (T01-T81)
 - 辅助 CLI: 8 个 (T82-T89)
 - 进度追踪: 8 个 (T90-T97)
-- 覆盖 20 个命令模板 + 37 个 Skill + 关键 CLI 命令 + 进度追踪
+- 补全 CLI: 12 个 (T98-T109)
+- 覆盖 20 个命令模板 + 38 个 Skill + 53 个 CLI 命令 + 进度追踪
 
 ---
 
@@ -1159,4 +1287,5 @@ Part IV   (T64-T75)  → 学习记忆: memory/learn/context/iterate
 Part V    (T76-T81)  → Constitution 治理
 Part VI   (T82-T89)  → 辅助 CLI 验证
 Part VII  (T90-T97)  → 实时进度追踪与断点续传
+Part VIII (T98-T109) → 补全 CLI 命令覆盖: update/fix-packet/ci/starters/extensions/story/pipeline/tdd-init/audit/baby-steps/sudo/start
 ```
