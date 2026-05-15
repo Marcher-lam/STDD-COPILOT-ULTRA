@@ -154,8 +154,8 @@ describe('UpdateCommand', () => {
     it('should skip files that were modified locally', async () => {
       const projectPath = createTempProject('modified-project');
 
-      const existingSkillsDir = path.join(projectPath, '.claude', 'skills');
-      const existingSkillDir = path.join(existingSkillsDir, 'stdd-init');
+      const existingSkillsDir = path.join(projectPath, '.claude', 'skills', 'stdd');
+      const existingSkillDir = path.join(existingSkillsDir, 'init');
       fs.mkdirSync(existingSkillDir, { recursive: true });
       fs.writeFileSync(
         path.join(existingSkillDir, 'SKILL.md'),
@@ -208,8 +208,8 @@ describe('UpdateCommand', () => {
     it('should overwrite all files including locally modified ones', async () => {
       const projectPath = createTempProject('force-project');
 
-      const existingSkillsDir = path.join(projectPath, '.claude', 'skills');
-      const existingSkillDir = path.join(existingSkillsDir, 'stdd-init');
+      const existingSkillsDir = path.join(projectPath, '.claude', 'skills', 'stdd');
+      const existingSkillDir = path.join(existingSkillsDir, 'init');
       fs.mkdirSync(existingSkillDir, { recursive: true });
       fs.writeFileSync(
         path.join(existingSkillDir, 'SKILL.md'),

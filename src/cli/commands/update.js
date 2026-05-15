@@ -244,13 +244,16 @@ class UpdateCommand {
       return summary;
     }
 
-    for (const engine of engineDirs) {
-      const targetDir = path.join(targetPath, engine, 'skills');
+    const stddSubdir = path.join(sourceDir, 'stdd');
+    const effectiveSourceDir = await this.exists(stddSubdir) ? stddSubdir : sourceDir;
 
-      const result = await this.syncSkillsDirectory(sourceDir, targetDir, {
+    for (const engine of engineDirs) {
+      const targetDir = path.join(targetPath, engine, 'skills', 'stdd');
+
+      const result = await this.syncSkillsDirectory(effectiveSourceDir, targetDir, {
         force: options.force,
         dryRun: options.dryRun,
-        scope: `skills:${engine}`
+        scope: `skills:${engine}:stdd`
       });
 
       summary.updated += result.updated;

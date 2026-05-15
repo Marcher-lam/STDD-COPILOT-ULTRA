@@ -32,7 +32,7 @@ stdd new change add-dark-mode
 stdd new spec auth
 
 ## 斜杠命令清单
-/stdd:init /stdd:new /stdd:propose /stdd:clarify /stdd:confirm /stdd:spec /stdd:plan /stdd:apply /stdd:execute /stdd:verify /stdd:archive /stdd:final-doc /stdd:brainstorm /stdd:issue /stdd:constitution /stdd:ff /stdd:continue /stdd:explore /stdd:graph /stdd:turbo /stdd:api-spec /stdd:certainty /stdd:commit /stdd:complexity /stdd:context /stdd:contract /stdd:design /stdd:factory /stdd:guard /stdd:help /stdd:iterate /stdd:learn /stdd:memory /stdd:metrics /stdd:mock /stdd:mutation /stdd:outside-in /stdd:parallel /stdd:prp /stdd:roles /stdd:schema /stdd:supervisor /stdd:user-test /stdd:validate /stdd:vision
+/stdd:init /stdd:new /stdd:propose /stdd:clarify /stdd:confirm /stdd:spec /stdd:plan /stdd:apply /stdd:execute /stdd:verify /stdd:archive /stdd:final-doc /stdd:brainstorm /stdd:issue /stdd:constitution /stdd:ff /stdd:continue /stdd:explore /stdd:graph /stdd:turbo /stdd:api-spec /stdd:certainty /stdd:commit /stdd:complexity /stdd:context /stdd:contract /stdd:design /stdd:factory /stdd:guard /stdd:help /stdd:iterate /stdd:learn /stdd:memory /stdd:metrics /stdd:mock /stdd:mutation /stdd:outside-in /stdd:parallel /stdd:product-proposal /stdd:prp /stdd:roles /stdd:schema /stdd:supervisor /stdd:user-test /stdd:validate /stdd:vision
 
 ## Graph Runtime 补强
 

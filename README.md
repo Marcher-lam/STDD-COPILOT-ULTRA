@@ -80,11 +80,11 @@ stdd progress --clear        # 清空进度
 
 ## 核心特性
 
-### 全部斜杠命令 (58 个)
+### 全部斜杠命令 (59 个)
 
 **Command 模板 (20)**: `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm` `/stdd:spec` `/stdd:plan` `/stdd:apply` `/stdd:execute` `/stdd:verify` `/stdd:archive` `/stdd:final-doc` `/stdd:brainstorm` `/stdd:issue` `/stdd:constitution` `/stdd:ff` `/stdd:continue` `/stdd:explore` `/stdd:graph` `/stdd:turbo`
 
-**Skill 模板 (38)**: `/stdd:api-spec` `/stdd:certainty` `/stdd:commit` `/stdd:complexity` `/stdd:context` `/stdd:contract` `/stdd:design` `/stdd:factory` `/stdd:guard` `/stdd:help` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:outside-in` `/stdd:parallel` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:supervisor` `/stdd:user-test` `/stdd:validate` `/stdd:vision`
+**Skill 模板 (46)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:brainstorm` `/stdd:certainty` `/stdd:clarify` `/stdd:commit` `/stdd:complexity` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:contract` `/stdd:design` `/stdd:execute` `/stdd:explore` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:graph` `/stdd:guard` `/stdd:help` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:plan` `/stdd:product-proposal` `/stdd:propose` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:spec` `/stdd:supervisor` `/stdd:turbo` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision`
 
 | 特性 | 描述 |
 |------|------|
@@ -92,7 +92,7 @@ stdd progress --clear        # 清空进度
 | **Ralph Loop TDD** | 🔴红灯 (生成测试) → 静态检查 → 🟢绿灯 (实现) → 变异审查 → 🔵重构 |
 | **5 级防跑偏防御** | 人机确认门 · 微任务隔离 · 连续失败回滚 · 静态质检门 · 伪变异审查 |
 | **Constitution + Hook** | 9 篇开发条例 + Pre/Post Hook 自动执行 + 豁免审计追踪 |
-| **38 Skills + 12 Agent 角色** | 完整会话入口覆盖，从需求到提交 |
+| **46 Skills + 12 Agent 角色** | 完整会话入口覆盖，从需求到提交 |
 | **Skill Graph 引擎** | 动态 DAG 编排，意图自适应拓扑 (hotfix/feature/repair/research) |
 | **双入口设计** | CLI (`stdd`) + AI 编码工具斜杠命令 (`/stdd:*`) |
 | **实时进度追踪** | `stdd progress` 自动记录命令执行，崩溃后可断点续传 |
@@ -334,7 +334,7 @@ stdd-copilot/
 │   │   └── ...
 │   └── types/                   # TypeScript/JSDoc 类型定义
 ├── src/templates/
-│   ├── skills/                  # 38 个 Skill 定义
+│   ├── skills/                  # 46 个 Skill 定义
 │   └── commands/                # 20 个斜杠命令模板
 ├── __tests__/                   # 80 个测试套件
 ├── stdd/                        # 运行时工作目录

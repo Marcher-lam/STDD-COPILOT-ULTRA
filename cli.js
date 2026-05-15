@@ -58,7 +58,8 @@ const {
   SudoExecutor,
   ElicitationCommand,
   BrowserDoctor,
-  createAgentExecutor
+  createAgentExecutor,
+  ProductProposalCommand
 } = require('./src/cli/commands/index');
 
 // ... (keep existing imports)
@@ -1068,6 +1069,19 @@ program.command('doctor')
   .action((options) => {
     const { DoctorCommand } = require('./src/cli/commands/doctor');
     new DoctorCommand().execute(options);
+  });
+
+program.command('product-proposal')
+  .description('Generate a comprehensive product proposal report from all project artifacts')
+  .option('--output <path>', 'Output file path (default: PRODUCT-PROPOSAL.md)')
+  .option('--json', 'Output structured JSON instead of Markdown')
+  .action((options) => {
+    try {
+      new ProductProposalCommand().execute(options);
+    } catch (error) {
+      console.error(chalk.red(error.message));
+      process.exit(1);
+    }
   });
 
 // Global progress tracking via Commander hooks — only active when stdd/ exists

@@ -52,4 +52,5 @@ module.exports = {
   createAgentExecutor: require('../../runtime/agents').createAgentExecutor,
   StartCommand: require('./start').StartCommand,
   DoctorCommand: require('./doctor').DoctorCommand,
+  ProductProposalCommand: require('./product-proposal').ProductProposalCommand,
 };

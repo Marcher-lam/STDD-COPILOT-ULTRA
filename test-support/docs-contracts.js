@@ -31,12 +31,17 @@ const COMMAND_FILE_BACKED_ENTRIES = [
 const SKILL_DRIVEN_ENTRIES = [
   '/stdd:api-spec',
   '/stdd:certainty',
+  '/stdd:clarify',
   '/stdd:commit',
   '/stdd:complexity',
+  '/stdd:confirm',
+  '/stdd:constitution',
   '/stdd:context',
   '/stdd:contract',
   '/stdd:design',
+  '/stdd:execute',
   '/stdd:factory',
+  '/stdd:final-doc',
   '/stdd:guard',
   '/stdd:help',
   '/stdd:iterate',
@@ -47,12 +52,16 @@ const SKILL_DRIVEN_ENTRIES = [
   '/stdd:mutation',
   '/stdd:outside-in',
   '/stdd:parallel',
+  '/stdd:plan',
+  '/stdd:product-proposal',
+  '/stdd:propose',
   '/stdd:prp',
   '/stdd:roles',
   '/stdd:schema',
   '/stdd:supervisor',
   '/stdd:user-test',
   '/stdd:validate',
+  '/stdd:verify',
   '/stdd:vision'
 ];
 
@@ -94,10 +103,12 @@ function getSlashEntriesFromCommandFiles() {
 }
 
 function getSlashEntriesFromSkillDirs() {
-  const dir = path.join(REPO_ROOT, 'src', 'templates', 'skills');
+  const dir = path.join(REPO_ROOT, 'src', 'templates', 'skills', 'stdd');
   return fs.readdirSync(dir)
-    .filter(name => name.startsWith('stdd-'))
-    .map(name => `/stdd:${name.replace(/^stdd-/, '')}`)
+    .filter(name => {
+      try { return fs.statSync(path.join(dir, name)).isDirectory(); } catch { return false; }
+    })
+    .map(name => `/stdd:${name}`)
     .sort();
 }
 

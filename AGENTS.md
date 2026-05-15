@@ -4,7 +4,7 @@
 
 ---
 
-## 全部能力入口 (45 个 = 20 Command 模板 + 38 Skill 模板，去重后)
+## 全部能力入口 (46 个 = 20 Command 模板 + 46 Skill 模板，去重后)
 
 ### Command 模板入口 (20)
 - `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm`
@@ -501,6 +501,7 @@ cat stdd/changes/<change>/evidence/fix-packet-*.md  # 分析失败原因
 ### 协作与文档
 `/stdd:commit` `/stdd:final-doc` `/stdd:design` `/stdd:prp` `/stdd:supervisor`
 `/stdd:context` `/stdd:iterate` `/stdd:memory` `/stdd:parallel` `/stdd:roles`
+`/stdd:product-proposal`
 
 ### 评估与学习
 `/stdd:metrics` `/stdd:learn` `/stdd:certainty` `/stdd:complexity` `/stdd:vision`

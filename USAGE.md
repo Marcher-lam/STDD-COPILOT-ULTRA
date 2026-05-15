@@ -590,6 +590,7 @@ stdd hooks enable            # 恢复 Hooks
 | Certainty | `/stdd:certainty` | 5 维度置信度评分 |
 | Complexity | `/stdd:complexity` | APP Mass 代码质量计算 |
 | Vision | `/stdd:vision` | 项目愿景文档管理 |
+| Product Proposal | `/stdd:product-proposal` | 从所有产物生成产品方案报告 |
 | User Test | `/stdd:user-test` | 用户测试脚本生成 |
 | Help | `/stdd:help` | 上下文感知帮助系统 |
 | Final Doc | `/stdd:final-doc` | 生成最终文档 |

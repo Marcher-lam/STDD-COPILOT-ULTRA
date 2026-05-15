@@ -351,10 +351,10 @@ ${workspaceSection}
   
   
   async copySkills(targetPath, selectedAgents) {
-    const sourceDir = path.join(getPackageRoot(), 'src', 'templates', 'skills');
+    const sourceDir = path.join(getPackageRoot(), 'src', 'templates', 'skills', 'stdd');
 
     for (const agent of selectedAgents) {
-      const targetDir = path.join(targetPath, agent, 'skills');
+      const targetDir = path.join(targetPath, agent, 'skills', 'stdd');
       if (await this.exists(sourceDir)) {
         await fs.mkdir(targetDir, { recursive: true });
         await fs.cp(sourceDir, targetDir, { recursive: true });
