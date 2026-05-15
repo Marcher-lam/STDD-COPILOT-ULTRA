@@ -22,6 +22,7 @@ All notable changes to STDD Copilot will be documented in this file.
 - **TypeScript Type Definitions**: JSDoc types for core interfaces
 - **Command Registry**: Centralized command management for dynamic loading
 - **Session Progress Tracking** (`stdd progress`): Real-time JSONL progress log for all CLI commands, survives terminal close/crash, supports breakpoint resume via `--resume`, SIGINT/SIGTERM signal capture, automatic truncation at 5000 entries
+- **Product Proposal Generator** (`stdd product-proposal`): Scans all `stdd/` artifacts (vision, proposals, specs, designs, tasks, evidence, progress) and generates a 15-section product proposal report (`PRODUCT-PROPOSAL.md`) with artifact coverage, quality metrics, PM capability matrix, and roadmap
 - **Logging System**: Multi-level structured logging with rotation
 - **`stdd start`**: Interactive quick-start wizard for new users
 - **`stdd doctor`**: Project health diagnostics (10 checks: STDD dir, config, Node.js version, git hooks, etc.)

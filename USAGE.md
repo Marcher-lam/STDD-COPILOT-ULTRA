@@ -508,6 +508,10 @@ stdd hooks verify            # 验证 Hooks
 stdd hooks status            # 查看 Hooks 状态
 stdd hooks disable           # 禁用 Hooks
 stdd hooks enable            # 恢复 Hooks
+
+stdd product-proposal        # 聚合所有产物生成产品方案报告 (15 章节)
+stdd product-proposal --json # JSON 结构化输出
+stdd product-proposal --output my-report.md  # 自定义输出路径
 ```
 
 ### 核心流程 (斜杠命令)

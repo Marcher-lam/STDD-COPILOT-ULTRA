@@ -1,15 +1,17 @@
 # STDD Copilot 系统架构
 
-version: "2.2"
-last_updated: "2026-05-14"
+version: "2.3"
+last_updated: "2026-05-15"
 
 ## 概述
 
-STDD Copilot 是一套基于 **Skill Graph（技能图谱）** 的全链路自动化开发框架，将 **Spec-First (需求规范优先)** 与 **TDD (测试驱动开发)** 深度融合。包含 47 个 Skills、12 个 Agent 角色、9 篇 Constitution 条例、Hook Enforcement System，以及已 CLI 化的 change/spec/apply/verify/archive、Constitution、Graph、workspace、metrics、context、CI 和 starter 工作流。
+STDD Copilot 基于 Skill Graph (技能图谱) 将 Spec-First 与 TDD 深度融合。包含 47 个 Skills、12 个 Agent 角色、9 篇 Constitution 条例、Hook Enforcement System，以及 57 个 CLI 命令。
 
-架构边界：CLI 负责产物生成、测试执行、mutation evidence、证据采集、质量门禁和工作区编排；真实 AI 自动编码、多 Agent runtime、contract/mock/factory 等仍由 Skill 和外部 AI 执行器承载。quick mutation 是启发式 anti-fake-green 检查；真实 mutation 依赖项目安装并配置 Stryker，STDD 不宣称内置完整跨语言 mutation 引擎。
+**架构边界**: CLI 负责产物生成、测试执行、mutation evidence、证据采集、质量门禁和工作区编排。真实 AI 自动编码、多 Agent runtime、contract/mock/factory 等仍由 Skill 和外部 AI 执行器承载。Quick mutation 是启发式 anti-fake-green 检查；真实 mutation 依赖项目安装并配置 Stryker。
 
-最新运行时补强：`stdd fix-packet [change]` 已提供 Golden Packet 风格失败修复上下文，`stdd outside-in init/scaffold/status` 已提供 layer registry 与 E2E/集成/单元测试骨架。Dynamic Skill Graph 已将 `stdd-outside-in` 纳入 feature intent，并新增 repair intent：`stdd-fix-packet → stdd-apply → stdd-verify`。系统级模块新增：`file-walker.js` (共享目录遍历)、`logger.js` (多级日志 + 轮转)、`security.js` (输入清理 + 密钥检测 + 路径安全)、`command-registry.js` (集中式命令定义)、`command-loader.js` (动态命令加载)、`types/index.js` (TypeScript/JSDoc 类型定义)、`session-progress.js` (实时进度追踪 + 断点续传)。当前完整测试基线为 `npm test`，80 个测试套件、893 个测试通过，npm audit 零漏洞。
+**运行时模块**: `file-walker.js` (共享目录遍历)、`logger.js` (多级日志 + 轮转)、`security.js` (输入清理 + 密钥检测 + 路径安全)、`command-registry.js` (集中式命令定义)、`command-loader.js` (动态命令加载)、`types/index.js` (TypeScript/JSDoc 类型定义)、`session-progress.js` (实时进度追踪 + 断点续传)。
+
+**测试基线**: `npm test`，80 个测试套件、893 个测试通过，npm audit 零漏洞。
 
 ---
 
@@ -267,6 +269,7 @@ graph TB
 | `/stdd:vision` | 文档 | 项目愿景文档管理 |
 | `/stdd:user-test` | 测试 | 用户测试脚本生成 |
 | `/stdd:help` | 帮助 | 上下文感知帮助系统 |
+| `/stdd:product-proposal` | 文档 | 聚合所有产物生成 15 章产品方案报告 (`stdd product-proposal`) |
 
 ---
 

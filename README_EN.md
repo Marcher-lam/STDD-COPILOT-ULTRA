@@ -2,9 +2,9 @@
 
 **Specification & Test-Driven Development Copilot**
 
-A **Skill Graph**-based full-lifecycle automation development framework that deeply integrates **Spec-First** with **TDD**.
+A Skill Graph-based development framework that integrates Spec-First with TDD.
 
-**Current baseline**: 77 test suites, 863 tests passed, zero npm audit vulnerabilities.
+80 test suites, 893 tests passed, zero npm audit vulnerabilities.
 
 [**English**](./README_EN.md) · [**简体中文**](./README.md)
 
@@ -223,18 +223,8 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 
 ## Contributing
 
-Issues and Pull Requests are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md).
+Issues and Pull Requests are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
 [MIT License](LICENSE)
-
----
-
-<div align="center">
-
-**STDD Copilot** — Your AI pair-programming expert that never drifts
-
-Made with ❤️ by [Marcher-lam](https://github.com/Marcher-lam)
-
-</div>
