@@ -361,7 +361,7 @@ class ApplyCommand {
     writeLog(changeDir, logEntry);
 
     if (resultStatus === 'failed') {
-      process.exit(1);
+      process.exitCode = 1;
     }
   }
 
@@ -376,7 +376,8 @@ class ApplyCommand {
     if (testCommands.length === 0) {
       console.log(chalk.red(`\n❌ RED Phase requires test commands to be configured.`));
       console.log(chalk.yellow(`  Please add a test command in stdd/config.yaml or pass --test-command`));
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     // Run tests - they MUST fail in RED phase
@@ -388,7 +389,8 @@ class ApplyCommand {
       console.log(chalk.red(`\n❌ RED Phase Violation: ${passedTests.length} test(s) passed when they should fail!`));
       console.log(chalk.yellow(`  TDD requires tests to fail first before implementation.`));
       console.log(chalk.yellow(`  Please write a failing test for the new behavior.`));
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     console.log(chalk.green(`\n✅ Tests failed as expected (RED phase)`));
@@ -476,7 +478,8 @@ class ApplyCommand {
         workspaces: testResults,
         status: 'failed',
       });
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
   }
 
@@ -523,7 +526,8 @@ class ApplyCommand {
         workspaces: testResults,
         status: 'failed',
       });
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
   }
 
@@ -574,4 +578,4 @@ class ApplyCommand {
   }
 }
 
-module.exports = { ApplyCommand, findActiveChange, parseTasks, pickTask };
+module.exports = { ApplyCommand };

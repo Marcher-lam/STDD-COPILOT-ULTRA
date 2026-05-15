@@ -6,6 +6,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const chalk = require('chalk');
+const { validateChangeName } = require('../../utils/change-utils');
 
 class NewCommand {
   constructor(spinner) {
@@ -23,25 +24,8 @@ class NewCommand {
     }
   }
 
-  /**
-   * 校验名称合法性：防路径遍历、非法字符、长度
-   */
   validateName(name) {
-    if (!name || typeof name !== 'string') {
-      throw new Error('Name is required.');
-    }
-    if (name.length > 128) {
-      throw new Error(`Name too long: ${name.length} characters (max 128).`);
-    }
-    if (name !== path.basename(name)) {
-      throw new Error(`Invalid name '${name}': must not contain path separators.`);
-    }
-    if (/\.\./.test(name)) {
-      throw new Error(`Invalid name '${name}': path traversal not allowed.`);
-    }
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name)) {
-      throw new Error(`Invalid name '${name}': only alphanumeric, hyphens, underscores, and dots are allowed.`);
-    }
+    validateChangeName(name);
   }
 
   async createChange(name, options = {}) {

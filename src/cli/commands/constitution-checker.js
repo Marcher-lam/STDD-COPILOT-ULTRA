@@ -293,14 +293,13 @@ class ConstitutionChecker {
   }
 
   _buildDepModuleMap(pkgJsonPath) {
-    // Parse package.json to extract dependency information
     try {
       const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
       const allDeps = {
         ...((pkgJson && pkgJson.dependencies) || {}),
         ...((pkgJson && pkgJson.devDependencies) || {}),
       };
-      return new Map(Object.entries(allDeps).map(([name, version]) => [name, version]));
+      return new Map(Object.keys(allDeps).map(name => [name, name]));
     } catch (_) {
       return new Map();
     }
@@ -463,7 +462,7 @@ class ConstitutionChecker {
 
         // Check if task has phase marker
         const hasPhase = /\[phase:(\w+)\]/.test(line);
-        const isPending = /\[\s*~?\s*\]/.test(line);
+        const isPending = /\[ \]/.test(line);
 
         if (isPending && !hasPhase) {
           this.issues.warning.push({
@@ -701,10 +700,6 @@ class ConstitutionChecker {
     const allLockfiles = jsLockfiles.concat(pyLockfiles);
 
     let hasAnyLockfile = allLockfiles.some(f => fs.existsSync(path.join(this.cwd, f)));
-
-    if (!hasAnyLockfile && this.workspaces.length === 0) {
-      hasAnyLockfile = allLockfiles.some(f => fs.existsSync(path.join(this.cwd, f)));
-    }
 
     if (!hasAnyLockfile) {
       this.issues.warning.push({
@@ -1119,28 +1114,27 @@ class ConstitutionChecker {
         const lines = content.split('\n');
         let nestingDepth = 0;
         let loopStack = [];
+        let reportedNestedAt = new Set();
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
-          // Detect loop openings
           const loopStarts = [...line.matchAll(/(?<!\w)(?:for\s*\(|forEach\s*\()/g)];
           for (const _ of loopStarts) {
             nestingDepth++;
-            loopStack.push(i + 1);  // track which line the loop started
+            loopStack.push(i + 1);
           }
-          // Report deeply nested loops
           if (nestingDepth >= 2) {
-            this.issues.warning.push({
-              article: 8,
-              name: 'Performance',
-              message: `Detected potential performance issue: Nested loop at ${relPath}:${i + 1} (depth: ${nestingDepth}). Consider optimizing with Map/Set or early exit.`
-            });
+            const key = `${relPath}:${loopStack[loopStack.length - 1]}`;
+            if (!reportedNestedAt.has(key)) {
+              reportedNestedAt.add(key);
+              this.issues.warning.push({
+                article: 8,
+                name: 'Performance',
+                message: `Detected potential performance issue: Nested loop at ${relPath}:${loopStack[loopStack.length - 1]} (depth: ${nestingDepth}). Consider optimizing with Map/Set or early exit.`
+              });
+            }
           }
-          // Detect loop closings (lines with just closing braces)
           const strippedLine = line.replace(/\/\/.*/, '').trim();
-          // Count closing braces that are on their own line or end with });
           if ((strippedLine === '}' || strippedLine.endsWith('});')) && nestingDepth > 0) {
-            // Heuristic: if there's no loop start on this line and we see closing braces,
-            // we're likely closing a loop body
             if (loopStarts.length === 0) {
               nestingDepth--;
               loopStack.pop();
@@ -1265,7 +1259,7 @@ class ConstitutionChecker {
     let foundCITypes = [];
     for (const ci of ciConfigs) {
       const fullPath = path.join(this.cwd, ci.path);
-      const exists = ci.isDir ? fs.existsSync(fullPath) : fs.existsSync(fullPath);
+      const exists = fs.existsSync(fullPath);
       if (exists) {
         foundCI = true;
         foundCITypes.push(ci.name);

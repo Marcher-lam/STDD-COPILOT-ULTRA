@@ -43,6 +43,7 @@ stdd/evidence/
 stdd/progress.jsonl
 stdd/runtime/agent-state.json
 stdd/runtime/agent-turns.jsonl
+stdd/reports/
 
 # Benchmark results
 benchmark-results.json

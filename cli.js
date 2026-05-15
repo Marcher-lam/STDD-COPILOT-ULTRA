@@ -537,7 +537,22 @@ Supported actions: show, check
   .action(async (action = 'show', target, options) => {
     try {
       if (action === 'check') {
-        await new ConstitutionChecker().run();
+        const issues = await new ConstitutionChecker().run();
+        const hasBlocking = issues.blocking.length > 0;
+        const hasWarning = issues.warning.length > 0;
+        for (const b of issues.blocking) {
+          console.log(chalk.red(`✗ Article ${b.article} (${b.name}): ${b.message}`));
+        }
+        for (const w of issues.warning) {
+          console.log(chalk.yellow(`⚠ Article ${w.article} (${w.name}): ${w.message}`));
+        }
+        for (const i of issues.info) {
+          console.log(chalk.blue(`ℹ Article ${i.article} (${i.name}): ${i.message}`));
+        }
+        if (!hasBlocking && !hasWarning) {
+          console.log(chalk.green('All constitution checks passed.'));
+        }
+        if (hasBlocking) process.exitCode = 1;
       } else if (action === 'status') {
         await new ConstitutionStatusCommand().execute(options);
       } else if (action === 'fix') {
@@ -1039,7 +1054,11 @@ program
 program.command('start')
   .description('Interactive quick-start wizard')
   .action(async () => {
-    const { StartCommand } = require('./src/cli/commands/start');
+    const { StartCommand, HELP_TEXT } = require('./src/cli/commands/start');
+    if (!process.stdin.isTTY) {
+      console.log(HELP_TEXT);
+      return;
+    }
     await new StartCommand().execute({});
   });
 
