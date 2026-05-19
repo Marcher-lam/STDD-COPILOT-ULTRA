@@ -1,21 +1,21 @@
 # STDD Copilot 边际优化追踪
 
-> Last Updated: 2026-05-19 | Round 24 完成 — Branch 90%+ 已达成
+> Last Updated: 2026-05-19 | Round 28 完成
 
 ## 当前质量基线
 
 ```
-Test Suites: 165 passed
-Tests:       3667 passed (100%)
-Coverage:    97.18% Stmts | 90.19% Branch | 96.94% Funcs | 97.71% Lines
+Test Suites: 171 passed
+Tests:       3810 passed (100%)
+Coverage:    97.33% Stmts | 91.03% Branch | 97.15% Funcs | 97.87% Lines
 ```
 
-## 24 轮优化累计改动
+## 28 轮优化累计改动
 
 | 类别 | 数量 |
 |------|------|
-| 新增测试用例 | +1132 (2535→3667) |
-| 新增测试套件 | +37 (128→165) |
+| 新增测试用例 | +1275 (2535→3810) |
+| 新增测试套件 | +43 (128→171) |
 | 空 catch 块修复 | 52 |
 | process.exit → exitCode | 14 |
 | TODO → 数据驱动实现 | 6 |
