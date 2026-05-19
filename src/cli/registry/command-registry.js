@@ -551,6 +551,16 @@ const commandRegistry = [
       },
     ],
   },
+  {
+    name: 'product-proposal',
+    description: 'Generate a structured product proposal document',
+    options: [
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'ProductProposalCommand',
+    spinner: 'Generating product proposal',
+    success: 'Product proposal generated!',
+  },
 ];
 
 module.exports = { commandRegistry };

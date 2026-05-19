@@ -39,7 +39,7 @@ class VerifyCommand {
     if (!changeDir) {
       throw new Error(resolvedName
         ? `Change '${resolvedName}' not found.`
-        : 'No active changes found.'
+        : 'No active changes found. Create one with `stdd new change <name>`.'
       );
     }
 
@@ -85,8 +85,15 @@ class VerifyCommand {
 
         let result = runCommand(testCmd, testCommand.cwd, testEnv);
 
+        if (result.status !== 0 && result.error) {
+          result.stderr = (result.stderr || '') + `\nCommand error: ${result.error.message}`;
+        }
+
         if (result.status !== 0 && injected.command !== testCommand.command) {
           result = runCommand(testCommand.command, testCommand.cwd);
+          if (result.error) {
+            result.stderr = (result.stderr || '') + `\nCommand error: ${result.error.message}`;
+          }
         }
 
         const testResult = {
@@ -95,8 +102,8 @@ class VerifyCommand {
           cwd: testCommand.cwd,
           command: testCommand.command,
           passed: result.status === 0,
-          output: result.stdout,
-          error: result.stderr,
+          output: (result.stdout || ''),
+          error: (result.stderr || ''),
         };
         const workspaceScope = commandToWorkspaceScope(cwd, testCommand);
         if (workspaceScope) {
@@ -177,7 +184,7 @@ class VerifyCommand {
       workspace: requestedWorkspace || null,
     });
     if (mutationEvidence) {
-      const score = mutationEvidence.data.mutationScore !== undefined ? mutationEvidence.data.mutationScore : mutationEvidence.data.score;
+      const score = (mutationEvidence.data.mutationScore !== undefined && mutationEvidence.data.mutationScore !== null) ? mutationEvidence.data.mutationScore : (mutationEvidence.data.score ?? null);
       report.mutation = {
         status: mutationEvidence.data.status,
         score,
@@ -237,18 +244,18 @@ class VerifyCommand {
       nodeVersion: process.version,
       cwd,
     };
-    const workspaceResults = report.tests && Array.isArray(report.tests.workspaces)
+    const evidenceWorkspaceResults = report.tests && Array.isArray(report.tests.workspaces)
       ? report.tests.workspaces.map(result => result.workspace).filter(Boolean)
       : [];
     if (requestedWorkspace) {
       metadata.workspace = requestedWorkspace;
       report.workspace = requestedWorkspace;
-    } else if (workspaceResults.length === 1) {
-      metadata.workspace = workspaceResults[0];
-      report.workspace = workspaceResults[0];
-    } else if (workspaceResults.length > 1) {
-      metadata.workspaces = workspaceResults;
-      report.workspaces = workspaceResults;
+    } else if (evidenceWorkspaceResults.length === 1) {
+      metadata.workspace = evidenceWorkspaceResults[0];
+      report.workspace = evidenceWorkspaceResults[0];
+    } else if (evidenceWorkspaceResults.length > 1) {
+      metadata.workspaces = evidenceWorkspaceResults;
+      report.workspaces = evidenceWorkspaceResults;
     }
     const evidenceReport = capture.captureVerify('verify', report, metadata);
     const evidencePath = capture.saveToFile(evidenceReport, changeDir, 'verify');

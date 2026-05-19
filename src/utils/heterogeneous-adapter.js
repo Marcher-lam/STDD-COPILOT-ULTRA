@@ -2,6 +2,8 @@ const fs = require('fs');
 const yaml = require('js-yaml');
 const path = require('path');
 const { getPackageRoot } = require('./path-resolver');
+const { createLogger } = require('./logger');
+const logger = createLogger('heterogeneous-adapter');
 
 /**
  * HeterogeneousAdapter - 异构引擎适配层
@@ -169,7 +171,8 @@ class HeterogeneousAdapter {
         }
       }
       return engines;
-    } catch {
+    } catch (err) {
+      if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
       return {};
     }
   }
@@ -186,10 +189,11 @@ class HeterogeneousAdapter {
   _isEnabled(engine) {
     const val = engine.enabled;
     if (typeof val === 'string') {
-      // 环境变量格式 "${VAR:-default}"
       const match = val.match(/\$\{(\w+):-(\w+)\}/);
       if (match) {
-        return process.env[match[1]] !== 'false' && match[2] !== 'false';
+        const envVal = process.env[match[1]];
+        const effectiveVal = envVal !== undefined ? envVal : match[2];
+        return effectiveVal !== 'false';
       }
       return val === 'true';
     }

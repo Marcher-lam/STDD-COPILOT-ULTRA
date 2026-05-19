@@ -63,4 +63,35 @@ describe('PipelineCommand', () => {
     const result = cmd.execute('my-change');
     expect(result.status).toBe('generated');
   });
+
+  it('uses process.cwd() when no cwd argument is given', () => {
+    const cmd = new PipelineCommand();
+    expect(cmd.cwd).toBe(process.cwd());
+  });
+
+  it('uses fallback empty string when changeName is given but change dir does not exist', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-pipeline-nullchange-'));
+    const stdd = path.join(tmp, 'stdd');
+    fs.mkdirSync(path.join(stdd, 'changes'), { recursive: true });
+    // Create specs at the fallback path so the command does not throw
+    // When changeDir is null, specsDir = path.join('', 'specs') = 'specs' (relative)
+    // That won't exist, so the command throws — which is expected.
+    const cmd = new PipelineCommand(tmp);
+    expect(() => cmd.execute('nonexistent-change')).toThrow(/Spec directory not found/);
+  });
+
+  it('prints JSON output when options.json is true', () => {
+    const tmp = setupWithSpecs();
+    const cmd = new PipelineCommand(tmp);
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const result = cmd.execute(null, { json: true });
+      expect(result.status).toBe('generated');
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('"status": "generated"')
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
 });

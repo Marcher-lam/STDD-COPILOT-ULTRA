@@ -8,6 +8,8 @@ const path = require('path');
 const chalk = require('chalk');
 const { detectWorkspaces } = require('../../utils/workspace-detector');
 const { evidenceMatchesWorkspace, extractEvidenceWorkspaceRefs } = require('../../utils/workspace-scope');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('audit');
 
 const ARTICLE_NAMES = {
   1: 'Library-First',
@@ -97,7 +99,8 @@ class AuditCommand {
   _evidenceFileMatchesWorkspace(filePath, workspace) {
     try {
       return evidenceMatchesWorkspace(JSON.parse(fs.readFileSync(filePath, 'utf-8')), workspace);
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
   }
@@ -114,7 +117,8 @@ class AuditCommand {
       let data;
       try {
         data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      } catch {
+      } catch (err) {
+        logger.warn(err.message);
         continue;
       }
 

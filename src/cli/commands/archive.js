@@ -8,6 +8,8 @@ const path = require('path');
 const chalk = require('chalk');
 const { findActiveChange, checkTasksCompletion } = require('../../utils/change-utils');
 const { detectWorkspaces } = require('../../utils/workspace-detector');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('archive');
 
 function extractProposalTitle(content) {
   if (!content) return 'Unknown';
@@ -54,7 +56,8 @@ function findLatestEvidence(changeDir) {
   const filePath = path.join(evidenceDir, files[0]);
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  } catch {
+  } catch (err) {
+    logger.warn(err.message);
     return null;
   }
 }
@@ -222,7 +225,7 @@ class ArchiveCommand {
     if (!changeDir) {
       throw new Error(resolvedName
         ? `Change '${resolvedName}' not found.`
-        : 'No active changes found.'
+        : 'No active changes found. Create one with `stdd new change <name>`.'
       );
     }
 

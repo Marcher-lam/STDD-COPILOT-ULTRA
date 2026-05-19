@@ -5,6 +5,8 @@ const { execSync } = require('child_process');
 const { MemoryScanner } = require('./memory-scan');
 const { resolveWorkspace } = require('../../utils/workspace-detector');
 const { workspaceToScope } = require('../../utils/workspace-scope');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('context');
 
 const LAYERS = ['foundation', 'components', 'contracts'];
 
@@ -107,21 +109,21 @@ class ContextCommand {
       if (clipCmd) {
         try {
           execSync(clipCmd, { input: outputStr, timeout: 3000 });
-          console.error(`✓ Copied to clipboard (${process.platform})`);
+          logger.info(`Copied to clipboard (${process.platform})`);
         } catch (err) {
-          console.error(chalk.yellow(`⚠ Clipboard copy failed on ${process.platform}. Try: echo '...' | ${clipCmd}`));
+          logger.warn(`Clipboard copy failed on ${process.platform}. Try: echo '...' | ${clipCmd}`);
           process.stdout.write(outputStr);
           return outputStr;
         }
       } else {
-        console.error(chalk.yellow(`⚠ Clipboard not supported on ${process.platform}. Output to stdout instead.`));
+        logger.warn(`Clipboard not supported on ${process.platform}. Output to stdout instead.`);
         process.stdout.write(outputStr);
         return outputStr;
       }
     } else if (output) {
       const outPath = path.resolve(output);
       await fs.writeFile(outPath, outputStr, 'utf-8');
-      console.error(`✓ Written to ${outPath}`);
+      logger.info(`Written to ${outPath}`);
     } else {
       process.stdout.write(outputStr);
     }

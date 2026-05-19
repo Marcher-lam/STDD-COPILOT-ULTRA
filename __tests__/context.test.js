@@ -392,4 +392,359 @@ describe('ContextCommand', () => {
       expect(result.workspace).toBeNull();
     });
   });
+
+  // ---- 以下为补充测试，覆盖未覆盖分支 ----
+
+  describe('resolveWorkspaceOption', () => {
+    // 行49：workspace 为 object 时直接返回
+    it('应直接返回 workspace 对象（不再 resolve）', async () => {
+      const baseDir = createTempDir();
+      const cmd = new ContextCommand(baseDir);
+      const ws = { name: 'foo', root: '/tmp/foo', packageJsonPath: '/tmp/foo/package.json' };
+      const result = await cmd.resolveWorkspaceOption({ workspace: ws });
+      expect(result).toBe(ws);
+    });
+
+    // 行62：format=json + mode=export + workspace 不存在 → stdout.write
+    it('当 format=json 且 mode=export 且 workspace 不存在时，应写入 stdout', async () => {
+      const baseDir = createTempDir();
+      fs.writeFileSync(path.join(baseDir, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }));
+      createMemoryDir(baseDir, {});
+
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      const cmd = new ContextCommand(baseDir);
+      const result = await cmd.resolveWorkspaceOption({
+        workspace: 'packages/nonexistent',
+        format: 'json',
+        mode: 'export',
+      });
+
+      // 应该通过 stdout.write 输出 JSON 错误
+      expect(stdoutSpy).toHaveBeenCalled();
+      const written = stdoutSpy.mock.calls.map(c => String(c[0])).join('');
+      const parsed = JSON.parse(written);
+      expect(parsed.status).toBe('error');
+      expect(result.status).toBe('error');
+
+      stdoutSpy.mockRestore();
+    });
+
+    // 行69：workspace 不存在且非 JSON 模式 → 抛出异常
+    it('当 workspace 不存在且非 JSON 模式时，应抛出异常', async () => {
+      const baseDir = createTempDir();
+      fs.writeFileSync(path.join(baseDir, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }));
+      createMemoryDir(baseDir, {});
+
+      const cmd = new ContextCommand(baseDir);
+      await expect(cmd.resolveWorkspaceOption({ workspace: 'packages/nonexistent' }))
+        .rejects.toThrow("Workspace 'packages/nonexistent' not found.");
+    });
+  });
+
+  describe('executeExport - clipboard 分支', () => {
+    // 行105-110：--copy 在 darwin 上成功复制到剪贴板
+    it('应在 darwin 上成功复制到剪贴板（--copy）', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {
+        'foundation.md': '# Foundation\nFoundation content',
+      });
+
+      // 重置模块缓存，用 doMock 注入 mock 的 execSync
+      jest.resetModules();
+      const execSyncMock = jest.fn(() => true);
+      jest.doMock('child_process', () => ({
+        ...jest.requireActual('child_process'),
+        execSync: execSyncMock,
+      }));
+
+      const { ContextCommand: FreshCmd } = require('../src/cli/commands/context');
+      const cmd = new FreshCmd(baseDir);
+      const result = await cmd.execute({ mode: 'export', copy: true });
+
+      expect(execSyncMock).toHaveBeenCalled();
+      expect(result).toContain('Foundation content');
+
+      jest.dontMock('child_process');
+    });
+
+    // 行111-114：clipboard 复制失败 → 回退到 stdout
+    it('当剪贴板复制失败时，应回退输出到 stdout', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {
+        'foundation.md': '# Foundation\nFoundation content',
+      });
+
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      jest.resetModules();
+      const execSyncMock = jest.fn(() => { throw new Error('clipboard error'); });
+      jest.doMock('child_process', () => ({
+        ...jest.requireActual('child_process'),
+        execSync: execSyncMock,
+      }));
+
+      const { ContextCommand: FreshCmd } = require('../src/cli/commands/context');
+      const cmd = new FreshCmd(baseDir);
+      const result = await cmd.execute({ mode: 'export', copy: true });
+
+      // 应该回退到 stdout
+      expect(stdoutSpy).toHaveBeenCalled();
+      expect(result).toContain('Foundation content');
+
+      jest.dontMock('child_process');
+      stdoutSpy.mockRestore();
+    });
+
+    // 行116-119：不支持剪贴板的平台（CLIP_COMMANDS[platform] 为 undefined）→ 回退到 stdout
+    it('在不支持剪贴板的平台上应回退到 stdout', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {
+        'foundation.md': '# Foundation\nFoundation content',
+      });
+
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      // 重置模块并通过 Object.defineProperty 临时修改 process.platform
+      jest.resetModules();
+      const origPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'freebsd' });
+
+      const { ContextCommand: FreshCmd } = require('../src/cli/commands/context');
+      const cmd = new FreshCmd(baseDir);
+      const result = await cmd.execute({ mode: 'export', copy: true });
+
+      expect(stdoutSpy).toHaveBeenCalled();
+      expect(result).toContain('Foundation content');
+
+      // 恢复 process.platform
+      Object.defineProperty(process, 'platform', { value: origPlatform });
+      jest.dontMock('child_process');
+      stdoutSpy.mockRestore();
+    });
+  });
+
+  describe('executeExport - stdout 回退（行126）', () => {
+    it('无 --copy 且无 --output 时，应输出到 stdout', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {
+        'foundation.md': '# Foundation\nF content',
+        'components.md': '# Components\nC content',
+      });
+
+      const cmd = new ContextCommand(baseDir);
+      const stdoutSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      const result = await cmd.execute({ mode: 'export' });
+
+      expect(stdoutSpy).toHaveBeenCalled();
+      expect(result).toContain('## 1. Foundation');
+      expect(result).toContain('## 2. Components');
+
+      stdoutSpy.mockRestore();
+    });
+  });
+
+  describe('printMarkdown - workspace 场景（行144-146）', () => {
+    it('带 workspace 时应输出 workspace 信息', async () => {
+      const baseDir = createTempDir();
+      fs.writeFileSync(path.join(baseDir, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }));
+      createMemoryDir(baseDir, {
+        'foundation.md': '# Foundation\nFoundation content',
+      });
+
+      // 创建 workspace 目录结构
+      const apiDir = path.join(baseDir, 'packages', 'api', 'src');
+      fs.mkdirSync(apiDir, { recursive: true });
+      fs.writeFileSync(path.join(baseDir, 'packages', 'api', 'package.json'), JSON.stringify({ name: 'api' }));
+      fs.writeFileSync(path.join(apiDir, 'index.ts'), 'export function apiHandler() { return true; }');
+
+      const cmd = new ContextCommand(baseDir);
+      // 直接调用 printMarkdown，传入 workspace
+      const { resolveWorkspace } = require('../src/utils/workspace-detector');
+      const ws = resolveWorkspace(baseDir, 'packages/api');
+
+      await cmd.printMarkdown(['foundation'], ws);
+
+      // 应包含 workspace 信息（行145-146）
+      const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
+      expect(output).toContain('Workspace:');
+      expect(output).toContain('api');
+    });
+  });
+
+  describe('readLayer - 非 ENOENT 错误（行171）', () => {
+    it('当读取文件遇到非 ENOENT 错误时，应向上抛出异常', async () => {
+      const baseDir = createTempDir();
+      const cmd = new ContextCommand(baseDir);
+
+      // mock fs.readFile 抛出权限错误
+      const fsPromises = require('fs').promises;
+      jest.spyOn(fsPromises, 'readFile').mockRejectedValue(Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' }));
+
+      await expect(cmd.readLayer('foundation')).rejects.toThrow('EACCES');
+
+      jest.restoreAllMocks();
+    });
+  });
+
+  describe('readWorkspaceLayer - components 和 contracts 分支（行179-182）', () => {
+    it('应通过 MemoryScanner 生成 components 层', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {});
+
+      const apiSrcDir = path.join(baseDir, 'packages', 'api', 'src');
+      fs.mkdirSync(apiSrcDir, { recursive: true });
+      fs.writeFileSync(path.join(apiSrcDir, 'index.ts'), 'export function handler() {}');
+      fs.writeFileSync(path.join(baseDir, 'packages', 'api', 'package.json'), JSON.stringify({ name: 'api' }));
+      fs.writeFileSync(path.join(baseDir, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }));
+
+      const cmd = new ContextCommand(baseDir);
+      const { resolveWorkspace } = require('../src/utils/workspace-detector');
+      const ws = resolveWorkspace(baseDir, 'packages/api');
+
+      const content = await cmd.readWorkspaceLayer('components', ws);
+      // MemoryScanner 的 components 输出包含源码文件路径
+      expect(content).toContain('index.ts');
+    });
+
+    it('应通过 MemoryScanner 生成 contracts 层', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {});
+
+      const apiSrcDir = path.join(baseDir, 'packages', 'api', 'src');
+      fs.mkdirSync(apiSrcDir, { recursive: true });
+      fs.writeFileSync(path.join(apiSrcDir, 'index.ts'), 'export function handler() {}');
+      fs.writeFileSync(path.join(baseDir, 'packages', 'api', 'package.json'), JSON.stringify({ name: 'api' }));
+      fs.writeFileSync(path.join(baseDir, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }));
+
+      const cmd = new ContextCommand(baseDir);
+      const { resolveWorkspace } = require('../src/utils/workspace-detector');
+      const ws = resolveWorkspace(baseDir, 'packages/api');
+
+      const content = await cmd.readWorkspaceLayer('contracts', ws);
+      // MemoryScanner 的 contracts 输出包含导出的函数名
+      expect(content).toContain('handler');
+    });
+
+    // 行182：未知 layer 返回 null
+    it('对未知 layer 应返回 null', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {});
+
+      const apiSrcDir = path.join(baseDir, 'packages', 'api', 'src');
+      fs.mkdirSync(apiSrcDir, { recursive: true });
+      fs.writeFileSync(path.join(baseDir, 'packages', 'api', 'package.json'), JSON.stringify({ name: 'api' }));
+      fs.writeFileSync(path.join(baseDir, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }));
+
+      const cmd = new ContextCommand(baseDir);
+      const { resolveWorkspace } = require('../src/utils/workspace-detector');
+      const ws = resolveWorkspace(baseDir, 'packages/api');
+
+      const result = await cmd.readWorkspaceLayer('unknown_layer', ws);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('readPackageJson（行208-214）', () => {
+    it('应正确读取并解析 package.json', async () => {
+      const baseDir = createTempDir();
+      const pkgPath = path.join(baseDir, 'package.json');
+      fs.writeFileSync(pkgPath, JSON.stringify({ name: 'test-pkg', version: '1.0.0', description: '测试包' }));
+
+      const cmd = new ContextCommand(baseDir);
+      const pkg = await cmd.readPackageJson(pkgPath);
+
+      expect(pkg.name).toBe('test-pkg');
+      expect(pkg.version).toBe('1.0.0');
+      expect(pkg.description).toBe('测试包');
+    });
+
+    it('当文件不存在时应返回 null', async () => {
+      const baseDir = createTempDir();
+      const cmd = new ContextCommand(baseDir);
+      const pkg = await cmd.readPackageJson(path.join(baseDir, 'nonexistent.json'));
+      expect(pkg).toBeNull();
+    });
+
+    it('当文件内容不是合法 JSON 时应返回 null', async () => {
+      const baseDir = createTempDir();
+      const badJsonPath = path.join(baseDir, 'bad.json');
+      fs.writeFileSync(badJsonPath, 'this is not json {{{');
+
+      const cmd = new ContextCommand(baseDir);
+      const pkg = await cmd.readPackageJson(badJsonPath);
+      expect(pkg).toBeNull();
+    });
+  });
+
+  describe('getMissingLayers（行216-224）', () => {
+    it('应返回缺失的 layer 列表', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {
+        'foundation.md': '# Foundation\nExists',
+      });
+
+      const cmd = new ContextCommand(baseDir);
+      const missing = await cmd.getMissingLayers(['foundation', 'components', 'contracts']);
+
+      expect(missing).toEqual(['components', 'contracts']);
+    });
+
+    it('当所有 layer 都存在时应返回空数组', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {
+        'foundation.md': '# Foundation\nExists',
+        'components.md': '# Components\nExists',
+        'contracts.md': '# Contracts\nExists',
+      });
+
+      const cmd = new ContextCommand(baseDir);
+      const missing = await cmd.getMissingLayers(['foundation', 'components', 'contracts']);
+
+      expect(missing).toEqual([]);
+    });
+
+    it('当所有 layer 都缺失时应返回全部', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {});
+
+      const cmd = new ContextCommand(baseDir);
+      const missing = await cmd.getMissingLayers(['foundation', 'components', 'contracts']);
+
+      expect(missing).toEqual(['foundation', 'components', 'contracts']);
+    });
+  });
+
+  describe('readLayerByPath - 非 ENOENT 错误（行235）', () => {
+    it('当遇到非 ENOENT 错误时应向上抛出异常', async () => {
+      const baseDir = createTempDir();
+      createMemoryDir(baseDir, {});
+
+      const memoryDir = path.join(baseDir, 'stdd', 'memory');
+
+      // mock fs.promises.readFile 抛出 EACCES
+      const fsPromises = require('fs').promises;
+      jest.spyOn(fsPromises, 'readFile').mockRejectedValue(Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' }));
+
+      await expect(ContextCommand.readLayerByPath(memoryDir, 'foundation')).rejects.toThrow('EACCES');
+
+      jest.restoreAllMocks();
+    });
+  });
+
+  describe('execute - 返回 error workspace（行25）', () => {
+    it('当 resolveWorkspaceOption 返回 error 状态时，execute 应直接返回', async () => {
+      const baseDir = createTempDir();
+      fs.writeFileSync(path.join(baseDir, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }));
+      createMemoryDir(baseDir, {});
+
+      const cmd = new ContextCommand(baseDir);
+      // 使用 json=true 让它不抛异常而是返回 error 对象
+      const result = await cmd.execute({ json: true, workspace: 'packages/nonexistent' });
+
+      expect(result.status).toBe('error');
+      expect(result.error).toBe("Workspace 'packages/nonexistent' not found.");
+    });
+  });
 });

@@ -107,4 +107,119 @@ describe('coverage parser', () => {
 
     expect(result).toEqual({ found: false });
   });
+
+  it('handles corrupt coverage-summary.json gracefully', () => {
+    const root = tempProject();
+    fs.mkdirSync(path.join(root, 'coverage'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'coverage', 'coverage-summary.json'), 'not valid json');
+
+    const result = parseCoverage(root);
+
+    expect(result.found).toBe(true);
+    expect(result.error).toBeDefined();
+  });
+
+  it('handles empty Istanbul JSON', () => {
+    const root = tempProject();
+    fs.mkdirSync(path.join(root, 'coverage'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'coverage', 'coverage-final.json'), '{}');
+
+    const result = parseCoverage(root);
+
+    expect(result.found).toBe(true);
+    expect(result.type).toBe('istanbul-json');
+    expect(result.statements.pct).toBe(null);
+  });
+
+  it('handles Istanbul JSON with missing statementMap', () => {
+    const root = tempProject();
+    fs.mkdirSync(path.join(root, 'coverage'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'coverage', 'coverage-final.json'), JSON.stringify({
+      '/tmp/b.js': {
+        s: { 0: 1 },
+        f: {},
+        b: {},
+      },
+    }));
+
+    const result = parseCoverage(root);
+
+    expect(result.found).toBe(true);
+    expect(result.statements.pct).toBe(100);
+  });
+
+  it('handles coverage-summary.json with no total', () => {
+    const root = tempProject();
+    fs.mkdirSync(path.join(root, 'coverage'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'coverage', 'coverage-summary.json'), '{}');
+
+    const result = parseCoverage(root);
+
+    expect(result.found).toBe(true);
+    expect(result.lines).toBe(null);
+  });
+
+  it('handles coverage.xml with no rates', () => {
+    const root = tempProject();
+    fs.writeFileSync(path.join(root, 'coverage.xml'), '<coverage></coverage>');
+
+    const result = parseCoverage(root);
+
+    expect(result.found).toBe(true);
+    expect(result.lines).toBe(null);
+    expect(result.branches).toBe(null);
+  });
+
+  it('falls back to coverage-final.json at root when coverage/ dir missing', () => {
+    const root = tempProject();
+    fs.writeFileSync(path.join(root, 'coverage-final.json'), JSON.stringify({
+      '/tmp/c.js': {
+        statementMap: { 0: { start: { line: 1 }, end: { line: 1 } } },
+        s: { 0: 1 },
+        f: {},
+        b: {},
+      },
+    }));
+
+    const result = parseCoverage(root);
+
+    expect(result.found).toBe(true);
+    expect(result.type).toBe('istanbul-json');
+  });
+
+  it('handles lcov with zero totals', () => {
+    const root = tempProject();
+    fs.mkdirSync(path.join(root, 'coverage'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'coverage', 'lcov.info'), 'TN:\nSF:empty.js\nend_of_record');
+
+    const result = parseCoverage(root);
+
+    expect(result.found).toBe(true);
+    expect(result.lines.pct).toBe(null);
+    expect(result.branches.pct).toBe(null);
+  });
+
+  it('parses Istanbul JSON with non-array branch hits', () => {
+    const root = tempProject();
+    fs.mkdirSync(path.join(root, 'coverage'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'coverage', 'coverage-final.json'), JSON.stringify({
+      '/tmp/d.js': {
+        statementMap: {},
+        s: {},
+        f: {},
+        b: { 0: 'not-array' },
+      },
+    }));
+
+    const result = parseCoverage(root);
+
+    expect(result.found).toBe(true);
+    expect(result.branches.total).toBe(0);
+  });
+
+  it('uses cwd when no root provided', () => {
+    const result = parseCoverage();
+    expect(result).toBeDefined();
+    expect(typeof result.found).toBe('boolean');
+  });
 });

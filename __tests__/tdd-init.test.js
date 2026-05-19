@@ -45,6 +45,10 @@ describe('TddInitCommand', () => {
     expect(fs.existsSync(path.join(srcDir, '__tests__', 'a.test.js'))).toBe(true);
     expect(fs.existsSync(path.join(srcDir, '__tests__', 'b.test.js'))).toBe(true);
 
+    const jsContent = fs.readFileSync(path.join(srcDir, '__tests__', 'a.test.js'), 'utf8');
+    expect(jsContent).toContain('throw new Error');
+    expect(jsContent).not.toContain('expect(true).toBe(true)');
+
     teardown();
   });
 
@@ -165,6 +169,8 @@ describe('TddInitCommand', () => {
 
     const testContent = fs.readFileSync(path.join(srcDir, '__tests__', 'test_calculator.py'), 'utf8');
     expect(testContent).toContain('def test_calculator');
+    expect(testContent).toContain('raise NotImplementedError');
+    expect(testContent).not.toContain('assert True');
 
     teardown();
   });
@@ -185,6 +191,8 @@ describe('TddInitCommand', () => {
     const testContent = fs.readFileSync(path.join(srcDir, '__tests__', 'test_helper.py'), 'utf8');
     expect(testContent).toContain('class TestHelper');
     expect(testContent).toContain('unittest.TestCase');
+    expect(testContent).toContain('self.fail');
+    expect(testContent).not.toContain('assertTrue(True)');
 
     teardown();
   });

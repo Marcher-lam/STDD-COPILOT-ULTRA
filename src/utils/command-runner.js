@@ -1,4 +1,5 @@
 const { spawnSync } = require('child_process');
+const { parseCommand } = require('./parse-command');
 
 // P0-3 Fix: Dangerous commands that should never be allowed
 const DANGEROUS_COMMANDS = [
@@ -25,49 +26,8 @@ function isDangerous(command) {
   return false;
 }
 
-function parseCommand(command) {
-  const input = String(command || '').trim();
-  if (!input) throw new Error('Command is required.');
-
-  const args = [];
-  let current = '';
-  let quote = null;
-  let escaping = false;
-
-  for (const char of input) {
-    if (escaping) {
-      current += char;
-      escaping = false;
-      continue;
-    }
-    if (char === '\\') {
-      escaping = true;
-      continue;
-    }
-    if (quote) {
-      if (char === quote) quote = null;
-      else current += char;
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      quote = char;
-      continue;
-    }
-    if (/\s/.test(char)) {
-      if (current) {
-        args.push(current);
-        current = '';
-      }
-      continue;
-    }
-    current += char;
-  }
-
-  if (escaping) current += '\\';
-  if (quote) throw new Error('Unterminated quote in command.');
-  if (current) args.push(current);
-  if (args.length === 0) throw new Error('Command is required.');
-  return { bin: args[0], args: args.slice(1) };
+function parseCommandLocal(command) {
+  return parseCommand(command, 'Command');
 }
 
 function validateCommand(command, _options = {}) {
@@ -80,7 +40,7 @@ function validateCommand(command, _options = {}) {
   }
 
   // P0-3 Fix: Shell injection detection
-  const injectionPatterns = [/\|/, /&&/, /;/, /\$/, /`/, />>\s*/, />\s*[^&]/];
+  const injectionPatterns = [/\|/, /&&/, /;/, /\$\(/, /`/, />>\s*/, />\s*[^&]/];
   for (const pattern of injectionPatterns) {
     if (pattern.test(input)) {
       throw new Error('Command rejected: Potential shell injection detected. Characters like pipe, &&, semicolon, dollar, backtick, or redirect are not allowed in test commands.');
@@ -96,7 +56,7 @@ function runCommand(command, options = {}) {
   // P0-3 Fix: Validate command before execution
   validateCommand(input, options);
 
-  const { bin, args } = parseCommand(command);
+  const { bin, args } = parseCommandLocal(command);
   return spawnSync(bin, args, {
     cwd: options.cwd,
     stdio: options.stdio || 'pipe',

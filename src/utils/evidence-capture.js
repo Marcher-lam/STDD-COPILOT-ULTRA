@@ -1,6 +1,8 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { createLogger } = require('./logger');
+const logger = createLogger('evidence-capture');
 
 /**
  * EvidenceCapture - 结构化错误证据采集器
@@ -127,7 +129,8 @@ class EvidenceCapture {
         return { __truncated: true, preview: str.slice(0, 2048), originalSize: str.length };
       }
       return JSON.parse(str);
-    } catch {
+    } catch (err) {
+      if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
       return { __unserializable: true };
     }
   }
@@ -154,6 +157,7 @@ class EvidenceCapture {
    * 根据验证结果判断整体状态
    */
   _determineStatus(results, type) {
+    if (!results) return 'unknown';
     if (type === 'verify') {
       const tasksOk = results.tasks && results.tasks.allDone;
       const testsOk = results.tests && (results.tests.passed === true || results.tests.passed === null);
@@ -163,7 +167,8 @@ class EvidenceCapture {
       return 'fail';
     }
     if (type === 'guard') {
-      const overall = Object.values(results).every(r => r.status === 'pass' || r.status === 'skip' || r.status === 'warn');
+      const values = typeof results === 'object' ? Object.values(results) : [];
+      const overall = values.every(r => r && (r.status === 'pass' || r.status === 'skip' || r.status === 'warn'));
       return overall ? 'pass' : 'fail';
     }
     return 'unknown';

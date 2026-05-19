@@ -8,7 +8,8 @@ const path = require('path');
 const chalk = require('chalk');
 const { spawnSync } = require('child_process');
 const { ConstitutionChecker } = require('./constitution-checker');
-const { detectWorkspaces, resolveWorkspace } = require('../../utils/workspace-detector');
+const { walkFiles } = require('../../utils/file-walker');
+const { detectWorkspaces, resolveWorkspace, collectSourceDirs } = require('../../utils/workspace-detector');
 const { workspaceToScope, normalizePath } = require('../../utils/workspace-scope');
 const { parseCoverage } = require('../../utils/coverage-parser');
 const { resolveChangeDir } = require('../../utils/change-utils');
@@ -22,24 +23,11 @@ class MetricsCommand {
   }
 
   getSourceDirs(workspace = null) {
-    const dirs = [];
-
-    if (workspace) {
-      const workspaceSrcDir = path.join(workspace.root, 'src');
-      const workspaceTestsDir = path.join(workspace.root, 'tests');
-      if (fs.existsSync(workspaceSrcDir)) dirs.push(workspaceSrcDir);
-      if (fs.existsSync(workspaceTestsDir)) dirs.push(workspaceTestsDir);
-      return dirs;
-    }
-
-    const rootSrcDir = path.join(this.cwd, 'src');
-    if (fs.existsSync(rootSrcDir)) dirs.push(rootSrcDir);
-
-    for (const workspace of this.workspaces) {
-      if (fs.existsSync(workspace.sourceDir)) dirs.push(workspace.sourceDir);
-    }
-
-    return dirs;
+    return collectSourceDirs(this.cwd, {
+      workspace,
+      workspaces: this.workspaces,
+      includeTests: true,
+    });
   }
 
   async execute(changeName, options = {}) {
@@ -200,18 +188,17 @@ class MetricsCommand {
   }
 
   categorizeFiles(dir) {
+    const jsFiles = walkFiles(dir, { extensions: ['.js', '.ts'] });
     const sourceFiles = [];
     const testFiles = [];
-    this.walkDir(dir, (filePath) => {
-      const ext = path.extname(filePath);
-      if (!['.js', '.ts'].includes(ext)) return;
+    for (const filePath of jsFiles) {
       const basename = path.basename(filePath);
       if (basename.includes('.test.') || basename.includes('.spec.')) {
         testFiles.push(filePath);
       } else {
         sourceFiles.push(filePath);
       }
-    });
+    }
     return { sourceFiles, testFiles };
   }
 
@@ -226,29 +213,8 @@ class MetricsCommand {
     return { sourceFiles: allSourceFiles, testFiles: allTestFiles };
   }
 
-  walkDir(dir, callback) {
-    if (!fs.existsSync(dir)) return;
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) {
-          this.walkDir(fullPath, callback);
-        }
-      } else if (entry.isFile()) {
-        callback(fullPath);
-      }
-    }
-  }
-
   findFiles(dir, pattern) {
-    const files = [];
-    this.walkDir(dir, (filePath) => {
-      if (pattern.test(filePath)) {
-        files.push(filePath);
-      }
-    });
-    return files;
+    return walkFiles(dir).filter(filePath => pattern.test(filePath));
   }
 
   countLines(files) {

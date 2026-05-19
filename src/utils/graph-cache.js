@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { getPackageRoot } = require('./path-resolver');
+const { createLogger } = require('./logger');
+const logger = createLogger('graph-cache');
 
 class GraphCacheManager {
   constructor(projectId = 'default') {
@@ -51,7 +53,24 @@ class GraphCacheManager {
       outputs
     }, null, 2));
   }
-  
+
+  deleteByNode(nodeName) {
+    if (!fs.existsSync(this.cacheDir)) return;
+    const files = fs.readdirSync(this.cacheDir).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(this.cacheDir, file), 'utf8'));
+        if (data.nodeName === nodeName) {
+          fs.unlinkSync(path.join(this.cacheDir, file));
+        }
+      } catch (err) {
+        if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
+        // corrupt entry, remove it
+        fs.unlinkSync(path.join(this.cacheDir, file));
+      }
+    }
+  }
+
   clear() {
     if (fs.existsSync(this.cacheDir)) {
       fs.rmSync(this.cacheDir, { recursive: true, force: true });

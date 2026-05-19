@@ -276,16 +276,15 @@ describe('GraphHistoryCommand', () => {
     expect(output).toContain('Tasks:');
   });
 
-  it('replay exits when ID is not found', () => {
-    const originalExit = process.exit;
-    process.exit = jest.fn();
+  it('replay sets exitCode = 1 when ID is not found', () => {
+    const originalExitCode = process.exitCode;
+    process.exitCode = 0;
 
     const cmd = new GraphHistoryCommand(tmpDir);
     cmd.replay('nonexistent-id');
 
-    expect(process.exit).toHaveBeenCalledWith(1);
-
-    process.exit = originalExit;
+    expect(process.exitCode).toBe(1);
+    process.exitCode = originalExitCode;
   });
 });
 

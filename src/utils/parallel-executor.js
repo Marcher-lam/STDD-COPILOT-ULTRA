@@ -13,6 +13,9 @@
  * 4. 并行组策略执行（all/any/race）
  * 5. 结果聚合与文件冲突检测
  */
+const { createLogger } = require('./logger');
+const logger = createLogger('parallel-executor');
+
 class ParallelExecutor {
   /**
    * @param {object}  graph       编译后的 DAG（含 skills 字典）
@@ -204,7 +207,8 @@ class ParallelExecutor {
             try {
               const retryOutput = await this.executeFn(nodeName, context);
               results[nodeName] = retryOutput;
-            } catch {
+            } catch (err) {
+              if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
               results[nodeName] = { success: false, error: error.message, degraded: true };
             }
           } else {

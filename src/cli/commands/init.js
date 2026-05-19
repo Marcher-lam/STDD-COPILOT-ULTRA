@@ -9,6 +9,8 @@ const { getPackageRoot } = require('../../utils/path-resolver');
 const { TechStackDetector } = require('../../utils/tech-stack-detector');
 const { detectWorkspaces } = require('../../utils/workspace-detector');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('init');
 
 // Template files
 const AGENTS_MD_TEMPLATE = `# STDD Copilot - AI Agent Instructions
@@ -271,7 +273,8 @@ class InitCommand {
     try {
       await fs.access(path);
       return true;
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
   }

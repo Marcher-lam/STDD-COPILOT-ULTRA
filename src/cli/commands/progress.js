@@ -6,13 +6,16 @@ const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 const { SessionProgress } = require('../../utils/session-progress');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('progress');
 
 class ProgressCommand {
   execute(options = {}) {
     const stddDir = path.join(process.cwd(), 'stdd');
     if (!fs.existsSync(stddDir)) {
-      console.error(chalk.red('STDD not initialized. Run `stdd init` first.'));
-      process.exit(1);
+      logger.error('STDD not initialized. Run `stdd init` first.');
+      process.exitCode = 1;
+      return;
     }
     const p = new SessionProgress(stddDir);
 
@@ -64,6 +67,24 @@ class ProgressCommand {
     const change = args.change || args.changeName;
     if (['apply', 'verify', 'archive', 'continue'].includes(command)) {
       return `stdd continue${change ? ` ${change}` : ''}`;
+    }
+    if (command === 'graph') {
+      return `stdd graph run --intent ${args.intent || 'feature'}${change ? ` --change-name ${change}` : ''}`;
+    }
+    if (command === 'constitution' && args.action === 'check') {
+      return 'stdd constitution check';
+    }
+    if (command === 'constitution' && args.action === 'fix') {
+      return `stdd constitution fix${args.article ? ` --article ${args.article}` : ''}`;
+    }
+    if (command === 'new') {
+      return `stdd new change ${change || '<name>'}`;
+    }
+    if (command === 'ff') {
+      return `stdd ff ${change || '<description>'}`;
+    }
+    if (command === 'doctor') {
+      return 'stdd doctor --deep';
     }
     return null;
   }

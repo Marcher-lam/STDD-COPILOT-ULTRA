@@ -20,7 +20,7 @@ class NewCommand {
       if (error.code === 'ENOENT') {
         throw new Error('STDD not initialized. Run `stdd init` first.');
       }
-      throw error;
+      throw new Error(`Cannot access workspace directory: ${error.message}`);
     }
   }
 

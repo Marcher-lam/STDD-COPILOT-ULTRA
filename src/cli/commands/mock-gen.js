@@ -38,7 +38,7 @@ class MockGenCommand {
     const mocksDir = path.join(changeDir, 'mocks');
     await fsPromises.mkdir(mocksDir, { recursive: true });
 
-    const mockFiles = this.generateMockFiles(apiSpec, mocksDir);
+    const mockFiles = await this.generateMockFiles(apiSpec, mocksDir);
     const handlersContent = this.generateHandlers(mockFiles, apiSpec, workspaceMeta);
     const handlersPath = path.join(mocksDir, 'handlers.js');
     await fsPromises.writeFile(handlersPath, handlersContent, 'utf8');
@@ -81,9 +81,10 @@ class MockGenCommand {
     return null;
   }
 
-  generateMockFiles(apiSpec, mocksDir) {
+  async generateMockFiles(apiSpec, mocksDir) {
     const mockFiles = [];
     const paths = apiSpec.paths || {};
+    const writeOps = [];
 
     for (const [routePath, methods] of Object.entries(paths)) {
       for (const [method, operation] of Object.entries(methods)) {
@@ -91,16 +92,23 @@ class MockGenCommand {
           const mockData = this.generateMockData(operation, method.toUpperCase(), routePath);
           const filename = this.mockFilename(method.toUpperCase(), routePath);
           const filePath = path.join(mocksDir, filename);
-          fs.writeFileSync(filePath, JSON.stringify(mockData, null, 2) + '\n', 'utf8');
+          writeOps.push(
+            fsPromises.writeFile(filePath, JSON.stringify(mockData, null, 2) + '\n', 'utf8')
+              .catch(err => { throw new Error(`Failed to write mock file ${filePath}: ${err.message}`); })
+          );
           mockFiles.push({ filename, filePath, method: method.toUpperCase(), routePath });
         }
       }
     }
 
+    await Promise.all(writeOps);
     return mockFiles;
   }
 
   generateMockData(operation, method, routePath) {
+    if (!operation.responses) {
+      return this.placeholderResponse(method, routePath);
+    }
     const successResponse = operation.responses['200']
       || operation.responses['201']
       || operation.responses['204']

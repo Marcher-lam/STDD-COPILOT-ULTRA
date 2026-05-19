@@ -9,6 +9,8 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { createLogger } = require('./logger');
+const logger = createLogger('session-progress');
 
 const FILENAME = 'progress.jsonl';
 const MAX_ENTRIES = 5000;
@@ -115,7 +117,7 @@ class SessionProgress {
     if (entries.length <= MAX_ENTRIES) return;
     try {
       fs.writeFileSync(this.filePath, entries.slice(-MAX_ENTRIES).map(e => JSON.stringify(e)).join('\n') + '\n', 'utf8');
-    } catch { /* no-op */ }
+    } catch (err) { logger.warn('Failed to truncate progress file: %s', err.message); }
   }
 }
 
@@ -134,9 +136,14 @@ function setActive(e) { _activeEntry = e; }
 function clearActive() { _activeEntry = null; }
 
 function installSignals() {
-  const mark = (sig) => { if (_activeEntry) progress().interrupt(_activeEntry.id, sig); };
-  process.on('SIGINT', () => { mark('SIGINT'); process.exit(130); });
-  process.on('SIGTERM', () => { mark('SIGTERM'); process.exit(143); });
+  const mark = (sig, exitCode) => {
+    if (_activeEntry) {
+      try { progress().interrupt(_activeEntry.id, sig); } catch { /* best effort */ }
+    }
+    process.exit(exitCode);
+  };
+  process.on('SIGINT', () => { mark('SIGINT', 130); });
+  process.on('SIGTERM', () => { mark('SIGTERM', 143); });
 }
 
 module.exports = { SessionProgress, progress, active, setActive, clearActive, installSignals, FILENAME };

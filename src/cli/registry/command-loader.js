@@ -62,7 +62,7 @@ class CommandLoader {
         } else if (errorViaStderr) {
           console.error(chalk.red(error.message));
         }
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
   }
@@ -104,7 +104,7 @@ class CommandLoader {
             await instance[method](...actionArgs);
           } catch (error) {
             console.error(chalk.red(error.message));
-            process.exit(1);
+            process.exitCode = 1;
           }
         });
       }

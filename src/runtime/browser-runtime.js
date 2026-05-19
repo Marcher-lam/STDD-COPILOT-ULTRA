@@ -1,8 +1,12 @@
 const path = require('path');
 const fs = require('fs');
+const { BrowserController } = require('./browser-controller');
+const { createLogger } = require('../utils/logger');
+const log = createLogger('BrowserRuntime');
 
-class BrowserRuntime {
+class BrowserRuntime extends BrowserController {
   constructor(cwd = process.cwd()) {
+    super(path.join(cwd, 'stdd', 'evidence'));
     this.cwd = cwd;
     this.playwright = null;
   }
@@ -23,9 +27,12 @@ class BrowserRuntime {
   }
 
   async snapshot(url, options = {}) {
-    const { width = 1280, height = 800 } = options;
+    const viewport = {
+      width: options.width || 1280,
+      height: options.height || 720,
+    };
     const outputDir = path.join(this.cwd, 'stdd', 'evidence');
-    
+
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
@@ -34,33 +41,23 @@ class BrowserRuntime {
     const filename = `snapshot-${path.basename(url)}-${timestamp}.png`;
     const filePath = path.join(outputDir, filename);
 
-    console.log(`[BrowserRuntime] Capturing snapshot: ${url}`);
+    log.info(`Capturing snapshot: ${url}`);
 
-    const browser = await this.getBrowser().chromium.launch({ headless: true });
-    const page = await browser.newPage({ viewport: { width, height } });
-
-    try {
+    return this._withBrowser(async (page) => {
+      await page.setViewportSize(viewport);
       await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 });
       await page.screenshot({ path: filePath, fullPage: false });
-      console.log(`[BrowserRuntime] Snapshot saved to: ${filePath}`);
+      log.info(`Snapshot saved to: ${filePath}`);
       return { success: true, path: filePath, relativePath: path.relative(this.cwd, filePath) };
-    } catch (error) {
-      console.error(`[BrowserRuntime] Error: ${error.message}`);
-      return { success: false, error: error.message };
-    } finally {
-      await browser.close();
-    }
+    });
   }
 
   async inspect(url, selector = 'body') {
-    console.log(`[BrowserRuntime] Inspecting: ${url} (selector: ${selector})`);
-    
-    const browser = await this.getBrowser().chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    log.info(`Inspecting: ${url} (selector: ${selector})`);
 
-    try {
+    return this._withBrowser(async (page) => {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 });
-      
+
       // Extract text content, title, and URL
       const data = await page.evaluate((sel) => {
         /* global document, window */
@@ -73,31 +70,37 @@ class BrowserRuntime {
         };
       }, selector);
 
-      console.log(`[BrowserRuntime] Page Title: ${data.title}`);
+      log.info(`Page Title: ${data.title}`);
       return { success: true, data };
-    } catch (error) {
-      console.error(`[BrowserRuntime] Error: ${error.message}`);
-      return { success: false, error: error.message };
-    } finally {
-      await browser.close();
-    }
+    });
   }
 
   async executeScript(url, script) {
-    console.log(`[BrowserRuntime] Executing script on: ${url}`);
-    
-    const browser = await this.getBrowser().chromium.launch({ headless: true });
-    const page = await browser.newPage();
+    log.info(`Executing script on: ${url}`);
 
-    try {
+    return this._withBrowser(async (page) => {
       await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 });
       const result = await page.evaluate(script);
       return { success: true, result };
+    });
+  }
+
+  /**
+   * Shared browser lifecycle helper — launches a headless browser,
+   * runs the given callback with a fresh page, and always closes the browser.
+   * Returns { success: false, error } on failure.
+   */
+  async _withBrowser(callback) {
+    let browser;
+    try {
+      browser = await this.getBrowser().chromium.launch({ headless: true });
+      const page = await browser.newPage();
+      return await callback(page);
     } catch (error) {
-      console.error(`[BrowserRuntime] Error: ${error.message}`);
+      console.error(`[BrowserRuntime] Error: ${error.message}`); // keep error output
       return { success: false, error: error.message };
     } finally {
-      await browser.close();
+      if (browser) await browser.close();
     }
   }
 }

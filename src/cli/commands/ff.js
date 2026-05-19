@@ -22,7 +22,7 @@ class FFCommand {
       if (error.code === 'ENOENT') {
         throw new Error('STDD not initialized. Run `stdd init` first.');
       }
-      throw error;
+      throw new Error(`Cannot access changes directory: ${error.message}`);
     }
     return changesDir;
   }

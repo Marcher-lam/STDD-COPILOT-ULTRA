@@ -497,4 +497,427 @@ describe('MockGenCommand', () => {
     expect(mockContent.createdAt).toBe('2024-01-01T00:00:00Z');
     expect(mockContent.date).toBe('2024-01-01');
   });
+
+  it('should throw when workspace does not exist', async () => {
+    const projectPath = createTempProject('missing-ws-project');
+    process.chdir(projectPath);
+    fs.writeFileSync(path.join(projectPath, 'package.json'), JSON.stringify({ private: true, workspaces: ['packages/*'] }, null, 2));
+    fs.mkdirSync(path.join(projectPath, 'stdd', 'changes', 'ws-change'), { recursive: true });
+
+    const cmd = new MockGenCommand();
+    await expect(cmd.execute('ws-change', { workspace: 'packages/api' }))
+      .rejects
+      .toThrow("Workspace 'packages/api' not found.");
+  });
+
+  it('should generate placeholder when operation has no responses', async () => {
+    const projectPath = createTempProject('mock-no-responses-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'no-responses', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'No Responses API', version: '0.1.0' },
+      paths: {
+        '/api/data': {
+          get: {
+            summary: 'Get data with no responses defined',
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('no-responses');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toHaveProperty('method', 'GET');
+    expect(mockContent).toHaveProperty('path', '/api/data');
+    expect(mockContent.statusCode).toBe(200);
+  });
+
+  it('should generate placeholder when success response has no content', async () => {
+    const projectPath = createTempProject('mock-no-content-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'no-content', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'No Content API', version: '0.1.0' },
+      paths: {
+        '/api/items': {
+          get: {
+            summary: 'Get items',
+            responses: {
+              '200': {
+                description: 'Success',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('no-content');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toHaveProperty('method', 'GET');
+    expect(mockContent.body).toHaveProperty('message');
+  });
+
+  it('should generate placeholder when schema is missing in content', async () => {
+    const projectPath = createTempProject('mock-no-schema-content-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'no-schema-content', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'No Schema Content API', version: '0.1.0' },
+      paths: {
+        '/api/items': {
+          get: {
+            summary: 'Get items',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {},
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('no-schema-content');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toHaveProperty('method', 'GET');
+  });
+
+  it('should generate placeholder when success response is null/empty', async () => {
+    const projectPath = createTempProject('mock-empty-response-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'empty-response', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Empty Response API', version: '0.1.0' },
+      paths: {
+        '/api/items': {
+          delete: {
+            summary: 'Delete items',
+            responses: {
+              '204': { description: 'No Content' },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('empty-response');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toHaveProperty('method', 'DELETE');
+    expect(mockContent.statusCode).toBe(200);
+  });
+
+  it('should handle schema with no type but with additionalProperties', async () => {
+    const projectPath = createTempProject('mock-additional-props-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'additional-props', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Additional Props API', version: '0.1.0' },
+      paths: {
+        '/api/metadata': {
+          get: {
+            summary: 'Get metadata',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      additionalProperties: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('additional-props');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toHaveProperty('key');
+    expect(mockContent.key).toBe('<string>');
+  });
+
+  it('should handle schema with default values for boolean and integer', async () => {
+    const projectPath = createTempProject('mock-defaults-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'defaults-change', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Defaults API', version: '0.1.0' },
+      paths: {
+        '/api/settings': {
+          get: {
+            summary: 'Get settings',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        enabled: { type: 'boolean', default: true },
+                        count: { type: 'integer', default: 42 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('defaults-change');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent.enabled).toBe(true);
+    expect(mockContent.count).toBe(42);
+  });
+
+  it('should handle uri and uuid format strings', async () => {
+    const projectPath = createTempProject('mock-format-strings-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'format-strings', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Format Strings API', version: '0.1.0' },
+      paths: {
+        '/api/resource': {
+          get: {
+            summary: 'Get resource',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        url: { type: 'string', format: 'uri' },
+                        id: { type: 'string', format: 'uuid' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('format-strings');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent.url).toBe('https://example.com');
+    expect(mockContent.id).toBe('00000000-0000-0000-0000-000000000000');
+  });
+
+  it('should handle string with default value', async () => {
+    const projectPath = createTempProject('mock-string-default-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'string-default', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'String Default API', version: '0.1.0' },
+      paths: {
+        '/api/config': {
+          get: {
+            summary: 'Get config',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string', default: 'test-config' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('string-default');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent.name).toBe('test-config');
+  });
+
+  it('should handle array without items (returns empty array)', async () => {
+    const projectPath = createTempProject('mock-empty-array-project');
+    process.chdir(projectPath);
+
+    createApiSpec(projectPath, 'empty-array', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Empty Array API', version: '0.1.0' },
+      paths: {
+        '/api/list': {
+          get: {
+            summary: 'Get list',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'array',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('empty-array');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    expect(mockContent).toEqual([]);
+  });
+
+  it('should return null for schema depth exceeding 5', async () => {
+    const projectPath = createTempProject('mock-deep-nested-project');
+    process.chdir(projectPath);
+
+    // Create a schema that's deeply nested (6+ levels)
+    createApiSpec(projectPath, 'deep-nested', 'api-spec.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'Deep Nested API', version: '0.1.0' },
+      paths: {
+        '/api/deep': {
+          get: {
+            summary: 'Get deep data',
+            responses: {
+              '200': {
+                description: 'Success',
+                content: {
+                  'application/json': {
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        l1: {
+                          type: 'object',
+                          properties: {
+                            l2: {
+                              type: 'object',
+                              properties: {
+                                l3: {
+                                  type: 'object',
+                                  properties: {
+                                    l4: {
+                                      type: 'object',
+                                      properties: {
+                                        l5: {
+                                          type: 'object',
+                                          properties: {
+                                            l6: { type: 'string' },
+                                          },
+                                        },
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('deep-nested');
+
+    const mockPath = result.mockFiles[0].filePath;
+    const mockContent = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+    // l6 should be null because depth exceeds 5
+    expect(mockContent.l1.l2.l3.l4.l5.l6).toBeNull();
+  });
+
+  it('should handle defaultForType for all types', () => {
+    const cmd = new MockGenCommand();
+    expect(cmd.defaultForType('string')).toBe('<string>');
+    expect(cmd.defaultForType('number')).toBe(0);
+    expect(cmd.defaultForType('integer')).toBe(0);
+    expect(cmd.defaultForType('boolean')).toBe(false);
+    expect(cmd.defaultForType('array')).toEqual([]);
+    expect(cmd.defaultForType('object')).toEqual({});
+    expect(cmd.defaultForType('unknown')).toBeNull();
+  });
+
+  it('should find workspace-specific api-spec when workspace tag matches', async () => {
+    const projectPath = createTempProject('mock-ws-tag-project');
+    process.chdir(projectPath);
+    createWorkspace(projectPath, 'packages/api', '@demo/api');
+
+    // Create both workspace-specific and default api-spec files
+    createApiSpec(projectPath, 'ws-tag-change', 'api-spec.packages-api.yaml', {
+      openapi: '3.0.0',
+      info: { title: 'WS Tag API', version: '0.1.0' },
+      paths: {
+        '/api/ws-endpoint': {
+          get: { summary: 'WS endpoint', responses: { '200': { description: 'OK' } } },
+        },
+      },
+    });
+
+    const cmd = new MockGenCommand();
+    const result = await cmd.execute('ws-tag-change', { workspace: 'packages/api' });
+
+    expect(result.mockFiles).toHaveLength(1);
+    expect(result.workspace).toMatchObject({ tag: 'packages-api' });
+  });
 });

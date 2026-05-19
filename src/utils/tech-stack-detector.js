@@ -5,6 +5,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createLogger } = require('./logger');
+const logger = createLogger('tech-stack-detector');
 
 class TechStackDetector {
   /**
@@ -65,7 +67,8 @@ class TechStackDetector {
     const pkgPath = path.join(rootPath, 'package.json');
     try {
       return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-    } catch {
+    } catch (err) {
+      if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
       return {};
     }
   }
@@ -110,8 +113,8 @@ class TechStackDetector {
       try {
         const content = fs.readFileSync(reqPath, 'utf-8').toLowerCase();
         if (content.includes('pytest')) return 'pytest';
-      } catch {
-        // ignore
+      } catch (err) {
+        if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
       }
     }
     const pyprojectPath = path.join(rootPath, 'pyproject.toml');
@@ -119,8 +122,8 @@ class TechStackDetector {
       try {
         const content = fs.readFileSync(pyprojectPath, 'utf-8').toLowerCase();
         if (content.includes('pytest')) return 'pytest';
-      } catch {
-        // ignore
+      } catch (err) {
+        if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
       }
     }
     const setupPath = path.join(rootPath, 'setup.py');
@@ -128,8 +131,8 @@ class TechStackDetector {
       try {
         const content = fs.readFileSync(setupPath, 'utf-8').toLowerCase();
         if (content.includes('pytest')) return 'pytest';
-      } catch {
-        // ignore
+      } catch (err) {
+        if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
       }
     }
     return 'unittest';
@@ -141,4 +144,4 @@ class TechStackDetector {
   }
 }
 
-module.exports = { TechStackDetector };
+module.exports = { TechStackDetector, mergePackageDeps: TechStackDetector._allDeps };

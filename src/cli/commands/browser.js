@@ -1,6 +1,8 @@
 const { BrowserController } = require('../../runtime/browser-controller');
 const { BrowserDoctor } = require('../../runtime/browser-doctor');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('browser');
 
 class BrowserCommand {
   constructor(cwd = process.cwd()) {
@@ -29,7 +31,7 @@ class BrowserCommand {
       console.log(chalk.dim(`Title: ${result.title}`));
       return result;
     } catch (error) {
-      console.error(chalk.red(`Browser Error: ${error.message}`));
+      logger.error(`Browser Error: ${error.message}`);
       if (error.message.includes("not installed")) {
         console.log(chalk.yellow("Tip: Run `npm install playwright` to enable built-in browser drive."));
       }
@@ -45,7 +47,7 @@ class BrowserCommand {
       console.log(chalk.dim(`Title: ${result.title}`));
       return result;
     } catch (error) {
-      console.error(chalk.red(`Inspection Error: ${error.message}`));
+      logger.error(`Inspection Error: ${error.message}`);
       process.exitCode = 1;
     }
   }

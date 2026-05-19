@@ -2,6 +2,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { AgentExecutor } = require('./executor-interface');
+const { parseCommand: sharedParseCommand } = require('../../utils/parse-command');
 
 const DEFAULT_ALLOWED_BINS = new Set(['node', process.execPath]);
 
@@ -17,48 +18,7 @@ function basename(value) {
 }
 
 function parseCommand(command) {
-  const input = String(command || '').trim();
-  if (!input) throw new Error('Shell agent executor requires a command.');
-
-  const args = [];
-  let current = '';
-  let quote = null;
-  let escaping = false;
-
-  for (const char of input) {
-    if (escaping) {
-      current += char;
-      escaping = false;
-      continue;
-    }
-    if (char === '\\') {
-      escaping = true;
-      continue;
-    }
-    if (quote) {
-      if (char === quote) quote = null;
-      else current += char;
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      quote = char;
-      continue;
-    }
-    if (/\s/.test(char)) {
-      if (current) {
-        args.push(current);
-        current = '';
-      }
-      continue;
-    }
-    current += char;
-  }
-
-  if (escaping) current += '\\';
-  if (quote) throw new Error('Unterminated quote in shell agent command.');
-  if (current) args.push(current);
-  if (args.length === 0) throw new Error('Shell agent executor requires a command.');
-  return { bin: args[0], args: args.slice(1) };
+  return sharedParseCommand(command, 'Shell agent command');
 }
 
 class ShellAgentExecutor extends AgentExecutor {

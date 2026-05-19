@@ -1,5 +1,7 @@
 const path = require('path');
 const fs = require('fs');
+const { createLogger } = require('../utils/logger');
+const log = createLogger('BrowserController');
 
 class BrowserController {
   constructor(outputDir = 'stdd/evidence') {
@@ -43,7 +45,7 @@ class BrowserController {
     const page = await context.newPage();
 
     try {
-      console.log('Navigating to:', url);
+      log.info(`Navigating to: ${url}`);
       await page.goto(url, { waitUntil: 'networkidle', timeout: 20000 });
       
       const timestamp = Date.now();
@@ -80,15 +82,15 @@ class BrowserController {
     const page = await browser.newPage();
 
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
       const title = await page.title();
-      const status = 200; // playwright throws on 404 usually unless ignoreHTTPSErrors etc
-      
-      return { 
-        status: 'success', 
-        url: page.url(), 
-        title, 
-        httpStatus: status 
+      const httpStatus = response ? response.status() : null;
+
+      return {
+        status: 'success',
+        url: page.url(),
+        title,
+        httpStatus,
       };
     } finally {
       await browser.close();

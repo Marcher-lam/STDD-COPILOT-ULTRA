@@ -2,11 +2,15 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const { spawnSync, execSync } = require('child_process');
-const { detectWorkspaces } = require('../../utils/workspace-detector');
+const { detectWorkspaces, collectSourceDirs } = require('../../utils/workspace-detector');
 const { parseCoverage } = require('../../utils/coverage-parser');
 const { findLatestMutationEvidence } = require('./mutation');
 const { SchemaCommand } = require('./schema');
 const { isSafeListed } = require('./depcheck');
+const { mergePackageDeps } = require('../../utils/tech-stack-detector');
+const { walkFiles } = require('../../utils/file-walker');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('constitution-checker');
 
 const LINTER_TIMEOUT = 10000;
 const LIBRARY_FIRST_DIRS = ['utils', 'helpers', 'lib'];
@@ -39,20 +43,10 @@ class ConstitutionChecker {
   }
 
   getSourceDirs() {
-    const dirs = [];
-    if (this.options.workspace) {
-      if (fs.existsSync(this.options.workspace.sourceDir)) dirs.push(this.options.workspace.sourceDir);
-      return dirs;
-    }
-
-    const rootSrcDir = path.join(this.cwd, 'src');
-    if (fs.existsSync(rootSrcDir)) dirs.push(rootSrcDir);
-
-    for (const workspace of this.workspaces) {
-      if (fs.existsSync(workspace.sourceDir)) dirs.push(workspace.sourceDir);
-    }
-
-    return dirs;
+    return collectSourceDirs(this.cwd, {
+      workspace: this.options.workspace,
+      workspaces: this.workspaces,
+    });
   }
 
   getPackageJsonPaths() {
@@ -166,7 +160,7 @@ class ConstitutionChecker {
     for (const pkgPath of this.getPackageJsonPaths()) {
       try {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-        const packageDeps = { ...((pkg && pkg.dependencies) || {}), ...((pkg && pkg.devDependencies) || {}) };
+        const packageDeps = mergePackageDeps(pkg);
         Object.keys(packageDeps).forEach(dep => deps.add(dep));
       } catch (_) {
         // ignore invalid package.json files
@@ -259,7 +253,7 @@ class ConstitutionChecker {
 
     try {
       const pkg = JSON.parse(fs.readFileSync(targetPkg, 'utf8'));
-      const allDeps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) };
+      const allDeps = mergePackageDeps(pkg);
       const depNames = Object.keys(allDeps);
       if (depNames.length === 0) return;
 
@@ -324,7 +318,7 @@ class ConstitutionChecker {
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) {
+        if (entry.name !== 'node_modules' && entry.name !== '__tests__' && !entry.name.startsWith('.')) {
           this._scanDirForConstImports(fullPath, usedPackages);
         }
       } else if (entry.isFile() && /\.(js|jsx|ts|tsx|mjs|cjs)$/.test(entry.name)) {
@@ -353,8 +347,8 @@ class ConstitutionChecker {
           }
         }
       }
-    } catch {
-      // ignore read errors
+    } catch (err) {
+      logger.warn(err.message);
     }
   }
 
@@ -420,8 +414,8 @@ class ConstitutionChecker {
               message: 'No test command configured in stdd/config.yaml or package.json',
             });
           }
-        } catch {
-          // ignore
+        } catch (err) {
+          logger.warn(err.message);
         }
       }
     }
@@ -476,29 +470,14 @@ class ConstitutionChecker {
   }
 
   _findTestFiles(srcDir) {
-    const testFiles = [];
-    if (!fs.existsSync(srcDir)) return testFiles;
-
-    const walkDir = (dir) => {
-      if (!fs.existsSync(dir)) return;
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) {
-            walkDir(fullPath);
-          }
-        } else if (entry.isFile()) {
-          if (/\.(test|spec)\.(js|jsx|ts|tsx)$/.test(entry.name) ||
-              /^test_\w+\.py$/.test(entry.name)) {
-            testFiles.push(fullPath);
-          }
-        }
-      }
-    };
-
-    walkDir(srcDir);
-    return testFiles;
+    if (!fs.existsSync(srcDir)) return [];
+    return walkFiles(srcDir, {
+      predicate: (filePath) => {
+        const basename = path.basename(filePath);
+        return /\.(test|spec)\.(js|jsx|ts|tsx)$/.test(basename) ||
+          /^test_\w+\.py$/.test(basename);
+      },
+    });
   }
 
   _checkTestFileAntiPatterns(testFile) {
@@ -530,8 +509,8 @@ class ConstitutionChecker {
           file: relPath,
         });
       }
-    } catch {
-      // ignore read errors
+    } catch (err) {
+      logger.warn(err.message);
     }
   }
 
@@ -872,7 +851,7 @@ class ConstitutionChecker {
       if (fs.existsSync(pkgPath)) {
         try {
           const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-          const devDeps = { ...((pkg && pkg.devDependencies) || {}), ...((pkg && pkg.dependencies) || {}) };
+          const devDeps = mergePackageDeps(pkg);
           if (devDeps.eslint) {
             return { type: 'eslint', cmd: 'npx', args: ['eslint', '--ext', '.js,.ts', 'src/'] };
           }

@@ -9,6 +9,8 @@ const chalk = require('chalk');
 const { findActiveChange, parseTasks } = require('../../utils/change-utils');
 const EvidenceCapture = require('../../utils/evidence-capture');
 const { walkFiles } = require('../../utils/file-walker');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('validate');
 
 const GWT_PATTERN = /^\s*(?:[-*]\s*)?(Given|When|Then|And|But)\b/i;
 
@@ -47,7 +49,12 @@ const LEAKAGE_RULES = [
 
 function lineDiagnostics(filePath, cwd) {
   const relFile = path.relative(cwd, filePath).replace(/\\/g, '/');
-  const content = fs.readFileSync(filePath, 'utf8');
+  let content;
+  try {
+    content = fs.readFileSync(filePath, 'utf8');
+  } catch (e) {
+    return [{ file: relFile, line: 0, rule: 'read-error', severity: 'error', message: `Cannot read file: ${e.message}`, text: '', suggestion: '' }];
+  }
   const lines = content.split('\n');
   const diagnostics = [];
   let scenarioCount = 0;
@@ -162,7 +169,9 @@ class ValidateCommand {
   compareTasksToSpecs(changeDir, specFiles) {
     const tasksPath = path.join(changeDir, 'tasks.md');
     const tasks = parseTasks(tasksPath) || [];
-    const specText = specFiles.map(file => fs.readFileSync(file, 'utf8')).join('\n').toLowerCase();
+    const specText = specFiles.map(file => {
+      try { return fs.readFileSync(file, 'utf8'); } catch (err) { logger.warn(err.message); return ''; }
+    }).join('\n').toLowerCase();
     const uncovered = tasks
       .filter(task => !this.taskAppearsInSpecs(task.description, specText))
       .map(task => task.description);

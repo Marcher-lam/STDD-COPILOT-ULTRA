@@ -209,6 +209,99 @@ module.exports = {
       expect(componentsContent).toContain('no source files found');
     });
 
+    it('should produce no symbols message when files have no exports', async () => {
+      const baseDir = createTempDir();
+
+      createProjectStructure(baseDir, {
+        'src/plain.js': 'const x = 1;\n// no exports',
+      });
+
+      const scanner = new MemoryScanner(baseDir);
+      const result = await scanner.scan();
+
+      const contractsContent = fs.readFileSync(result.contractsPath, 'utf-8');
+      expect(contractsContent).toContain('No exported symbols found');
+    });
+
+    it('should handle exports.name = pattern', async () => {
+      const baseDir = createTempDir();
+
+      createProjectStructure(baseDir, {
+        'src/legacy.js': 'exports.myFunc = function() {};\nexports.myVal = 42;',
+      });
+
+      const scanner = new MemoryScanner(baseDir);
+      const result = await scanner.scan();
+
+      const contractsContent = fs.readFileSync(result.contractsPath, 'utf-8');
+      expect(contractsContent).toContain('myFunc');
+      expect(contractsContent).toContain('myVal');
+    });
+
+    it('should handle Python class with inheritance', async () => {
+      const baseDir = createTempDir();
+
+      createProjectStructure(baseDir, {
+        'src/models.py': 'class Admin(User):\n    pass\n',
+      });
+
+      const scanner = new MemoryScanner(baseDir);
+      const result = await scanner.scan();
+
+      const contractsContent = fs.readFileSync(result.contractsPath, 'utf-8');
+      expect(contractsContent).toContain('Admin');
+      expect(contractsContent).toContain('(User)');
+    });
+
+    it('should handle Python class without inheritance', async () => {
+      const baseDir = createTempDir();
+
+      createProjectStructure(baseDir, {
+        'src/models.py': 'class Standalone:\n    pass\n',
+      });
+
+      const scanner = new MemoryScanner(baseDir);
+      const result = await scanner.scan();
+
+      const contractsContent = fs.readFileSync(result.contractsPath, 'utf-8');
+      expect(contractsContent).toContain('Standalone');
+    });
+
+    it('should skip dot-directories and node_modules in findSourceFiles', async () => {
+      const baseDir = createTempDir();
+
+      createProjectStructure(baseDir, {
+        'src/.hidden/file.js': 'export const a = 1;',
+        'src/node_modules/pkg/index.js': 'export const b = 2;',
+        'src/visible/file.js': 'export const c = 3;',
+      });
+
+      const scanner = new MemoryScanner(baseDir);
+      const result = await scanner.scan();
+
+      expect(result.fileCount).toBe(1);
+    });
+
+    it('should handle config.yaml with null source_root', async () => {
+      const baseDir = createTempDir();
+      fs.mkdirSync(path.join(baseDir, 'stdd'), { recursive: true });
+      fs.writeFileSync(
+        path.join(baseDir, 'stdd', 'config.yaml'),
+        'source_root: null\n',
+        'utf-8'
+      );
+
+      createProjectStructure(baseDir, {
+        'src/app.js': 'export function app() {}',
+      });
+
+      const scanner = new MemoryScanner(baseDir);
+      const result = await scanner.scan();
+
+      // Falls back to default src/ directory
+      expect(result.fileCount).toBe(1);
+    });
+
     it('should read source_root from config.yaml', async () => {
       const baseDir = createTempDir();
       fs.mkdirSync(path.join(baseDir, 'stdd'), { recursive: true });
@@ -255,6 +348,20 @@ module.exports = {
       const files = await scanner.listMemory();
 
       expect(files).toEqual([]);
+    });
+
+    it('should throw non-ENOENT errors from listMemory', async () => {
+      const baseDir = createTempDir();
+      const memoryDir = path.join(baseDir, 'stdd', 'memory');
+      fs.mkdirSync(memoryDir, { recursive: true });
+      // Make the directory unreadable (no read permission)
+      fs.chmodSync(memoryDir, 0o000);
+
+      const scanner = new MemoryScanner(baseDir);
+      await expect(scanner.listMemory()).rejects.toThrow();
+
+      // Restore permissions for cleanup
+      fs.chmodSync(memoryDir, 0o755);
     });
   });
 
@@ -310,6 +417,65 @@ module.exports = {
 
     it('should infer index file purpose', () => {
       expect(scanner.inferPurpose('index.js', 'src')).toContain('entry');
+    });
+
+    it('should infer header, footer, form, list, table, card, nav component purposes', () => {
+      expect(scanner.inferPurpose('Header.js', 'src/components')).toContain('Header');
+      expect(scanner.inferPurpose('Footer.js', 'src/components')).toContain('Footer');
+      expect(scanner.inferPurpose('SearchForm.js', 'src/components')).toContain('Form');
+      expect(scanner.inferPurpose('UserList.js', 'src/components')).toContain('List');
+      expect(scanner.inferPurpose('DataTable.js', 'src/components')).toContain('Table');
+      expect(scanner.inferPurpose('ProfileCard.js', 'src/components')).toContain('Card');
+      expect(scanner.inferPurpose('TopNav.js', 'src/components')).toContain('Navigation');
+    });
+
+    it('should return generic UI Component for unmatched component files', () => {
+      expect(scanner.inferPurpose('Widget.js', 'src/components')).toBe('UI Component');
+    });
+
+    it('should infer string, array, math utility purposes', () => {
+      expect(scanner.inferPurpose('string.js', 'src/utils')).toContain('String');
+      expect(scanner.inferPurpose('array.js', 'src/helpers')).toContain('Array');
+      expect(scanner.inferPurpose('math.js', 'src/utils')).toContain('Math');
+    });
+
+    it('should return generic utility for unmatched util files', () => {
+      expect(scanner.inferPurpose('crypto.js', 'src/utils')).toBe('Utility functions');
+    });
+
+    it('should infer data service purpose', () => {
+      expect(scanner.inferPurpose('data.js', 'src/services')).toContain('Data');
+    });
+
+    it('should return generic service for unmatched service files', () => {
+      expect(scanner.inferPurpose('payment.js', 'src/services')).toBe('Business logic service');
+    });
+
+    it('should infer model, controller, route, config, test, middleware, hook purposes', () => {
+      expect(scanner.inferPurpose('user.js', 'src/models')).toBe('Data model definition');
+      expect(scanner.inferPurpose('user.js', 'src/entity')).toBe('Data model definition');
+      expect(scanner.inferPurpose('app.js', 'src/controllers')).toBe('Request handler controller');
+      expect(scanner.inferPurpose('routes.js', 'src/routes')).toBe('Route definitions');
+      expect(scanner.inferPurpose('routes.js', 'src/router')).toBe('Route definitions');
+      expect(scanner.inferPurpose('settings.js', 'src/config')).toBe('Configuration module');
+      expect(scanner.inferPurpose('settings.js', 'src/conf')).toBe('Configuration module');
+      expect(scanner.inferPurpose('app.test.js', 'src/test')).toBe('Test suite');
+      expect(scanner.inferPurpose('app.spec.js', 'src/spec')).toBe('Test suite');
+      expect(scanner.inferPurpose('auth.js', 'src/middleware')).toBe('Request middleware');
+      expect(scanner.inferPurpose('useAuth.js', 'src/hook')).toBe('Custom hook');
+    });
+
+    it('should infer name-based purposes for app, main, config, constant, type, interface', () => {
+      expect(scanner.inferPurpose('app.js', 'src')).toContain('Application');
+      expect(scanner.inferPurpose('main.js', 'src')).toContain('Main');
+      expect(scanner.inferPurpose('config.js', 'src')).toBe('Configuration');
+      expect(scanner.inferPurpose('constant.js', 'src')).toBe('Constants definition');
+      expect(scanner.inferPurpose('types.js', 'src')).toBe('Type definitions');
+      expect(scanner.inferPurpose('interfaces.js', 'src')).toBe('Interface definitions');
+    });
+
+    it('should return generic Source module for unmatched files', () => {
+      expect(scanner.inferPurpose('foobar.js', 'src')).toBe('Source module');
     });
   });
 });

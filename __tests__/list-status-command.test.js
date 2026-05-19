@@ -34,7 +34,7 @@ describe('ListCommand + StatusCommand', () => {
   beforeEach(() => {
     originalCwd = process.cwd();
     logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    errorSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {

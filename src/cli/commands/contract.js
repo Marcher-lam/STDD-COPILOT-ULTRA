@@ -9,11 +9,19 @@ const yaml = require('js-yaml');
 const { resolveWorkspace } = require('../../utils/workspace-detector');
 const EvidenceCapture = require('../../utils/evidence-capture');
 const { resolveChangeDir } = require('../../utils/change-utils');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('contract');
 
 class ContractCommand {
   constructor(projectRoot = process.cwd()) {
     this.projectRoot = projectRoot;
     this.evidence = new EvidenceCapture();
+  }
+
+  async execute(action, changeName, options = {}) {
+    if (action === 'generate' || action === 'gen') return this.generate(changeName, options);
+    if (action === 'verify' || action === 'check') return this.verify(changeName, options);
+    throw new Error(`Unknown contract action '${action}'. Use generate or verify.`);
   }
 
   async generate(changeName, options = {}) {
@@ -29,7 +37,8 @@ class ContractCommand {
 
     try {
       await fsPromises.access(apiSpecFile);
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       throw new Error(`API spec not found at ${workspace ? `api-spec for workspace '${options.workspace}'` : 'api-spec.yaml'}. Run 'stdd api-spec ${changeName}' first.`);
     }
 
@@ -95,7 +104,8 @@ class ContractCommand {
     const contractsDir = path.join(changeDir, 'specs', 'contracts');
     try {
       await fsPromises.access(contractsDir);
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       throw new Error(`Contracts directory not found. Run 'stdd contract generate ${changeName}' first.`);
     }
 
@@ -107,10 +117,15 @@ class ContractCommand {
       throw new Error('No contract JSON files found. Run "stdd contract generate" first.');
     }
 
-    const contractDocs = await Promise.all(contractFiles.map(async (f) => {
+    const contractDocs = [];
+    for (const f of contractFiles) {
       const content = await fsPromises.readFile(f, 'utf8');
-      return { file: f, doc: JSON.parse(content) };
-    }));
+      try {
+        contractDocs.push({ file: f, doc: JSON.parse(content) });
+      } catch (e) {
+        throw new Error(`Invalid JSON in contract file ${path.basename(f)}: ${e.message}`);
+      }
+    }
 
     const apiSpecFile = workspace
       ? path.join(changeDir, 'specs', `api-spec.${this._toSafeFilename(workspace.name)}.yaml`)
@@ -118,7 +133,8 @@ class ContractCommand {
 
     try {
       await fsPromises.access(apiSpecFile);
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       throw new Error(`API spec not found at ${workspace ? `api-spec for workspace '${options.workspace}'` : 'api-spec.yaml'}.`);
     }
 

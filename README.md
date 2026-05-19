@@ -8,7 +8,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/tests-893%20passed-brightgreen.svg)](./CONTRIBUTING.md)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](./CONTRIBUTING.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 [**简体中文**](./README.md) · [**English**](./README_EN.md)

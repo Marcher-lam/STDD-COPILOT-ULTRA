@@ -7,6 +7,17 @@
 const fs = require('fs');
 const path = require('path');
 
+const CONVERGENCE_KEYWORDS = ['agree', 'consensus', 'approved', 'done', 'resolved', 'confirmed', '达成共识', '同意', '通过'];
+
+function detectKeywordConvergence(history) {
+  if (history.length < 2) return false;
+  const lastTwo = history.slice(-2);
+  const allAgree = lastTwo.every(turn =>
+    CONVERGENCE_KEYWORDS.some(kw => (turn.content || '').toLowerCase().includes(kw))
+  );
+  return allAgree;
+}
+
 const DEFAULT_AGENTS = [
   { id: 'po', name: 'Product Owner', role: 'Focus on scope, value, and user journey.' },
   { id: 'arch', name: 'Architect', role: 'Focus on system boundaries, patterns, and risks.' },
@@ -34,7 +45,12 @@ class AgentEngine {
 
   loadState() {
     if (!fs.existsSync(this.statePath)) return this.getDefaultState();
-    return JSON.parse(fs.readFileSync(this.statePath, 'utf8'));
+    try {
+      return JSON.parse(fs.readFileSync(this.statePath, 'utf8'));
+    } catch (err) {
+      if (err.code !== 'ENOENT' && err.code !== 'EACCES') console.error(`  Warning: ${err.message}`);
+      return this.getDefaultState();
+    }
   }
 
   saveState(state) {
@@ -43,11 +59,12 @@ class AgentEngine {
 
   start(topic, options = {}) {
     this.ensureRuntimeDir();
+    const agents = options.agents && options.agents.length > 0 ? options.agents : DEFAULT_AGENTS;
     const state = {
       ...this.getDefaultState(),
       status: 'active',
       topic,
-      agents: options.agents || DEFAULT_AGENTS,
+      agents,
       maxRounds: options.rounds || 6,
       currentSpeakerIndex: 0,
     };
@@ -66,7 +83,11 @@ class AgentEngine {
     if (state.currentSpeakerIndex === 0) state.round++;
 
     // Check convergence (rounds limit or keyword)
+    const history = this.getHistory();
     if (state.round >= state.maxRounds) {
+      state.status = 'completed';
+      state.convergenceDetected = true;
+    } else if (detectKeywordConvergence(history)) {
       state.status = 'completed';
       state.convergenceDetected = true;
     }
@@ -84,7 +105,8 @@ class AgentEngine {
     if (!fs.existsSync(this.turnsPath)) return [];
     return fs.readFileSync(this.turnsPath, 'utf8').trim().split('\n')
       .filter(Boolean)
-      .map(line => JSON.parse(line));
+      .map(line => { try { return JSON.parse(line); } catch { return null; } })
+      .filter(Boolean);
   }
 
   getStatus() {

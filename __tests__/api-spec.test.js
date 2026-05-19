@@ -308,4 +308,313 @@ Feature: Web Users
       .rejects
       .toThrow("Workspace 'packages/api' not found.");
   });
+
+  it('should extract headers as request hints', async () => {
+    const projectPath = createTempProject('header-hints-project');
+    process.chdir(projectPath);
+
+    createFeatureFile(projectPath, 'auth-api', 'auth.feature', `Feature: Auth API
+
+  Scenario: Authenticated request
+    Given the Authorization header is set
+    When GET /api/protected is called
+    Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('auth-api');
+
+    const content = fs.readFileSync(result.outputPath, 'utf8');
+    const doc = yaml.load(content);
+
+    expect(doc.paths['/api/protected'].get.requestBody).toBeDefined();
+  });
+
+  it('should extract query params as request hints', async () => {
+    const projectPath = createTempProject('query-params-project');
+    process.chdir(projectPath);
+
+    createFeatureFile(projectPath, 'search-api', 'search.feature', `Feature: Search API
+
+  Scenario: Search with query params
+    Given the query parameters include page and limit
+    When GET /api/search is called
+    Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('search-api');
+
+    const content = fs.readFileSync(result.outputPath, 'utf8');
+    const doc = yaml.load(content);
+
+    expect(doc.paths['/api/search'].get.requestBody).toBeDefined();
+  });
+
+  it('should extract response body hints with JSON content', async () => {
+    const projectPath = createTempProject('response-body-project');
+    process.chdir(projectPath);
+
+    createFeatureFile(projectPath, 'detail-api', 'detail.feature', `Feature: Detail API
+
+  Scenario: Get user details
+    When GET /api/users/{id} is called
+    Then the response should be 200 OK
+    And the response body contains {"name": "John"}
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('detail-api');
+
+    const content = fs.readFileSync(result.outputPath, 'utf8');
+    const doc = yaml.load(content);
+
+    expect(doc.paths['/api/users/{id}'].get.responses['200']).toBeDefined();
+  });
+
+  it('should extract Scenario Outline summary', async () => {
+    const projectPath = createTempProject('scenario-outline-project');
+    process.chdir(projectPath);
+
+    createFeatureFile(projectPath, 'outline-change', 'outline.feature', `Feature: Outline API
+
+  Scenario Outline: Get item by id
+    When GET /api/items/{id} is called
+    Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('outline-change');
+
+    const content = fs.readFileSync(result.outputPath, 'utf8');
+    const doc = yaml.load(content);
+
+    expect(doc.paths['/api/items/{id}']).toBeDefined();
+    expect(doc.paths['/api/items/{id}'].get.summary).toBe('Get item by id');
+  });
+
+  it('should handle feature files without workspace scope when workspace is provided', async () => {
+    const projectPath = createTempProject('no-scope-ws-project');
+    process.chdir(projectPath);
+    createWorkspace(projectPath, 'packages/api', '@demo/api');
+
+    // Feature files without workspace metadata or tags
+    createFeatureFile(projectPath, 'noscope-change', 'generic.feature', `Feature: Generic API
+
+  Scenario: Generic endpoint
+    When GET /api/generic is called
+    Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    // When no feature files have workspace scope, all features are included
+    const result = await cmd.execute('noscope-change', { workspace: 'packages/api' });
+
+    expect(result.openapiDoc.paths['/api/generic']).toBeDefined();
+  });
+
+  it('should filter workspace-scoped features to matching workspace only', async () => {
+    const projectPath = createTempProject('ws-filter-project');
+    process.chdir(projectPath);
+    createWorkspace(projectPath, 'packages/api', '@demo/api');
+    createWorkspace(projectPath, 'packages/web', '@demo/web');
+
+    // Feature with workspace metadata matching packages/api
+    createFeatureFile(projectPath, 'ws-filter-change', 'api-users.feature', `# Workspace: packages/api
+Feature: API Users
+
+  Scenario: List users
+    When GET /api/users is called
+    Then the response should be 200 OK
+`);
+
+    // Feature with workspace metadata matching packages/web (should be excluded)
+    createFeatureFile(projectPath, 'ws-filter-change', 'web-pages.feature', `# Workspace: packages/web
+Feature: Web Pages
+
+  Scenario: List pages
+    When GET /web/pages is called
+    Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('ws-filter-change', { workspace: 'packages/api' });
+
+    expect(result.openapiDoc.paths['/api/users']).toBeDefined();
+    expect(result.openapiDoc.paths['/web/pages']).toBeUndefined();
+  });
+
+  it('should throw when workspace provided but no feature files match', async () => {
+    const projectPath = createTempProject('no-match-ws-project');
+    process.chdir(projectPath);
+    createWorkspace(projectPath, 'packages/api', '@demo/api');
+
+    // Feature scoped to different workspace
+    createFeatureFile(projectPath, 'nomatch-change', 'other.feature', `# Workspace: packages/other
+Feature: Other
+
+  @workspace:packages-other
+  Scenario: Other endpoint
+    When GET /other/endpoint is called
+    Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    // All features have workspace scope but none match packages/api
+    await expect(cmd.execute('nomatch-change', { workspace: 'packages/api' }))
+      .rejects
+      .toThrow('No .feature files found');
+  });
+
+  it('should throw with workspace suffix when no features found for workspace', async () => {
+    const projectPath = createTempProject('ws-suffix-project');
+    process.chdir(projectPath);
+    createWorkspace(projectPath, 'packages/api', '@demo/api');
+
+    const changeDir = path.join(projectPath, 'stdd', 'changes', 'ws-suffix-change');
+    fs.mkdirSync(changeDir, { recursive: true });
+    fs.mkdirSync(path.join(changeDir, 'specs'));
+
+    const cmd = new ApiSpecCommand();
+    await expect(cmd.execute('ws-suffix-change', { workspace: 'packages/api' }))
+      .rejects
+      .toThrow("for workspace 'packages/api'");
+  });
+
+  it('should handle findFeatureFiles when specsDir does not exist', async () => {
+    const cmd = new ApiSpecCommand();
+    const files = await cmd.findFeatureFiles('/nonexistent/path/specs');
+    expect(files).toEqual([]);
+  });
+
+  it('should include 3xx, 4xx, and 5xx status codes in response hints', async () => {
+    const projectPath = createTempProject('status-codes-project');
+    process.chdir(projectPath);
+
+    createFeatureFile(projectPath, 'status-change', 'status.feature', `Feature: Status Codes API
+
+  Scenario: Various responses
+    When GET /api/test is called
+    Then the response should be 200 OK
+    And the response should be 404 NotFound
+    And the response should be 500 Internal
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('status-change');
+
+    const content = fs.readFileSync(result.outputPath, 'utf8');
+    const doc = yaml.load(content);
+
+    expect(doc.paths['/api/test'].get.responses['200']).toBeDefined();
+    expect(doc.paths['/api/test'].get.responses['404']).toBeDefined();
+    expect(doc.paths['/api/test'].get.responses['500']).toBeDefined();
+  });
+
+  it('should not overwrite existing path method if already defined', async () => {
+    const projectPath = createTempProject('dup-method-project');
+    process.chdir(projectPath);
+
+    // Two feature files with the same endpoint and method
+    createFeatureFile(projectPath, 'dup-change', 'first.feature', `Feature: First
+
+  Scenario: First call
+    When GET /api/items is called
+    Then the response should be 200 OK
+`);
+    createFeatureFile(projectPath, 'dup-change', 'second.feature', `Feature: Second
+
+  Scenario: Second call
+    When GET /api/items is called
+    Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('dup-change');
+
+    const content = fs.readFileSync(result.outputPath, 'utf8');
+    const doc = yaml.load(content);
+
+    // Should keep the first definition, not crash
+    expect(doc.paths['/api/items'].get).toBeDefined();
+  });
+
+  it('should handle buildRequestBody with no body hint', async () => {
+    const cmd = new ApiSpecCommand();
+    const hints = [{ line: 1, type: 'header', text: 'Authorization: Bearer token' }];
+    const result = cmd.buildRequestBody(hints);
+    expect(result.required).toBe(true);
+    expect(result.content['application/json'].schema.properties).toHaveProperty('data');
+  });
+
+  it('should handle buildRequestBody with body hint', async () => {
+    const cmd = new ApiSpecCommand();
+    const hints = [{ line: 1, type: 'body_ref', text: 'request body with user data' }];
+    const result = cmd.buildRequestBody(hints);
+    expect(result.required).toBe(true);
+    expect(result.content['application/json'].schema.description).toBe('request body with user data');
+  });
+
+  it('should remove empty schemas from components', async () => {
+    const projectPath = createTempProject('no-schemas-project');
+    process.chdir(projectPath);
+
+    createFeatureFile(projectPath, 'noschema-change', 'simple.feature', `Feature: Simple
+
+  Scenario: Simple call
+    When GET /api/simple is called
+    Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('noschema-change');
+
+    const content = fs.readFileSync(result.outputPath, 'utf8');
+    const doc = yaml.load(content);
+
+    expect(doc.components).toBeDefined();
+    // schemas should be deleted if empty
+    expect(doc.components.schemas).toBeUndefined();
+  });
+
+  it('should use auto-generated summary when no scenario found', async () => {
+    const projectPath = createTempProject('auto-summary-project');
+    process.chdir(projectPath);
+
+    createFeatureFile(projectPath, 'autosum-change', 'no-scenario.feature', `Feature: No Scenario
+
+When GET /api/no-scenario is called
+Then the response should be 200 OK
+`);
+
+    const cmd = new ApiSpecCommand();
+    const result = await cmd.execute('autosum-change');
+
+    const content = fs.readFileSync(result.outputPath, 'utf8');
+    const doc = yaml.load(content);
+
+    expect(doc.paths['/api/no-scenario'].get.summary).toContain('Auto-generated');
+  });
+
+  it('should detect feature with workspace tags', async () => {
+    const cmd = new ApiSpecCommand();
+
+    // Test with actual content by writing temp files
+    const projectPath = createTempProject('ws-tag-detect-project');
+
+    // Test with workspace tags
+    const tempFile = path.join(projectPath, 'tagged.feature');
+    fs.writeFileSync(tempFile, `@workspace:my-tag\nFeature: Tagged\n  Scenario: Test\n    When GET /api/test is called`);
+    expect(cmd.featureHasWorkspaceScope(tempFile)).toBe(true);
+
+    // Test with workspace metadata
+    const tempFile2 = path.join(projectPath, 'meta.feature');
+    fs.writeFileSync(tempFile2, `# Workspace: some/path\nFeature: Meta\n  Scenario: Test\n    When GET /api/test is called`);
+    expect(cmd.featureHasWorkspaceScope(tempFile2)).toBe(true);
+
+    // Test without workspace scope
+    const tempFile3 = path.join(projectPath, 'plain.feature');
+    fs.writeFileSync(tempFile3, `Feature: Plain\n  Scenario: Test\n    When GET /api/test is called`);
+    expect(cmd.featureHasWorkspaceScope(tempFile3)).toBe(false);
+  });
 });

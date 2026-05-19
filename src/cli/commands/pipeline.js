@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { resolveChangeDir } = require('../../utils/change-utils');
 const { walkFiles } = require('../../utils/file-walker');
+const { parseBddScenarios } = require('../../utils/bdd-scenario-parser');
 
 class PipelineCommand {
   constructor(cwd = process.cwd()) { this.cwd = cwd; }
@@ -10,7 +11,7 @@ class PipelineCommand {
     const changeDir = changeName ? resolveChangeDir(path.join(this.cwd, 'stdd'), changeName) : null;
     const specsDir = changeName ? path.join(changeDir || '', 'specs') : path.join(this.cwd, 'stdd', 'specs');
     if (!fs.existsSync(specsDir)) throw new Error(`Spec directory not found: ${path.relative(this.cwd, specsDir)}`);
-    const ir = this.parseSpecs(walkFiles(specsDir, { extensions: ['.feature', '.md'], skipDirs: new Set() }));
+    const ir = this.parseSpecs(walkFiles(specsDir, { extensions: ['.feature', '.md'], skipDirs: new Set() }), this.cwd);
     const outDir = changeName ? path.join(changeDir, 'pipeline') : path.join(this.cwd, 'stdd', 'pipeline');
     fs.mkdirSync(outDir, { recursive: true });
     const irPath = path.join(outDir, 'ir.json');
@@ -22,20 +23,8 @@ class PipelineCommand {
     return { status: 'generated', ir: irPath, tests: testPath };
   }
 
-  parseSpecs(files) {
-    const scenarios = [];
-    for (const file of files) {
-      let current = null;
-      for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
-        const match = line.match(/^\s*(?:#{2,5}\s*)?Scenario:\s*(.+)$/i);
-        if (match) {
-          current = { name: match[1].trim(), source: path.relative(this.cwd, file), steps: [] };
-          scenarios.push(current);
-        } else if (current && /^\s*(?:[-*]\s*)?(Given|When|Then|And|But)\b/i.test(line)) {
-          current.steps.push(line.trim().replace(/^[-*]\s*/, ''));
-        }
-      }
-    }
+  parseSpecs(files, cwd) {
+    const scenarios = parseBddScenarios(files, cwd);
     return { version: '1.0', generatedAt: new Date().toISOString(), scenarios };
   }
 

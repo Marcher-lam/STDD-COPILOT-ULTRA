@@ -171,8 +171,11 @@ class ApplyCommand {
 
     // If user requested a specific phase, validate the transition
     if (requestedPhase) {
+      if (requestedPhase === TDD_PHASES.DONE) {
+        throw new Error(`Cannot execute 'done' phase directly. It is set automatically after REFACTOR.`);
+      }
       if (!PHASE_ORDER.includes(requestedPhase)) {
-        throw new Error(`Invalid phase '${requestedPhase}'. Valid phases: ${PHASE_ORDER.join(', ')}`);
+        throw new Error(`Invalid phase '${requestedPhase}'. Valid phases: red, green, refactor`);
       }
 
       const currentIdx = PHASE_ORDER.indexOf(taskPhase);
@@ -318,8 +321,7 @@ class ApplyCommand {
       });
       console.log(chalk.yellow(`  Fix packet: ${fixPacket.output}`));
     } else {
-      updateTaskLine(tasksPath, task, 'x');
-      console.log(chalk.dim(`\n  Task marked complete (tests skipped)`));
+      throw new Error(`Unexpected result status: ${resultStatus}`);
     }
 
     const workspaceResults = testResults.map(result => result.workspace).filter(Boolean);
@@ -430,26 +432,6 @@ class ApplyCommand {
 
     console.log(`\n  ${chalk.dim('📡 STDD Reporter linked for better evidence')}`);
 
-    if (testCommands.length === 0) {
-      if (!options.allowNoTests) {
-        failNoTestCommand(TDD_PHASES.REFACTOR);
-        return;
-      }
-      console.log(chalk.yellow(`  No test command configured. Marking complete because --allow-no-tests was provided.`));
-      updateTaskLine(tasksPath, task, 'x');
-      updateTaskPhase(tasksPath, task.index, TDD_PHASES.DONE);
-      writeLog(changeDir, {
-        change: changeName,
-        task: task.description,
-        phase: TDD_PHASES.REFACTOR,
-        command: '(none)',
-        workspaces: [],
-        status: 'skipped',
-        reason: '--allow-no-tests',
-      });
-      return;
-    }
-
     const testResults = await this._runTests(testCommands, cwd);
     const allPassed = testResults.every(r => r.passed);
 
@@ -512,6 +494,26 @@ class ApplyCommand {
       configCommand: getConfigTestCommand(cwd),
       workspace: workspace,
     });
+
+    if (testCommands.length === 0) {
+      if (!options.allowNoTests) {
+        failNoTestCommand(TDD_PHASES.REFACTOR);
+        return;
+      }
+      console.log(chalk.yellow(`  No test command configured. Marking complete because --allow-no-tests was provided.`));
+      updateTaskLine(tasksPath, task, 'x');
+      updateTaskPhase(tasksPath, task.index, TDD_PHASES.DONE);
+      writeLog(changeDir, {
+        change: changeName,
+        task: task.description,
+        phase: TDD_PHASES.REFACTOR,
+        command: '(none)',
+        workspaces: [],
+        status: 'skipped',
+        reason: '--allow-no-tests',
+      });
+      return;
+    }
 
     console.log(`\n  ${chalk.dim('📡 STDD Reporter linked for better evidence')}`);
 

@@ -3,6 +3,8 @@ const path = require('path');
 const { spawn } = require('child_process');
 const os = require('os');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('graph');
 const DynamicGraphRouter = require('../../utils/dynamic-router');
 const HeterogeneousAdapter = require('../../utils/heterogeneous-adapter');
 const ParallelExecutor = require('../../utils/parallel-executor');
@@ -151,7 +153,7 @@ Currently implemented: visualize, analyze, parallel --detect, history, replay, r
   graph
     .command('visualize')
     .description('Print the compiled graph as Mermaid, JSON, or open in browser')
-    .option('--intent <intent>', 'Graph intent: feature, hotfix, research', 'feature')
+    .option('--intent <intent>', 'Graph intent: feature, hotfix, research, repair, brownfield', 'feature')
     .option('--format <format>', 'Output format: mermaid, json, or html', 'mermaid')
     .option('--output <file>', 'Write output to file')
     .action(async (options = {}) => {
@@ -179,15 +181,17 @@ Currently implemented: visualize, analyze, parallel --detect, history, replay, r
           await openInBrowser(outputPath);
           console.log(chalk.green('\u{1F9FF} Graph visualization opened in browser.'));
         } catch (error) {
-          console.error(chalk.red(`Error opening graph visualization: ${error.message}`));
-          process.exit(1);
+          logger.error(`Error opening graph visualization: ${error.message}`);
+          process.exitCode = 1;
+          return;
         }
         return;
       }
 
       if (format !== 'mermaid') {
-        console.error(chalk.red(`Unsupported graph format: ${options.format}`));
-        process.exit(1);
+        logger.error(`Unsupported graph format: ${options.format}`);
+        process.exitCode = 1;
+        return;
       }
 
       writeOrPrint(buildMermaid(compiled), options.output);
@@ -196,7 +200,7 @@ Currently implemented: visualize, analyze, parallel --detect, history, replay, r
   graph
     .command('analyze')
     .description('Print graph node, edge, entry, terminal, and layer summary')
-    .option('--intent <intent>', 'Graph intent: feature, hotfix, research', 'feature')
+    .option('--intent <intent>', 'Graph intent: feature, hotfix, research, repair, brownfield', 'feature')
     .action((options = {}) => {
       console.log(formatAnalyze(compileGraph(options.intent)));
     });
@@ -204,12 +208,13 @@ Currently implemented: visualize, analyze, parallel --detect, history, replay, r
   graph
     .command('parallel')
     .description('Inspect graph parallelization opportunities')
-    .option('--intent <intent>', 'Graph intent: feature, hotfix, research', 'feature')
+    .option('--intent <intent>', 'Graph intent: feature, hotfix, research, repair, brownfield', 'feature')
     .option('--detect', 'Detect parallelizable layers')
     .action((options = {}) => {
       if (!options.detect) {
-        console.error(chalk.red('Only `stdd graph parallel --detect` is implemented currently.'));
-        process.exit(1);
+        logger.error('Only `stdd graph parallel --detect` is implemented currently.');
+        process.exitCode = 1;
+        return;
       }
       console.log(formatParallelLayers(compileGraph(options.intent)));
     });
@@ -225,8 +230,8 @@ Currently implemented: visualize, analyze, parallel --detect, history, replay, r
         const historyCommand = new GraphHistoryCommand();
         historyCommand.list(options);
       } catch (error) {
-        console.error(chalk.red(`Error: ${error.message}`));
-        process.exit(1);
+        logger.error(error.message);
+        process.exitCode = 1;
       }
     });
 
@@ -241,15 +246,15 @@ Currently implemented: visualize, analyze, parallel --detect, history, replay, r
         const historyCommand = new GraphHistoryCommand();
         historyCommand.replay(id, options);
       } catch (error) {
-        console.error(chalk.red(`Error: ${error.message}`));
-        process.exit(1);
+        logger.error(error.message);
+        process.exitCode = 1;
       }
     });
 
   graph
     .command('run')
     .description('Execute the full STDD workflow based on intent DAG')
-    .option('--intent <intent>', 'Graph intent: feature, hotfix, research', 'feature')
+    .option('--intent <intent>', 'Graph intent: feature, hotfix, research, repair, brownfield', 'feature')
     .option('--change-name <name>', 'Custom change name')
     .option('--workspace <workspace>', 'Run with workspace context (path or package name)')
     .option('--skip-apply', 'Skip apply and verify steps (spec generation only)')
@@ -264,20 +269,17 @@ Examples:
 
 Executes nodes in topological order. Feature intent includes outside-in scaffolding; repair intent starts with fix-packet evidence.
 `)
-    .action((options = {}) => {
+    .action(async (options = {}) => {
       try {
         const runCommand = new GraphRunCommand();
-        runCommand.execute(options.intent, {
+        await runCommand.execute(options.intent, {
           changeName: options.changeName,
           skipApply: options.skipApply,
           workspace: options.workspace,
-        }).catch((error) => {
-          console.error(chalk.red(`Error: ${error.message}`));
-          process.exit(1);
         });
       } catch (error) {
-        console.error(chalk.red(`Error: ${error.message}`));
-        process.exit(1);
+        logger.error(error.message);
+        process.exitCode = 1;
       }
     });
 
@@ -298,10 +300,22 @@ Executes nodes in topological order. Feature intent includes outside-in scaffold
 
         printRecommendations(recs);
       } catch (error) {
-        console.error(chalk.red(`Error: ${error.message}`));
-        process.exit(1);
+        logger.error(error.message);
+        process.exitCode = 1;
       }
     });
 }
 
-module.exports = graphCommand;
+module.exports = {
+  graphCommand,
+  compileGraph,
+  getEdges,
+  getLayers,
+  buildMermaid,
+  sanitizeMermaidId,
+  formatAnalyze,
+  formatParallelLayers,
+  writeOrPrint,
+  getGraphHtmlTemplatePath,
+  renderHtml,
+};

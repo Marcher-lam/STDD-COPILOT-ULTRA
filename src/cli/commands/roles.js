@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 const { walkFiles } = require('../../utils/file-walker');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('roles');
 
 const ROLES = [
   { id: 'po', name: 'Product Owner', lens: 'scope, value, acceptance criteria' },
@@ -76,7 +78,10 @@ class RolesCommand {
     for (const file of files) {
       const relFile = path.relative(this.cwd, file).replace(/\\/g, '/');
       let content;
-      try { content = fs.readFileSync(file, 'utf8'); } catch { continue; }
+      try { content = fs.readFileSync(file, 'utf8'); } catch (err) {
+        logger.warn(err.message);
+        continue;
+      }
       const lines = content.split('\n');
       for (const [index, line] of lines.entries()) {
         for (const rule of REVIEW_PATTERNS) {

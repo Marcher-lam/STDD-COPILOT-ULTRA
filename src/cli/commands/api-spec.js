@@ -4,7 +4,6 @@
  */
 
 const fs = require('fs');
-const fsPromises = require('fs').promises;
 const path = require('path');
 const yaml = require('js-yaml');
 const { resolveWorkspace } = require('../../utils/workspace-detector');
@@ -22,7 +21,7 @@ class ApiSpecCommand {
 
     try {
       if (!changeDir) throw new Error('missing change');
-      await fsPromises.access(changeDir);
+      fs.accessSync(changeDir);
     } catch (error) {
       throw new Error(`Change '${changeName}' does not exist in stdd/changes/.`);
     }
@@ -40,7 +39,7 @@ class ApiSpecCommand {
     const outputFile = workspaceMeta ? `api-spec.${workspaceMeta.tag}.yaml` : 'api-spec.yaml';
     const outputPath = path.join(specsDir, outputFile);
     const yamlContent = yaml.dump(openapiDoc, { noRefs: true, lineWidth: -1 });
-    await fsPromises.writeFile(outputPath, yamlContent, 'utf8');
+    fs.writeFileSync(outputPath, yamlContent, 'utf8');
 
     if (options.format === 'json') {
       console.log(JSON.stringify(openapiDoc, null, 2));
@@ -70,12 +69,12 @@ class ApiSpecCommand {
 
   async findFeatureFiles(specsDir, workspace = null) {
     try {
-      await fsPromises.access(specsDir);
+      fs.accessSync(specsDir);
     } catch (error) {
       return [];
     }
 
-    const entries = await fsPromises.readdir(specsDir);
+    const entries = fs.readdirSync(specsDir);
     let featureFiles = entries
       .filter(entry => entry.endsWith('.feature'))
       .map(entry => path.join(specsDir, entry))
@@ -122,8 +121,8 @@ class ApiSpecCommand {
     return tags;
   }
 
-  async readFeatureFile(filePath) {
-    return fsPromises.readFile(filePath, 'utf8');
+  readFeatureFile(filePath) {
+    return fs.readFileSync(filePath, 'utf8');
   }
 
   generateOpenApiSpec(changeName, featureFiles, workspace = null) {
@@ -290,7 +289,7 @@ class ApiSpecCommand {
               'application/json': {
                 schema: {
                   type: 'object',
-                  description: 'TODO: Please refine type',
+                  description: 'Response body payload',
                 },
               },
             },
@@ -306,7 +305,7 @@ class ApiSpecCommand {
           'application/json': {
             schema: {
               type: 'object',
-              description: 'TODO: Please refine type',
+              description: 'Response body payload',
             },
           },
         },
@@ -320,8 +319,7 @@ class ApiSpecCommand {
         in: 'path',
         required: true,
         schema: {
-          type: 'object',
-          description: 'TODO: Please refine type for parameter ' + param,
+          type: 'string',
         },
       }));
     }
@@ -341,7 +339,7 @@ class ApiSpecCommand {
     const bodyHint = hints.find(h => h.type === 'body_ref');
     const schema = {
       type: 'object',
-      description: bodyHint ? bodyHint.text : 'TODO: Please refine request body schema',
+      description: bodyHint ? bodyHint.text : 'Request body payload',
       properties: {},
     };
 
@@ -349,7 +347,7 @@ class ApiSpecCommand {
       schema.properties = {
         data: {
           type: 'object',
-          description: 'TODO: Please refine type',
+          description: 'Auto-generated schema',
         },
       };
     }

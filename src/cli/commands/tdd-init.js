@@ -1,17 +1,17 @@
 const fs = require('fs');
 const path = require('path');
-const { detectWorkspaces } = require('../../utils/workspace-detector');
+const { collectSourceDirs } = require('../../utils/workspace-detector');
 
 const JS_TEST_TEMPLATE = (className) =>
-  `describe('${className}', () => {\n  it('should pass', () => {\n    // TODO: write test\n    expect(true).toBe(true);\n  });\n});\n`;
+  `describe('${className}', () => {\n  it('documents the expected behavior before implementation', () => {\n    throw new Error('Define expected behavior for ${className} before implementing.');\n  });\n});\n`;
 
 const PY_PYTEST_TEMPLATE = (className) => {
   const funcName = className.replace(/^Test/, '').replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
-  return `def test_${funcName}():\n    # TODO: write test\n    assert True\n`;
+  return `def test_${funcName}():\n    raise NotImplementedError("Define expected behavior before implementing.")\n`;
 };
 
 const PY_UNITTEST_TEMPLATE = (className) =>
-  `import unittest\n\n\nclass ${className}(unittest.TestCase):\n    def test_placeholder(self):\n        # TODO: write test\n        self.assertTrue(True)\n\n\nif __name__ == '__main__':\n    unittest.main()\n`;
+  `import unittest\n\n\nclass ${className}(unittest.TestCase):\n    def test_placeholder(self):\n        self.fail("Define expected behavior before implementing.")\n\n\nif __name__ == '__main__':\n    unittest.main()\n`;
 
 function detectPythonFramework(srcDir) {
   const entries = fs.readdirSync(srcDir, { withFileTypes: true });
@@ -127,17 +127,7 @@ function generateTestContent(sourceFile, pyFramework) {
 }
 
 function getSourceDirs(cwd, options = {}) {
-  if (options.sourceDir) return [path.resolve(cwd, options.sourceDir)];
-
-  const dirs = [];
-  const rootSrc = path.join(cwd, 'src');
-  if (fs.existsSync(rootSrc)) dirs.push(rootSrc);
-
-  for (const workspace of detectWorkspaces(cwd)) {
-    if (fs.existsSync(workspace.sourceDir)) dirs.push(workspace.sourceDir);
-  }
-
-  return [...new Set(dirs.map(dir => path.resolve(dir)))];
+  return collectSourceDirs(cwd, { sourceDir: options.sourceDir });
 }
 
 class TddInitCommand {
@@ -146,6 +136,7 @@ class TddInitCommand {
   }
 
   async execute(cwd, options = {}) {
+    cwd = cwd || process.cwd();
     const dryRun = options.dryRun || false;
 
     const extensions = new Set(['.js', '.ts', '.py']);

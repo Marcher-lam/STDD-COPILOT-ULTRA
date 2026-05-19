@@ -81,4 +81,98 @@ describe('EvidenceCapture', () => {
     expect(report.evidenceCount).toBe(0);
     expect(report.instruction).toBe('No evidence captured.');
   });
+
+  describe('_safeSnapshot', () => {
+    it('should return null for null input', () => {
+      const ec = new EvidenceCapture();
+      expect(ec._safeSnapshot(null)).toBeNull();
+    });
+
+    it('should handle circular references gracefully', () => {
+      const ec = new EvidenceCapture();
+      const circular = {};
+      circular.self = circular;
+
+      const result = ec._safeSnapshot(circular);
+      expect(result.__unserializable).toBe(true);
+    });
+  });
+
+  describe('captureVerify', () => {
+    it('should return unknown status when results is null', () => {
+      const ec = new EvidenceCapture();
+      const report = ec.captureVerify('verify', null);
+      expect(report.status).toBe('unknown');
+      expect(report.type).toBe('verify');
+    });
+
+    it('should return unknown status for unknown type', () => {
+      const ec = new EvidenceCapture();
+      const report = ec.captureVerify('other', { some: 'data' });
+      expect(report.status).toBe('unknown');
+    });
+
+    it('should return pass for verify with all checks passing', () => {
+      const ec = new EvidenceCapture();
+      const report = ec.captureVerify('verify', {
+        tasks: { allDone: true },
+        tests: { passed: true },
+        constitution: { status: 'pass' },
+        lint: null,
+      });
+      expect(report.status).toBe('pass');
+    });
+
+    it('should return fail for verify with failing tasks', () => {
+      const ec = new EvidenceCapture();
+      const report = ec.captureVerify('verify', {
+        tasks: { allDone: false },
+        tests: { passed: true },
+        constitution: { status: 'pass' },
+        lint: null,
+      });
+      expect(report.status).toBe('fail');
+    });
+
+    it('should return pass for guard when all checks pass', () => {
+      const ec = new EvidenceCapture();
+      const report = ec.captureVerify('guard', {
+        check1: { status: 'pass' },
+        check2: { status: 'skip' },
+        check3: { status: 'warn' },
+      });
+      expect(report.status).toBe('pass');
+    });
+
+    it('should return fail for guard when a check fails', () => {
+      const ec = new EvidenceCapture();
+      const report = ec.captureVerify('guard', {
+        check1: { status: 'pass' },
+        check2: { status: 'fail' },
+      });
+      expect(report.status).toBe('fail');
+    });
+  });
+
+  describe('saveToFile', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+
+    it('should save evidence report to disk', () => {
+      const ec = new EvidenceCapture();
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ev-cap-'));
+      try {
+        const report = ec.captureVerify('verify', { tasks: { allDone: true } });
+        const filePath = ec.saveToFile(report, tmpDir, 'test');
+
+        expect(fs.existsSync(filePath)).toBe(true);
+        const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        expect(content.type).toBe('verify');
+        expect(content.status).toBeDefined();
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+  });
 });

@@ -2,11 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 const { detectWorkspaces, resolveWorkspace } = require('./workspace-detector');
+const { createLogger } = require('./logger');
+const logger = createLogger('test-command-resolver');
 
 function readPackageJson(root) {
   try {
     return JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8'));
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
     return null;
   }
 }
@@ -15,7 +18,14 @@ function detectPackageManager(cwd) {
   if (fs.existsSync(path.join(cwd, 'pnpm-workspace.yaml'))) return 'pnpm';
   if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
   if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
+  if (fs.existsSync(path.join(cwd, 'bun.lockb'))) return 'bun';
   return 'npm';
+}
+
+function detectPackageManagerWithFallback(workspaceRoot, projectRoot) {
+  const wsPM = detectPackageManager(workspaceRoot);
+  if (wsPM !== 'npm') return wsPM;
+  return detectPackageManager(projectRoot);
 }
 
 function buildTestCommand(packageManager) {
@@ -45,7 +55,8 @@ function getConfigTestCommand(cwd) {
   try {
     const config = yaml.load(fs.readFileSync(configPath, 'utf-8'));
     return (config && config.test && config.test.command) || null;
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
     return null;
   }
 }
@@ -64,7 +75,7 @@ function resolveTestCommands(cwd, options = {}) {
     const pkg = readPackageJson(workspace.root);
     if (!hasTestScript(pkg)) return [];
     return [createCommand(
-      buildTestCommand(detectPackageManager(cwd)),
+      buildTestCommand(detectPackageManagerWithFallback(workspace.root, cwd)),
       workspace.root,
       (pkg && pkg.name) || workspace.name,
       'workspace'
@@ -86,10 +97,10 @@ function resolveTestCommands(cwd, options = {}) {
   }
 
   return detectWorkspaces(cwd)
-    .map(workspace => ({ workspace, pkg: readPackageJson(workspace.root) }))
+    .map(workspace => ({ workspace, pkg: readPackageJson(workspace.root), wsPM: detectPackageManagerWithFallback(workspace.root, cwd) }))
     .filter(item => hasTestScript(item.pkg))
     .map(item => createCommand(
-      buildTestCommand(packageManager),
+      buildTestCommand(item.wsPM),
       item.workspace.root,
       (item.pkg && item.pkg.name) || item.workspace.name,
       'workspace'
@@ -106,4 +117,5 @@ module.exports = {
   detectTestCommand,
   getConfigTestCommand,
   _detectPackageManager: detectPackageManager,
+  _detectPackageManagerWithFallback: detectPackageManagerWithFallback,
 };

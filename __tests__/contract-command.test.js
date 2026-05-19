@@ -443,4 +443,266 @@ describe('ContractCommand', () => {
       expect(result).toHaveProperty('evidence');
     });
   });
+
+  describe('execute', () => {
+    it('should delegate to generate when action is "generate"', async () => {
+      const projectPath = createTempProject('exec-gen');
+      process.chdir(projectPath);
+
+      createApiSpec(projectPath, 'exec-gen', {
+        openapi: '3.0.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/api/test': { get: { summary: 'Test', responses: { '200': { description: 'OK' } } } },
+        },
+      });
+
+      const cmd = new ContractCommand(projectPath);
+      const result = await cmd.execute('generate', 'exec-gen');
+      expect(result.interactions).toBe(1);
+    });
+
+    it('should delegate to generate when action is "gen" alias', async () => {
+      const projectPath = createTempProject('exec-gen-alias');
+      process.chdir(projectPath);
+
+      createApiSpec(projectPath, 'exec-gen-alias', {
+        openapi: '3.0.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/api/test': { get: { summary: 'Test', responses: { '200': { description: 'OK' } } } },
+        },
+      });
+
+      const cmd = new ContractCommand(projectPath);
+      const result = await cmd.execute('gen', 'exec-gen-alias');
+      expect(result.interactions).toBe(1);
+    });
+
+    it('should delegate to verify when action is "verify"', async () => {
+      const projectPath = createTempProject('exec-verify');
+      process.chdir(projectPath);
+
+      createApiSpec(projectPath, 'exec-verify', {
+        openapi: '3.0.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/api/test': { get: { summary: 'Test', responses: { '200': { description: 'OK' } } } },
+        },
+      });
+
+      createContracts(projectPath, 'exec-verify', {
+        consumer: 'my-frontend',
+        provider: 'api-service',
+        interactions: [
+          {
+            description: 'GET /api/test -> 200',
+            request: { method: 'GET', path: '/api/test' },
+            response: { status: 200, body: {} },
+          },
+        ],
+      });
+
+      const cmd = new ContractCommand(projectPath);
+      const result = await cmd.execute('verify', 'exec-verify');
+      expect(result.hasViolations).toBe(false);
+    });
+
+    it('should delegate to verify when action is "check" alias', async () => {
+      const projectPath = createTempProject('exec-check');
+      process.chdir(projectPath);
+
+      createApiSpec(projectPath, 'exec-check', {
+        openapi: '3.0.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/api/test': { get: { summary: 'Test', responses: { '200': { description: 'OK' } } } },
+        },
+      });
+
+      createContracts(projectPath, 'exec-check', {
+        consumer: 'my-frontend',
+        provider: 'api-service',
+        interactions: [
+          {
+            description: 'GET /api/test -> 200',
+            request: { method: 'GET', path: '/api/test' },
+            response: { status: 200, body: {} },
+          },
+        ],
+      });
+
+      const cmd = new ContractCommand(projectPath);
+      const result = await cmd.execute('check', 'exec-check');
+      expect(result.hasViolations).toBe(false);
+    });
+
+    it('should throw for unknown action', async () => {
+      const cmd = new ContractCommand('/tmp');
+      await expect(cmd.execute('unknown-action', 'some-change')).rejects.toThrow(
+        "Unknown contract action 'unknown-action'. Use generate or verify."
+      );
+    });
+  });
+
+  describe('generate with workspace errors', () => {
+    it('should throw when workspace is specified but not found during generate', async () => {
+      const projectPath = createTempProject('gen-bad-workspace');
+      process.chdir(projectPath);
+
+      const cmd = new ContractCommand(projectPath);
+      await expect(cmd.generate('gen-bad-workspace', { workspace: 'nonexistent-ws' }))
+        .rejects.toThrow("Workspace 'nonexistent-ws' not found.");
+    });
+  });
+
+  describe('verify with missing api spec', () => {
+    it('should throw when api spec is missing during verify', async () => {
+      const projectPath = createTempProject('verify-no-spec');
+      process.chdir(projectPath);
+
+      // Create contracts dir and a contract but no api-spec.yaml
+      const contractsDir = path.join(projectPath, 'stdd', 'changes', 'verify-no-spec', 'specs', 'contracts');
+      fs.mkdirSync(contractsDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(contractsDir, 'contract.json'),
+        JSON.stringify({ consumer: 'a', provider: 'b', interactions: [] }),
+        'utf8'
+      );
+
+      const cmd = new ContractCommand(projectPath);
+      await expect(cmd.verify('verify-no-spec')).rejects.toThrow('API spec not found');
+    });
+  });
+
+  describe('verify with workspace errors', () => {
+    it('should throw when workspace is specified but not found during verify', async () => {
+      const projectPath = createTempProject('verify-bad-workspace');
+      process.chdir(projectPath);
+
+      const cmd = new ContractCommand(projectPath);
+      await expect(cmd.verify('verify-bad-workspace', { workspace: 'missing-ws' }))
+        .rejects.toThrow("Workspace 'missing-ws' not found.");
+    });
+  });
+
+  describe('_toSafeFilename', () => {
+    it('should handle null input', () => {
+      const cmd = new ContractCommand('/tmp');
+      expect(cmd._toSafeFilename(null)).toBe('');
+    });
+
+    it('should handle undefined input', () => {
+      const cmd = new ContractCommand('/tmp');
+      expect(cmd._toSafeFilename(undefined)).toBe('');
+    });
+
+    it('should handle empty string', () => {
+      const cmd = new ContractCommand('/tmp');
+      expect(cmd._toSafeFilename('')).toBe('');
+    });
+
+    it('should lowercase and replace special chars', () => {
+      const cmd = new ContractCommand('/tmp');
+      expect(cmd._toSafeFilename('My Workspace Name!')).toBe('my-workspace-name');
+    });
+
+    it('should strip leading and trailing hyphens', () => {
+      const cmd = new ContractCommand('/tmp');
+      expect(cmd._toSafeFilename('--hello--')).toBe('hello');
+    });
+  });
+
+  describe('_extractInteractions edge cases', () => {
+    it('should handle operations with content in responses', async () => {
+      const projectPath = createTempProject('gen-with-content');
+      process.chdir(projectPath);
+
+      createApiSpec(projectPath, 'gen-with-content', {
+        openapi: '3.0.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/api/items': {
+            get: {
+              summary: 'List items',
+              responses: {
+                '200': {
+                  description: 'OK',
+                  content: { 'application/json': { schema: { type: 'array' } } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const cmd = new ContractCommand(projectPath);
+      const result = await cmd.generate('gen-with-content');
+
+      const contract = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+      expect(contract.interactions[0].response.body).toHaveProperty('_schema');
+    });
+
+    it('should handle operations with non-standard status codes', async () => {
+      const projectPath = createTempProject('gen-nonstandard-status');
+      process.chdir(projectPath);
+
+      createApiSpec(projectPath, 'gen-nonstandard-status', {
+        openapi: '3.0.0',
+        info: { title: 'Test API', version: '1.0.0' },
+        paths: {
+          '/api/items': {
+            get: {
+              summary: 'List items',
+              responses: {
+                'default': { description: 'Error response' },
+              },
+            },
+          },
+        },
+      });
+
+      const cmd = new ContractCommand(projectPath);
+      const result = await cmd.generate('gen-nonstandard-status');
+
+      const contract = JSON.parse(fs.readFileSync(result.outputPath, 'utf8'));
+      expect(contract.interactions.length).toBe(1);
+      // parseInt('default', 10) is NaN, so it falls back to 200
+      expect(contract.interactions[0].response.status).toBe(200);
+    });
+  });
+
+  describe('_printResults', () => {
+    it('should print results with violations', () => {
+      const cmd = new ContractCommand('/tmp');
+      const logs = [];
+      const origLog = console.log;
+      console.log = (...args) => logs.push(args.join(' '));
+
+      cmd._printResults([
+        { status: 'ok', interaction: 'GET /a' },
+        { status: 'violation', interaction: 'POST /b', message: 'Missing endpoint' },
+      ], 1);
+
+      console.log = origLog;
+      expect(logs.some(l => l.includes('GET /a'))).toBe(true);
+      expect(logs.some(l => l.includes('POST /b'))).toBe(true);
+      expect(logs.some(l => l.includes('violation'))).toBe(true);
+    });
+
+    it('should print all-pass results', () => {
+      const cmd = new ContractCommand('/tmp');
+      const logs = [];
+      const origLog = console.log;
+      console.log = (...args) => logs.push(args.join(' '));
+
+      cmd._printResults([
+        { status: 'ok', interaction: 'GET /a' },
+        { status: 'ok', interaction: 'POST /b' },
+      ], 1);
+
+      console.log = origLog;
+      expect(logs.some(l => l.includes('All 2 interaction(s) verified'))).toBe(true);
+    });
+  });
 });

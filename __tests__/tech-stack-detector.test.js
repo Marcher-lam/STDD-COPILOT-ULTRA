@@ -186,6 +186,267 @@ describe('TechStackDetector', () => {
     });
   });
 
+  describe('Error handling', () => {
+    let origReadFileSync;
+    let origExistsSync;
+
+    beforeEach(() => {
+      origReadFileSync = fs.readFileSync;
+      origExistsSync = fs.existsSync;
+    });
+
+    afterEach(() => {
+      fs.readFileSync = origReadFileSync;
+      fs.existsSync = origExistsSync;
+    });
+
+    it('_readPackageJson logs warning for non-ENOENT/non-EACCES parse errors', () => {
+      const dir = createTempDir();
+      // Write malformed JSON so JSON.parse throws SyntaxError (no .code property)
+      fs.writeFileSync(path.join(dir, 'package.json'), '{invalid json!!!');
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const pkg = TechStackDetector._readPackageJson(dir);
+
+      expect(pkg).toEqual({});
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('_readPackageJson silently returns {} for ENOENT', () => {
+      const dir = createTempDir();
+      // package.json does not exist
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const pkg = TechStackDetector._readPackageJson(dir);
+
+      expect(pkg).toEqual({});
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('_readPackageJson silently returns {} for EACCES', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(path.join(dir, 'package.json'), '{}');
+      // Mock readFileSync to throw EACCES
+      fs.readFileSync = jest.fn(() => {
+        const err = new Error('permission denied');
+        err.code = 'EACCES';
+        throw err;
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const pkg = TechStackDetector._readPackageJson(dir);
+
+      expect(pkg).toEqual({});
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('_detectPythonTestRunner handles read error on requirements.txt', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(path.join(dir, 'requirements.txt'), 'pytest==7.0\n');
+
+      // Override readFileSync to throw a non-ENOENT/non-EACCES error for requirements.txt
+      const realReadFileSync = origReadFileSync;
+      fs.readFileSync = jest.fn((filePath, encoding) => {
+        if (filePath.includes('requirements.txt')) {
+          const err = new Error('read error');
+          err.code = 'EISDIR';
+          throw err;
+        }
+        return realReadFileSync(filePath, encoding);
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const runner = TechStackDetector._detectPythonTestRunner(dir);
+
+      expect(runner).toBe('unittest');
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('_detectPythonTestRunner handles read error on pyproject.toml', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(path.join(dir, 'pyproject.toml'), '[tool.pytest]\n');
+
+      const realReadFileSync = origReadFileSync;
+      fs.readFileSync = jest.fn((filePath, encoding) => {
+        if (filePath.includes('pyproject.toml')) {
+          const err = new Error('read error');
+          err.code = 'EISDIR';
+          throw err;
+        }
+        return realReadFileSync(filePath, encoding);
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const runner = TechStackDetector._detectPythonTestRunner(dir);
+
+      expect(runner).toBe('unittest');
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('_detectPythonTestRunner finds pytest in setup.py', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(
+        path.join(dir, 'setup.py'),
+        'from setuptools import setup\nsetup(install_requires=["pytest"])\n'
+      );
+
+      const result = TechStackDetector.analyze(dir);
+
+      expect(result.language).toBe('python');
+      expect(result.testRunner).toBe('pytest');
+      expect(result.testCommand).toBe('pytest');
+    });
+
+    it('_detectPythonTestRunner handles read error on setup.py', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(path.join(dir, 'setup.py'), 'pytest stuff\n');
+
+      const realReadFileSync = origReadFileSync;
+      fs.readFileSync = jest.fn((filePath, encoding) => {
+        if (filePath.includes('setup.py')) {
+          const err = new Error('read error');
+          err.code = 'EISDIR';
+          throw err;
+        }
+        return realReadFileSync(filePath, encoding);
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const runner = TechStackDetector._detectPythonTestRunner(dir);
+
+      expect(runner).toBe('unittest');
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('_detectPythonTestRunner falls through requirements.txt -> pyproject.toml -> setup.py', () => {
+      const dir = createTempDir();
+      // requirements.txt exists but no pytest; pyproject.toml doesn't exist; setup.py has pytest
+      fs.writeFileSync(path.join(dir, 'requirements.txt'), 'flask==2.0\n');
+      fs.writeFileSync(
+        path.join(dir, 'setup.py'),
+        'setup(tests_require=["pytest"])\n'
+      );
+
+      const result = TechStackDetector.analyze(dir);
+
+      expect(result.language).toBe('python');
+      expect(result.testRunner).toBe('pytest');
+    });
+
+    it('_detectPythonTestRunner suppresses ENOENT error on requirements.txt read', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(path.join(dir, 'requirements.txt'), 'pytest\n');
+
+      const realReadFileSync = origReadFileSync;
+      fs.readFileSync = jest.fn((filePath) => {
+        if (filePath.includes('requirements.txt')) {
+          const err = new Error('not found');
+          err.code = 'ENOENT';
+          throw err;
+        }
+        return realReadFileSync(filePath);
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const runner = TechStackDetector._detectPythonTestRunner(dir);
+
+      expect(runner).toBe('unittest');
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('_detectPythonTestRunner suppresses EACCES error on pyproject.toml read', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(path.join(dir, 'pyproject.toml'), '[tool.pytest]\n');
+
+      const realReadFileSync = origReadFileSync;
+      fs.readFileSync = jest.fn((filePath) => {
+        if (filePath.includes('pyproject.toml')) {
+          const err = new Error('permission denied');
+          err.code = 'EACCES';
+          throw err;
+        }
+        return realReadFileSync(filePath);
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const runner = TechStackDetector._detectPythonTestRunner(dir);
+
+      expect(runner).toBe('unittest');
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('_detectPythonTestRunner suppresses ENOENT error on setup.py read', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(path.join(dir, 'setup.py'), 'pytest\n');
+
+      const realReadFileSync = origReadFileSync;
+      fs.readFileSync = jest.fn((filePath) => {
+        if (filePath.includes('setup.py')) {
+          const err = new Error('not found');
+          err.code = 'ENOENT';
+          throw err;
+        }
+        return realReadFileSync(filePath);
+      });
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const runner = TechStackDetector._detectPythonTestRunner(dir);
+
+      expect(runner).toBe('unittest');
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('detects Python/pytest from setup.py only', () => {
+      const dir = createTempDir();
+      // Only setup.py exists, no requirements.txt or pyproject.toml
+      fs.writeFileSync(
+        path.join(dir, 'setup.py'),
+        'from setuptools import setup\nsetup(tests_require=["pytest"])\n'
+      );
+
+      const result = TechStackDetector.analyze(dir);
+
+      expect(result.language).toBe('python');
+      expect(result.testRunner).toBe('pytest');
+      expect(result.testCommand).toBe('pytest');
+    });
+
+    it('detects Python/unittest when pyproject.toml exists but has no pytest', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(
+        path.join(dir, 'pyproject.toml'),
+        '[build-system]\nrequires = ["setuptools"]\n'
+      );
+
+      const result = TechStackDetector.analyze(dir);
+
+      expect(result.language).toBe('python');
+      expect(result.testRunner).toBe('unittest');
+      expect(result.testCommand).toBe('python -m unittest discover');
+    });
+
+    it('detects Python/unittest when setup.py exists but has no pytest', () => {
+      const dir = createTempDir();
+      fs.writeFileSync(
+        path.join(dir, 'setup.py'),
+        'from setuptools import setup\nsetup(name="mylib")\n'
+      );
+
+      const result = TechStackDetector.analyze(dir);
+
+      expect(result.language).toBe('python');
+      expect(result.testRunner).toBe('unittest');
+    });
+  });
+
   describe('Static methods', () => {
     it('_detectLanguage returns correct values', () => {
       const nodeDir = createTempDir();

@@ -90,4 +90,137 @@ describe('NewCommand', () => {
       .rejects
       .toThrow('STDD not initialized. Run `stdd init` first.');
   });
+
+  it('should reject duplicate change name', async () => {
+    const projectPath = createTempProject('dup-change-project');
+    process.chdir(projectPath);
+
+    const newCommand = new NewCommand(silentSpinner);
+    await newCommand.createChange('existing-change');
+
+    await expect(newCommand.createChange('existing-change'))
+      .rejects
+      .toThrow("Change 'existing-change' already exists.");
+  });
+
+  it('should reject duplicate spec domain', async () => {
+    const projectPath = createTempProject('dup-spec-project');
+    process.chdir(projectPath);
+
+    const newCommand = new NewCommand(silentSpinner);
+    await newCommand.createSpec('billing');
+
+    await expect(newCommand.createSpec('billing'))
+      .rejects
+      .toThrow("Spec 'billing' already exists.");
+  });
+
+  it('should create change with custom title and description', async () => {
+    const projectPath = createTempProject('custom-change-project');
+    process.chdir(projectPath);
+
+    const newCommand = new NewCommand(silentSpinner);
+    await newCommand.createChange('my-feature', {
+      title: 'Custom Feature',
+      description: 'A detailed description',
+    });
+
+    const proposal = fs.readFileSync(
+      path.join(projectPath, 'stdd', 'changes', 'my-feature', 'proposal.md'),
+      'utf8'
+    );
+    expect(proposal).toContain('# Proposal: Custom Feature');
+    expect(proposal).toContain('A detailed description');
+  });
+
+  it('should create change with default title when none provided', async () => {
+    const projectPath = createTempProject('default-title-project');
+    process.chdir(projectPath);
+
+    const newCommand = new NewCommand(silentSpinner);
+    await newCommand.createChange('default-feature');
+
+    const proposal = fs.readFileSync(
+      path.join(projectPath, 'stdd', 'changes', 'default-feature', 'proposal.md'),
+      'utf8'
+    );
+    expect(proposal).toContain('# Proposal: default-feature');
+  });
+
+  it('should include tasks with default template', async () => {
+    const projectPath = createTempProject('tasks-project');
+    process.chdir(projectPath);
+
+    const newCommand = new NewCommand(silentSpinner);
+    await newCommand.createChange('with-tasks');
+
+    const tasks = fs.readFileSync(
+      path.join(projectPath, 'stdd', 'changes', 'with-tasks', 'tasks.md'),
+      'utf8'
+    );
+    expect(tasks).toContain('# Tasks: with-tasks');
+    expect(tasks).toContain('TASK-001');
+    expect(tasks).toContain('TASK-004');
+  });
+
+  it('should generate proposal template with metadata', () => {
+    const newCommand = new NewCommand(silentSpinner);
+    const template = newCommand.generateProposalTemplate('test-change', 'Test Title', 'Test description');
+    expect(template).toContain('# Proposal: Test Title');
+    expect(template).toContain('Test description');
+    expect(template).toContain('## Intent');
+    expect(template).toContain('## Scope');
+    expect(template).toContain('## Success Criteria');
+    expect(template).toContain('## Risks');
+    expect(template).toContain('test-change');
+  });
+
+  it('should generate spec template with domain info', () => {
+    const newCommand = new NewCommand(silentSpinner);
+    const template = newCommand.generateSpecTemplate('orders');
+    expect(template).toContain('# Spec: orders');
+    expect(template).toContain('## Requirements');
+    expect(template).toContain('ordersModel');
+    expect(template).toContain('/api/orders');
+  });
+
+  it('should fail to create spec when STDD not initialized', async () => {
+    const projectPath = createTempProject('uninit-spec-project', false);
+    process.chdir(projectPath);
+
+    const newCommand = new NewCommand(silentSpinner);
+    await expect(newCommand.createSpec('no-init'))
+      .rejects
+      .toThrow('STDD not initialized');
+  });
+
+  it('should validate change name via validateChangeName', () => {
+    const newCommand = new NewCommand(silentSpinner);
+    expect(() => newCommand.validateName('valid-name')).not.toThrow();
+  });
+
+  it('should reject invalid change names', () => {
+    const newCommand = new NewCommand(silentSpinner);
+    expect(() => newCommand.validateName('')).toThrow();
+  });
+
+  it('should print next steps after creating a change', async () => {
+    const projectPath = createTempProject('next-steps-project');
+    process.chdir(projectPath);
+
+    const newCommand = new NewCommand(silentSpinner);
+    await newCommand.createChange('next-test');
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Change 'next-test' created"));
+  });
+
+  it('should print next steps after creating a spec', async () => {
+    const projectPath = createTempProject('spec-next-project');
+    process.chdir(projectPath);
+
+    const newCommand = new NewCommand(silentSpinner);
+    await newCommand.createSpec('payments');
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Spec 'payments' created"));
+  });
 });

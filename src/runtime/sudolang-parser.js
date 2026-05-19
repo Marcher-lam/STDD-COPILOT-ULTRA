@@ -24,6 +24,8 @@ class SudoLangParser {
       const line = lines[i].trim();
       if (!line || line.startsWith('//') || line.startsWith('#')) continue;
 
+      result.raw.push(line);
+
       if (line.match(/^interface\s+(\w+)/i)) {
         if (buffer.length > 0) this.processBlock(result, buffer);
         buffer = [line];
@@ -58,7 +60,7 @@ class SudoLangParser {
   normalize(data) {
     return {
       extractedAt: new Date().toISOString(),
-      complexityScore: data.interfaces.length + data.constraints.length,
+      complexityScore: data.interfaces.length + data.constraints.length + data.commands.length + data.goals.length,
       ...data
     };
   }

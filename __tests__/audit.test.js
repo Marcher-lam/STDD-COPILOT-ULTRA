@@ -333,4 +333,194 @@ describe('AuditCommand', () => {
       expect(art4.count).toBe(3);
     });
   });
+
+  describe('Lint results and metadata extraction', () => {
+    it('should extract file paths from lint results output', async () => {
+      const projectPath = createTempProject('lint-results', (p) => {
+        const evidenceDir = path.join(p, 'stdd', 'evidence');
+        fs.mkdirSync(evidenceDir, { recursive: true });
+        const evidence = {
+          type: 'guard',
+          status: 'fail',
+          results: {
+            lint: {
+              status: 'fail',
+              details: {
+                output: 'src/app.js: line 10, col 5\nsrc/utils.ts: line 3\nnot-a-file: ignored\nother.txt: ignored',
+              },
+            },
+          },
+        };
+        fs.writeFileSync(
+          path.join(evidenceDir, 'guard-2000000001.json'),
+          JSON.stringify(evidence, null, 2)
+        );
+      });
+
+      const cmd = new AuditCommand(projectPath);
+      const result = await cmd.execute({ json: true });
+
+      expect(result.totalChecks).toBe(1);
+      expect(result.riskiestFiles.find(f => f.file === 'src/app.js')).toBeDefined();
+    });
+
+    it('should extract file from evidence metadata.file', async () => {
+      const projectPath = createTempProject('metadata-file', (p) => {
+        const evidenceDir = path.join(p, 'stdd', 'evidence');
+        fs.mkdirSync(evidenceDir, { recursive: true });
+        const evidence = {
+          type: 'guard',
+          status: 'fail',
+          results: {},
+          metadata: { file: 'src/config.js' },
+        };
+        fs.writeFileSync(
+          path.join(evidenceDir, 'guard-2000000002.json'),
+          JSON.stringify(evidence, null, 2)
+        );
+      });
+
+      const cmd = new AuditCommand(projectPath);
+      const result = await cmd.execute({ json: true });
+
+      const riskyConfig = result.riskiestFiles.find(f => f.file === 'src/config.js');
+      expect(riskyConfig).toBeDefined();
+    });
+  });
+
+  describe('Evidence file workspace matching', () => {
+    it('should handle malformed JSON in workspace matching gracefully', async () => {
+      const projectPath = createTempProject('workspace-malformed', (p) => {
+        const evidenceDir = path.join(p, 'stdd', 'evidence');
+        fs.mkdirSync(evidenceDir, { recursive: true });
+        // Malformed JSON that should be caught by try/catch in _evidenceFileMatchesWorkspace
+        fs.writeFileSync(
+          path.join(evidenceDir, 'guard-2000000003.json'),
+          '{not valid json'
+        );
+      });
+
+      const cmd = new AuditCommand(projectPath);
+      // With workspace filter, the malformed file should be silently skipped
+      const result = await cmd.execute({ json: true, workspace: 'some-workspace' });
+      expect(result.totalChecks).toBe(0);
+    });
+  });
+
+  describe('_extractIssueFiles', () => {
+    it('should extract files from issue.files array', () => {
+      const cmd = new AuditCommand('/tmp');
+      const files = cmd._extractIssueFiles({
+        files: ['src/a.js', 'src/b.ts', 123, 'src/c.js'],
+      });
+      expect(files).toContain('src/a.js');
+      expect(files).toContain('src/b.ts');
+      expect(files).toContain('src/c.js');
+      // Non-string entries should be filtered
+      expect(files).not.toContain(123);
+    });
+
+    it('should extract file paths from issue.message', () => {
+      const cmd = new AuditCommand('/tmp');
+      const files = cmd._extractIssueFiles({
+        message: 'Error in src/deep/path/file.js and also src/other/thing.ts',
+      });
+      expect(files).toContain('src/deep/path/file.js');
+      expect(files).toContain('src/other/thing.ts');
+    });
+
+    it('should extract from file/path/filepath/filePath keys', () => {
+      const cmd = new AuditCommand('/tmp');
+      const files = cmd._extractIssueFiles({
+        file: 'src/from-file.js',
+        path: 'src/from-path.js',
+        filepath: 'src/from-filepath.js',
+        filePath: 'src/from-filePath.js',
+      });
+      expect(files).toContain('src/from-file.js');
+      expect(files).toContain('src/from-path.js');
+      expect(files).toContain('src/from-filepath.js');
+      expect(files).toContain('src/from-filePath.js');
+    });
+  });
+
+  describe('Workspace stats aggregation', () => {
+    it('should accumulate stats for same workspace across multiple issues', async () => {
+      const projectPath = createTempProject('workspace-accum', (p) => {
+        fs.writeFileSync(path.join(p, 'package.json'), JSON.stringify({ workspaces: ['packages/*'] }, null, 2));
+        fs.mkdirSync(path.join(p, 'packages', 'api'), { recursive: true });
+        fs.writeFileSync(path.join(p, 'packages', 'api', 'package.json'), JSON.stringify({ name: '@demo/api' }, null, 2));
+
+        const evidenceDir = path.join(p, 'stdd', 'evidence');
+        fs.mkdirSync(evidenceDir, { recursive: true });
+
+        // First evidence: blocking issue
+        const ev1 = makeEvidence('guard', 'fail', {
+          blocking: [
+            { article: 7, file: 'packages/api/src/auth.js', message: 'secret in packages/api/src/auth.js' },
+          ],
+        });
+        fs.writeFileSync(path.join(evidenceDir, 'guard-2000000010.json'), JSON.stringify(ev1, null, 2));
+
+        // Second evidence: warning issue in same workspace
+        const ev2 = makeEvidence('guard', 'fail', {
+          warning: [
+            { article: 4, file: 'packages/api/src/utils.js', message: 'long file packages/api/src/utils.js' },
+          ],
+        });
+        fs.writeFileSync(path.join(evidenceDir, 'guard-2000000011.json'), JSON.stringify(ev2, null, 2));
+      });
+
+      const cmd = new AuditCommand(projectPath);
+      const result = await cmd.execute({ json: true });
+
+      expect(result.workspaceBreakdown.length).toBe(1);
+      const ws = result.workspaceBreakdown[0];
+      expect(ws.workspaceName).toBe('packages/api');
+      expect(ws.totalIssues).toBe(2);
+      expect(ws.blockingIssues).toBe(1);
+      expect(ws.warningIssues).toBe(1);
+    });
+  });
+
+  describe('_printReport variations', () => {
+    it('should print "No violations found" when there are none', async () => {
+      const projectPath = createTempProject('no-violations', (p) => {
+        const evidenceDir = path.join(p, 'stdd', 'evidence');
+        fs.mkdirSync(evidenceDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(evidenceDir, 'guard-3000000001.json'),
+          JSON.stringify(makeEvidence('guard', 'pass'), null, 2)
+        );
+      });
+
+      const cmd = new AuditCommand(projectPath);
+      await cmd.execute({ json: false });
+
+      const printed = logSpy.mock.calls.map(call => String(call[0])).join('\n');
+      expect(printed).toContain('No violations found');
+      expect(printed).toContain('No risky files identified');
+    });
+
+    it('should print text report with violations and risky files', async () => {
+      const projectPath = createTempProject('text-violations', (p) => {
+        const evidenceDir = path.join(p, 'stdd', 'evidence');
+        fs.mkdirSync(evidenceDir, { recursive: true });
+        const evidence = makeEvidence('verify', 'fail', {
+          blocking: [{ article: 7, message: 'secret in src/config.js' }],
+        });
+        fs.writeFileSync(
+          path.join(evidenceDir, 'verify-3000000002.json'),
+          JSON.stringify(evidence, null, 2)
+        );
+      });
+
+      const cmd = new AuditCommand(projectPath);
+      await cmd.execute({ json: false });
+
+      const printed = logSpy.mock.calls.map(call => String(call[0])).join('\n');
+      expect(printed).toContain('Top Violations');
+      expect(printed).toContain('Riskiest Files');
+    });
+  });
 });

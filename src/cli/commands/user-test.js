@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { resolveChangeDir } = require('../../utils/change-utils');
 const { walkFiles } = require('../../utils/file-walker');
+const { parseBddScenarios } = require('../../utils/bdd-scenario-parser');
 
 class UserTestCommand {
   constructor(cwd = process.cwd()) { this.cwd = cwd; }
@@ -10,7 +11,7 @@ class UserTestCommand {
     const changeDir = changeName ? resolveChangeDir(path.join(this.cwd, 'stdd'), changeName) : null;
     const base = changeName ? path.join(changeDir || '', 'specs') : path.join(this.cwd, 'stdd', 'specs');
     if (!fs.existsSync(base)) throw new Error(`Spec directory not found: ${path.relative(this.cwd, base)}`);
-    const scenarios = this.extractScenarios(walkFiles(base, { extensions: ['.feature', '.md'], skipDirs: new Set() }));
+    const scenarios = this.extractScenarios(walkFiles(base, { extensions: ['.feature', '.md'], skipDirs: new Set() }), this.cwd);
     const outputDir = changeName ? changeDir : path.join(this.cwd, 'stdd');
     const outputs = [];
     if (!options.agentOnly) outputs.push(this.writeHuman(outputDir, scenarios));
@@ -20,22 +21,8 @@ class UserTestCommand {
     return { scenarios, outputs };
   }
 
-  extractScenarios(files) {
-    const scenarios = [];
-    for (const file of files) {
-      const lines = fs.readFileSync(file, 'utf8').split('\n');
-      let current = null;
-      for (const line of lines) {
-        const scenario = line.match(/^\s*(?:#{2,5}\s*)?Scenario:\s*(.+)$/i);
-        if (scenario) {
-          current = { name: scenario[1].trim(), steps: [], source: path.relative(this.cwd, file) };
-          scenarios.push(current);
-        } else if (current && /^\s*(?:[-*]\s*)?(Given|When|Then|And|But)\b/i.test(line)) {
-          current.steps.push(line.trim().replace(/^[-*]\s*/, ''));
-        }
-      }
-    }
-    return scenarios;
+  extractScenarios(files, cwd) {
+    return parseBddScenarios(files, cwd);
   }
 
   writeHuman(dir, scenarios) {

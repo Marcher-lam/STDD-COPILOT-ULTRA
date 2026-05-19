@@ -88,4 +88,26 @@
  * @property {Object} mutation - Mutation evidence results
  */
 
-module.exports = {};
+const TASK_STATUS = {
+  PENDING: ' ',
+  IN_PROGRESS: '~',
+  DONE: 'x',
+};
+
+const GUARD_STATUS = {
+  PASS: 'pass',
+  FAIL: 'fail',
+  WARN: 'warn',
+  SKIP: 'skip',
+};
+
+const CHANGE_PHASES = {
+  PROPOSAL: 'Phase 1: Proposal',
+  SPECIFICATION: 'Phase 2: Specification',
+  DESIGN: 'Phase 3: Design',
+  IMPLEMENTATION: 'Phase 4: Implementation',
+  VERIFICATION: 'Phase 5: Verification',
+  COMPLETE: 'Phase 6: Complete',
+};
+
+module.exports = { TASK_STATUS, GUARD_STATUS, CHANGE_PHASES };

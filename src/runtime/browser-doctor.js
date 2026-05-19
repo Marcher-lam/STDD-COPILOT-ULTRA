@@ -1,12 +1,9 @@
 const fs = require('fs');
-const path = require('path');
 const { spawnSync } = require('child_process');
+const { _detectPackageManager: detectPkgMgr } = require('../utils/test-command-resolver');
 
 function detectPackageManager(cwd = process.cwd()) {
-  if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
-  if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
-  if (fs.existsSync(path.join(cwd, 'bun.lockb'))) return 'bun';
-  return 'npm';
+  return detectPkgMgr(cwd);
 }
 
 function installCommandFor(packageManager) {

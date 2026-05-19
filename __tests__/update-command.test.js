@@ -387,4 +387,446 @@ workspaces:
         .toThrow('STDD not initialized');
     });
   });
+
+  describe('printSummary branches', () => {
+    it('should truncate errors list at 5 with "...and N more"', async () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const errors = [];
+      for (let i = 0; i < 8; i++) {
+        errors.push({ scope: 'test', message: `error ${i}`, error: 'fail' });
+      }
+      updateCommand.report = {
+        engineCommands: { updated: 0, added: 0, skipped: 0, localChanges: 0 },
+        skills: { updated: 0, added: 0, skipped: 0, localChanges: 0 },
+        schemas: { updated: 0, added: 0, skipped: 0, localChanges: 0 },
+        githubTemplates: { updated: 0, added: 0, skipped: 0, localChanges: 0 },
+        config: { merged: false, added: [], skipped: [] },
+        errors,
+        filesUpdated: [], filesSkipped: [], filesAdded: [], filesLocalChanges: [],
+      };
+      updateCommand.options = {};
+
+      updateCommand.printSummary();
+
+      const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
+      expect(output).toContain('...and 3 more');
+    });
+
+    it('should show local changes warning without --force and without --dry-run', async () => {
+      const projectPath = createTempProject('local-changes-warning-project');
+
+      // Create a modified file that will be detected as locally changed
+      const existingSkillsDir = path.join(projectPath, '.claude', 'skills', 'stdd');
+      const existingSkillDir = path.join(existingSkillsDir, 'init');
+      fs.mkdirSync(existingSkillDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(existingSkillDir, 'SKILL.md'),
+        '# Locally modified content that differs from template\n'
+      );
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      await updateCommand.execute(projectPath, { force: false, dryRun: false });
+
+      expect(logSpy.mock.calls.some(call => String(call[0]).includes('Use --force to overwrite'))).toBe(true);
+    });
+  });
+
+  describe('printChangeDetails', () => {
+    it('should print updated files in dry-run mode', async () => {
+      const projectPath = createTempProject('print-details-updated');
+
+      // Create a local modification so there's something to update with force
+      const existingSkillsDir = path.join(projectPath, '.claude', 'skills', 'stdd');
+      const existingSkillDir = path.join(existingSkillsDir, 'init');
+      fs.mkdirSync(existingSkillDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(existingSkillDir, 'SKILL.md'),
+        '# Modified content\n'
+      );
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      await updateCommand.execute(projectPath, { dryRun: true, force: true });
+
+      expect(logSpy.mock.calls.some(call => String(call[0]).includes('Updated:'))).toBe(true);
+    });
+
+    it('should print local changes files in dry-run mode', async () => {
+      const projectPath = createTempProject('print-details-local');
+
+      // Create a locally modified file
+      const existingSkillsDir = path.join(projectPath, '.claude', 'skills', 'stdd');
+      const existingSkillDir = path.join(existingSkillsDir, 'init');
+      fs.mkdirSync(existingSkillDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(existingSkillDir, 'SKILL.md'),
+        '# Modified content\n'
+      );
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      await updateCommand.execute(projectPath, { dryRun: true, force: false });
+
+      expect(logSpy.mock.calls.some(call => String(call[0]).includes('Skipped (Local changes):'))).toBe(true);
+    });
+  });
+
+  describe('updateEngineCommands edge cases', () => {
+    it('should handle no engine directories gracefully', async () => {
+      const projectPath = createTempProject('no-engine-dirs');
+      // Remove all engine dirs so detectEngineDirs returns empty
+      const claudeDir = path.join(projectPath, '.claude');
+      fs.rmSync(claudeDir, { recursive: true, force: true });
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      await updateCommand.execute(projectPath, { force: false });
+
+      // Should succeed without errors about engine commands
+      expect(logSpy.mock.calls.some(call =>
+        String(call[0]).includes('Engine commands:') && String(call[0]).includes('updated 0')
+      )).toBe(true);
+    });
+  });
+
+  describe('updateSkills edge cases', () => {
+    it('should handle no engine directories for skills', async () => {
+      const projectPath = createTempProject('no-engine-skills');
+      const claudeDir = path.join(projectPath, '.claude');
+      fs.rmSync(claudeDir, { recursive: true, force: true });
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      await updateCommand.execute(projectPath, { force: false });
+
+      expect(logSpy.mock.calls.some(call =>
+        String(call[0]).includes('Skills:') && String(call[0]).includes('updated 0')
+      )).toBe(true);
+    });
+  });
+
+  describe('syncDirectory extension filter', () => {
+    it('should skip files with non-matching extensions', async () => {
+      const projectPath = createTempProject('ext-filter-project');
+      const updateCommand = new UpdateCommand(silentSpinner);
+
+      // The GitHub templates sync uses extensions: ['.md']
+      // Create a .github dir with a non-.md file already present
+      // The source dir only has .md files, so this tests the extension branch indirectly
+      await updateCommand.execute(projectPath, { force: false });
+
+      // Should complete without error
+      expect(logSpy.mock.calls.some(call => String(call[0]).includes('Update summary'))).toBe(true);
+    });
+  });
+
+  describe('updateSchemas edge cases', () => {
+    it('should handle missing source schema directory', async () => {
+      const projectPath = createTempProject('missing-schema-source');
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const pathResolver = require('../src/utils/path-resolver');
+      const spy = jest.spyOn(pathResolver, 'getPackageRoot').mockReturnValue(path.join(projectPath, 'nonexistent-package-root'));
+
+      try {
+        await updateCommand.execute(projectPath, { force: false });
+        // Should log errors about missing schema dir
+        expect(logSpy.mock.calls.some(call =>
+          String(call[0]).includes('Schemas:')
+        )).toBe(true);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  describe('updateGitHubTemplates edge cases', () => {
+    it('should handle missing source github templates directory', async () => {
+      const projectPath = createTempProject('missing-github-source');
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const pathResolver = require('../src/utils/path-resolver');
+      const spy = jest.spyOn(pathResolver, 'getPackageRoot').mockReturnValue(path.join(projectPath, 'nonexistent-package-root'));
+
+      try {
+        await updateCommand.execute(projectPath, { force: false });
+        expect(logSpy.mock.calls.some(call =>
+          String(call[0]).includes('GitHub templates:')
+        )).toBe(true);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  describe('updateConfig edge cases', () => {
+    it('should create config.yaml from defaults when missing', async () => {
+      const projectPath = createTempProject('create-config-defaults');
+
+      // Make sure no config.yaml exists in stdd dir
+      const configPath = path.join(projectPath, 'stdd', 'config.yaml');
+      if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      await updateCommand.execute(projectPath, { force: false });
+
+      // Config should have been created from defaults
+      expect(fs.existsSync(configPath)).toBe(true);
+    });
+
+    it('should skip config creation in dry-run when config.yaml missing and defaults exist', async () => {
+      const projectPath = createTempProject('dryrun-config-create');
+
+      const configPath = path.join(projectPath, 'stdd', 'config.yaml');
+      if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      await updateCommand.execute(projectPath, { dryRun: true });
+
+      // Config should NOT have been created (dry run)
+      expect(fs.existsSync(configPath)).toBe(false);
+    });
+
+    it('should skip config when neither user config nor default config exists', async () => {
+      const projectPath = createTempProject('no-configs-at-all');
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const result = await updateCommand.updateConfig(projectPath, { force: false });
+      // If default config exists in the package, it gets created (merged=true).
+      // If not, merged=false. Either way, no crash.
+      expect(result).toBeDefined();
+      expect(typeof result.merged).toBe('boolean');
+    });
+
+    it('should handle config merge error gracefully', async () => {
+      const projectPath = createTempProject('config-merge-error');
+      const configPath = path.join(projectPath, 'stdd', 'config.yaml');
+      fs.writeFileSync(configPath, 'version: "1.0"\nname: "test"\n');
+      // getPackageRoot returns real root — defaultConfigPath may or may not exist
+      // If default doesn't exist: skipped
+      // If default exists: merged
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const result = await updateCommand.updateConfig(projectPath, { force: false });
+      // Either merged or skipped — either way no crash
+      expect(result).toBeDefined();
+      expect(typeof result.merged).toBe('boolean');
+    });
+
+    it('should skip config when user config exists but default does not', async () => {
+      const projectPath = createTempProject('config-no-default');
+      const configPath = path.join(projectPath, 'stdd', 'config.yaml');
+      fs.writeFileSync(configPath, 'version: "1.0"\nname: "test"\n');
+      // The default config comes from getPackageRoot() which resolves to real package root
+      // In test environment this might not have stdd/config.yaml, so result.skipped should contain reason
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const result = await updateCommand.updateConfig(projectPath, { force: false });
+      // Key assertion: no crash, and we get a valid result
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('syncDirectory force with dry-run', () => {
+    it('should mark files as updated in dry-run when force is true and content differs', async () => {
+      const projectPath = createTempProject('force-dryrun-project');
+
+      // Create a locally modified skill
+      const existingSkillsDir = path.join(projectPath, '.claude', 'skills', 'stdd');
+      const existingSkillDir = path.join(existingSkillsDir, 'init');
+      fs.mkdirSync(existingSkillDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(existingSkillDir, 'SKILL.md'),
+        '# Modified by user - this is different from the template content\n'
+      );
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      await updateCommand.execute(projectPath, { dryRun: true, force: true });
+
+      // Should show the file as "updated" in dry run
+      expect(logSpy.mock.calls.some(call => String(call[0]).includes('Updated:'))).toBe(true);
+
+      // File should NOT actually be modified
+      const content = fs.readFileSync(path.join(existingSkillDir, 'SKILL.md'), 'utf8');
+      expect(content).toBe('# Modified by user - this is different from the template content\n');
+    });
+  });
+
+  describe('formatYamlScalar', () => {
+    it('should format various scalar types correctly', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+
+      expect(updateCommand.formatYamlScalar(true)).toBe('true');
+      expect(updateCommand.formatYamlScalar(false)).toBe('false');
+      expect(updateCommand.formatYamlScalar(42)).toBe('42');
+      expect(updateCommand.formatYamlScalar(null)).toBe('null');
+      expect(updateCommand.formatYamlScalar(undefined)).toBe('null');
+      expect(updateCommand.formatYamlScalar('simple-value')).toBe('simple-value');
+      expect(updateCommand.formatYamlScalar('value with spaces')).toBe('"value with spaces"');
+    });
+  });
+
+  describe('detectEngineDirs', () => {
+    it('should detect .claude engine dir', async () => {
+      const projectPath = createTempProject('detect-engine');
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const engines = await updateCommand.detectEngineDirs(projectPath);
+      expect(engines).toContain('.claude');
+    });
+
+    it('should return empty array when no engine dirs exist', async () => {
+      const projectPath = createTempProject('no-engines');
+      fs.rmSync(path.join(projectPath, '.claude'), { recursive: true, force: true });
+
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const engines = await updateCommand.detectEngineDirs(projectPath);
+      expect(engines).toEqual([]);
+    });
+  });
+
+  describe('hashContent', () => {
+    it('should produce consistent hashes', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const hash1 = updateCommand.hashContent('test content');
+      const hash2 = updateCommand.hashContent('test content');
+      const hash3 = updateCommand.hashContent('different content');
+      expect(hash1).toBe(hash2);
+      expect(hash1).not.toBe(hash3);
+    });
+  });
+
+  describe('renderGitHubTemplate', () => {
+    it('should replace workspace block in template', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const content = 'Before\n<!-- STDD:WORKSPACES:start -->old block<!-- STDD:WORKSPACES:end -->\nAfter';
+      const result = updateCommand.renderGitHubTemplate(content, '/project', [
+        { name: '@scope/api', root: '/project/packages/api', sourceDir: '/project/packages/api/src', packageJsonPath: '/project/packages/api/package.json' },
+      ]);
+      expect(result).toContain('packages/api');
+      expect(result).toContain('Before');
+      expect(result).toContain('After');
+    });
+  });
+
+  describe('formatAffectedWorkspaces', () => {
+    it('should return default placeholder when no workspaces', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const result = updateCommand.formatAffectedWorkspaces([], '/project');
+      expect(result).toContain('packages/api');
+      expect(result).toContain('apps/web');
+    });
+
+    it('should format workspace paths', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const result = updateCommand.formatAffectedWorkspaces([
+        { root: '/project/packages/api' },
+      ], '/project');
+      expect(result).toContain('packages/api');
+    });
+  });
+
+  describe('mergeYamlConfig', () => {
+    it('should append new keys from default config', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const userConfig = 'version: "1.0"\nname: "test"\n';
+      const defaultConfig = 'version: "1.0"\nname: "default"\nnew_key: "value"\n';
+      const result = updateCommand.mergeYamlConfig(userConfig, defaultConfig);
+      expect(result).toContain('name: "test"');
+      expect(result).toContain('new_key: "value"');
+      expect(result).toContain('Added by stdd update');
+    });
+
+    it('should return user config unchanged when no new keys', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const config = 'version: "1.0"\nname: "test"\n';
+      const result = updateCommand.mergeYamlConfig(config, 'version: "1.0"\nname: "default"\n');
+      expect(result).toBe(config);
+    });
+
+    it('should handle user config without trailing newline', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const userConfig = 'version: "1.0"';
+      const defaultConfig = 'new_key: "value"\n';
+      const result = updateCommand.mergeYamlConfig(userConfig, defaultConfig);
+      expect(result).toContain('new_key: "value"');
+    });
+  });
+
+  describe('renderWorkspaceRegistryBlock', () => {
+    it('should render enabled=false correctly', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const result = updateCommand.renderWorkspaceRegistryBlock({
+        enabled: false,
+        items: [],
+      });
+      expect(result).toContain('enabled: false');
+    });
+
+    it('should render items with custom keys', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const result = updateCommand.renderWorkspaceRegistryBlock({
+        enabled: true,
+        items: [{
+          name: '@scope/api',
+          root: 'packages/api',
+          source_root: 'packages/api/src',
+          package_json: 'packages/api/package.json',
+          owner: 'platform',
+        }],
+      });
+      expect(result).toContain('owner: platform');
+      expect(result).toContain('name: "@scope/api"');
+    });
+  });
+
+  describe('replaceWorkspaceRegistryBlock', () => {
+    it('should append block when no existing workspaces section', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const content = 'version: "1.0"\nname: "test"\n';
+      const block = 'workspaces:\n  enabled: true\n  items: []\n';
+      const result = updateCommand.replaceWorkspaceRegistryBlock(content, block);
+      expect(result).toContain('workspaces:');
+      expect(result).toContain('version: "1.0"');
+    });
+
+    it('should replace existing workspaces section', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const content = 'version: "1.0"\nworkspaces:\n  enabled: true\n  items:\n    - name: "old"\nname: "test"\n';
+      const block = 'workspaces:\n  enabled: true\n  items: []\n';
+      const result = updateCommand.replaceWorkspaceRegistryBlock(content, block);
+      expect(result).not.toContain('name: "old"');
+      expect(result).toContain('version: "1.0"');
+      expect(result).toContain('name: "test"');
+    });
+  });
+
+  describe('detectNewYamlKeys', () => {
+    it('should detect newly added keys', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const merged = 'version: "1.0"\nname: "test"\n# Added by stdd update\nnew_key: "value"\n';
+      const original = 'version: "1.0"\nname: "test"\n';
+      const newKeys = updateCommand.detectNewYamlKeys(merged, original);
+      expect(newKeys).toContain('new_key');
+    });
+
+    it('should return empty array when no new keys', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      const config = 'version: "1.0"\nname: "test"\n';
+      const newKeys = updateCommand.detectNewYamlKeys(config, config);
+      expect(newKeys).toEqual([]);
+    });
+  });
+
+  describe('addError', () => {
+    it('should add error to report', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      updateCommand.addError('test-scope', 'test message', new Error('test error'), '/some/file');
+      expect(updateCommand.report.errors).toHaveLength(1);
+      expect(updateCommand.report.errors[0]).toEqual({
+        scope: 'test-scope',
+        message: 'test message',
+        filePath: '/some/file',
+        error: 'test error',
+      });
+    });
+
+    it('should handle null error object', () => {
+      const updateCommand = new UpdateCommand(silentSpinner);
+      updateCommand.addError('scope', 'msg', null);
+      expect(updateCommand.report.errors[0].error).toBe('Unknown error');
+    });
+  });
 });

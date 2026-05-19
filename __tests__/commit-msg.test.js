@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
-const { CommitCommand, buildSubject, extractProposalTitle, detectType, extractScopeFromChangeName } = require('../src/cli/commands/commit-msg');
+const { CommitCommand, buildSubject, extractProposalTitle, detectType, extractScopeFromChangeName, detectTddPhase, extractIssue, buildPhaseSubject, buildBody } = require('../src/cli/commands/commit-msg');
 
 describe('commit-msg CLI command', () => {
   const cliPath = path.join(__dirname, '..', 'cli.js');
@@ -263,5 +263,189 @@ describe('CommitCommand class', () => {
 
     const parsed = JSON.parse(result);
     expect(parsed.subject).toBe('feat: json test');
+  });
+
+  it('throws when requireIssue is set but no issue found', async () => {
+    const projectPath = createTempProject('require-issue-test', {
+      proposalContent: '# Proposal: no issue\n\nNo issue ref.',
+    });
+    process.chdir(projectPath);
+
+    const cmd = new CommitCommand();
+    await expect(cmd.execute('demo', { requireIssue: true }))
+      .rejects.toThrow('Issue number is required');
+  });
+
+  it('uses --issue option', async () => {
+    const projectPath = createTempProject('issue-option-test', {
+      proposalContent: '# Proposal: with issue\n\nDesc.',
+    });
+    process.chdir(projectPath);
+
+    const cmd = new CommitCommand();
+    const result = await cmd.execute('demo', { issue: '42', format: 'json' });
+    const parsed = JSON.parse(result);
+    expect(parsed.issue).toBe('42');
+  });
+
+  it('uses TDD phase subject with --tdd flag', async () => {
+    const projectPath = createTempProject('tdd-phase-test', {
+      proposalContent: '# Proposal: tdd phase\n\nDesc.',
+    });
+    process.chdir(projectPath);
+
+    const cmd = new CommitCommand();
+    const result = await cmd.execute('demo', { tdd: true, format: 'json' });
+    const parsed = JSON.parse(result);
+    expect(parsed.phase).toBeDefined();
+  });
+
+  it('uses --phase option for phase subject', async () => {
+    const projectPath = createTempProject('phase-option-test', {
+      proposalContent: '# Proposal: phase option\n\nDesc.',
+    });
+    process.chdir(projectPath);
+
+    const cmd = new CommitCommand();
+    const result = await cmd.execute('demo', { phase: 'red', format: 'json' });
+    const parsed = JSON.parse(result);
+    expect(parsed.subject).toContain('red:');
+  });
+
+  it('throws when STDD not initialized', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-noinit-'));
+    tempDirs.push(root);
+    const projectPath = path.join(root, 'no-stdd');
+    fs.mkdirSync(projectPath, { recursive: true });
+    process.chdir(projectPath);
+
+    const cmd = new CommitCommand();
+    await expect(cmd.execute('x')).rejects.toThrow('STDD not initialized');
+  });
+
+  it('throws when change not found', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-nochange2-'));
+    tempDirs.push(root);
+    const projectPath = path.join(root, 'no-change');
+    fs.mkdirSync(path.join(projectPath, 'stdd', 'changes'), { recursive: true });
+    process.chdir(projectPath);
+
+    const cmd = new CommitCommand();
+    await expect(cmd.execute('nonexistent')).rejects.toThrow("Change 'nonexistent' not found");
+  });
+
+  it('throws when no active changes', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-empty-'));
+    tempDirs.push(root);
+    const projectPath = path.join(root, 'empty');
+    fs.mkdirSync(path.join(projectPath, 'stdd', 'changes'), { recursive: true });
+    process.chdir(projectPath);
+
+    const cmd = new CommitCommand();
+    await expect(cmd.execute()).rejects.toThrow('No active changes found');
+  });
+});
+
+describe('commit-msg unit helpers', () => {
+  describe('detectTddPhase', () => {
+    it('detects red phase from failing test keywords', () => {
+      expect(detectTddPhase([{ description: 'write failing test', isDone: false }])).toBe('red');
+    });
+
+    it('detects red phase from 失败测试 keyword', () => {
+      expect(detectTddPhase([{ description: '创建失败测试', isDone: false }])).toBe('red');
+    });
+
+    it('detects refactor phase', () => {
+      expect(detectTddPhase([{ description: 'refactor the code', isDone: true }])).toBe('refactor');
+    });
+
+    it('detects green phase as default', () => {
+      expect(detectTddPhase([{ description: 'implement feature', isDone: true }])).toBe('green');
+    });
+
+    it('respects explicit phase option', () => {
+      expect(detectTddPhase([], { phase: 'red' })).toBe('red');
+    });
+
+    it('detects red when no tasks completed', () => {
+      expect(detectTddPhase([{ description: 'red phase test', isDone: false }])).toBe('red');
+    });
+  });
+
+  describe('extractIssue', () => {
+    it('extracts from #number in content', () => {
+      expect(extractIssue('fix bug #42', '')).toBe('42');
+    });
+
+    it('extracts from issue: prefix', () => {
+      expect(extractIssue('issue-123 fix', '')).toBe('123');
+    });
+
+    it('extracts from gh- prefix', () => {
+      expect(extractIssue('gh-456 description', '')).toBe('456');
+    });
+
+    it('returns null when no issue found', () => {
+      expect(extractIssue('no issue here', 'no-change')).toBeNull();
+    });
+
+    it('uses explicit option over content', () => {
+      expect(extractIssue('#99', '', { issue: '1' })).toBe('1');
+    });
+
+    it('strips leading # from option', () => {
+      expect(extractIssue('', '', { issue: '#7' })).toBe('7');
+    });
+  });
+
+  describe('buildPhaseSubject', () => {
+    it('builds phase subject with issue', () => {
+      expect(buildPhaseSubject('red', '42', 'write tests')).toBe('red: write tests (#42)');
+    });
+
+    it('builds phase subject without issue', () => {
+      expect(buildPhaseSubject('green', null, 'implement')).toBe('green: implement');
+    });
+
+    it('uses default description when none provided', () => {
+      expect(buildPhaseSubject('red', null, null)).toBe('red: update implementation');
+    });
+
+    it('truncates long subjects', () => {
+      const long = 'a'.repeat(60);
+      const result = buildPhaseSubject('red', null, long);
+      expect(result.length).toBeLessThanOrEqual(50);
+      expect(result).toMatch(/\.\.\.$/);
+    });
+  });
+
+  describe('buildBody', () => {
+    let tmpDir;
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-body-'));
+    });
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('includes completed task descriptions', () => {
+      const body = buildBody([{ description: 'write tests' }], 'demo', tmpDir);
+      expect(body).toContain('write tests');
+    });
+
+    it('returns empty string when no tasks and no specs', () => {
+      const body = buildBody([], 'demo', tmpDir);
+      expect(body).toBe('');
+    });
+
+    it('includes spec filenames when specs dir exists', () => {
+      const specsDir = path.join(tmpDir, 'specs');
+      fs.mkdirSync(specsDir);
+      fs.writeFileSync(path.join(specsDir, 'auth.feature'), '# Spec');
+      const body = buildBody([{ description: 'done' }], 'demo', tmpDir);
+      expect(body).toContain('Spec changes:');
+      expect(body).toContain('auth.feature');
+    });
   });
 });

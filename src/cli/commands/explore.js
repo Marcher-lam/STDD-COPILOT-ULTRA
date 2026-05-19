@@ -7,6 +7,8 @@
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('explore');
 const { TechStackDetector } = require('../../utils/tech-stack-detector');
 const { MemoryScanner } = require('./memory-scan');
 
@@ -28,7 +30,13 @@ class ExploreCommand {
       ? await scanner.findSourceFiles(sourceDir)
       : [];
 
-    const { sourceFiles: srcFiles, testFiles } = this._categorizeSourceFiles(sourceFiles);
+    let { sourceFiles: srcFiles, testFiles } = this._categorizeSourceFiles(sourceFiles);
+
+    // Apply scope filtering if a scope is provided
+    if (scope) {
+      srcFiles = this._applyScopeFilter(srcFiles, scope);
+      testFiles = this._applyScopeFilter(testFiles, scope);
+    }
 
     const untestedFiles = this._findUntestedFiles(srcFiles, testFiles);
     const longFiles = this._findLongFiles(srcFiles);
@@ -77,6 +85,45 @@ class ExploreCommand {
     return { sourceFiles, testFiles };
   }
 
+  /**
+   * Filter files whose relative paths match the given scope pattern.
+   *
+   * Scope matching rules:
+   *  - A plain name like "src" matches any file under a "src" directory segment.
+   *  - A path with separators like "src/cli" matches files under that exact subpath.
+   *  - A glob-like pattern ending with "*" (e.g. "test/*") does prefix matching.
+   *  - Matching is case-insensitive and normalised to forward slashes.
+   *
+   * @param {string[]} files  Absolute file paths.
+   * @param {string} scope    The scope pattern to match against.
+   * @returns {string[]} Files whose relative path matches the scope.
+   */
+  _applyScopeFilter(files, scope) {
+    const normalisedScope = scope.replace(/\\/g, '/').toLowerCase();
+    const isGlob = normalisedScope.endsWith('*');
+    const prefix = isGlob ? normalisedScope.slice(0, -1) : normalisedScope;
+
+    return files.filter((file) => {
+      const rel = path.relative(this.cwd, file).replace(/\\/g, '/').toLowerCase();
+      if (isGlob) {
+        // Prefix match: "test/*" matches "test/foo.js", "test/cli/bar.js"
+        // Also handle bare-name glob like "src*" — treat as segment prefix match
+        if (prefix.endsWith('/')) {
+          return rel.startsWith(prefix);
+        }
+        return rel.startsWith(prefix) || rel.split('/').some((segment) => segment.startsWith(prefix));
+      }
+
+      // Exact segment match: "src" matches any file under a "src/" directory
+      if (!normalisedScope.includes('/')) {
+        return rel.split('/').includes(normalisedScope);
+      }
+
+      // Path match: "src/cli" matches files whose relative path starts with "src/cli/"
+      return rel.startsWith(normalisedScope + '/') || rel === normalisedScope;
+    });
+  }
+
   _findUntestedFiles(sourceFiles, testFiles) {
     const testBasenames = new Set(
       testFiles.map((f) => {
@@ -99,8 +146,8 @@ class ExploreCommand {
         if (lineCount > LONG_FILE_THRESHOLD) {
           results.push({ file, lineCount });
         }
-      } catch {
-        // skip unreadable
+      } catch (err) {
+        logger.warn(err.message);
       }
     }
     return results;
@@ -125,8 +172,8 @@ class ExploreCommand {
         if (exportCount > HIGH_EXPORT_THRESHOLD) {
           results.push({ file, exportCount });
         }
-      } catch {
-        // skip unreadable
+      } catch (err) {
+        logger.warn(err.message);
       }
     }
     return results;
@@ -144,7 +191,8 @@ class ExploreCommand {
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       const deps = { ...((pkg && pkg.dependencies) || {}), ...((pkg && pkg.devDependencies) || {}) };
       return Object.keys(deps).sort();
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return [];
     }
   }
@@ -258,7 +306,8 @@ class ExploreCommand {
     }
 
     if (report.scope) {
-      console.log(chalk.dim(`\n  Scope filter: "${report.scope}" (showing full report; scope filtering is a future enhancement)`));
+      const totalFiles = report.untestedFiles.length + report.longFiles.length + report.highExportFiles.length;
+      console.log(chalk.dim(`\n  Scope filter applied: "${report.scope}"`));
     }
 
     console.log('');

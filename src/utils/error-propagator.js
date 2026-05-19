@@ -103,10 +103,11 @@ class ErrorPropagator {
    * 清理受影响节点的缓存（部分清理，非全量）
    * @param {string[]} affectedNodes 需要清理的节点列表
    */
-  clearAffectedCache(_affectedNodes) {
-    // 当前 cache.clear() 是全量清理；后续可优化为按节点精准清理
-    // 目前保持全量清理以确保一致性
-    this.cache.clear();
+  clearAffectedCache(affectedNodes) {
+    if (!this.cache || !affectedNodes || affectedNodes.length === 0) return;
+    for (const node of affectedNodes) {
+      this.cache.deleteByNode(node);
+    }
   }
 
   /**

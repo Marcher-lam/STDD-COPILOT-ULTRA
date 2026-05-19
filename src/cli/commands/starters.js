@@ -8,10 +8,22 @@ const path = require('path');
 const { getPackageRoot } = require('../../utils/path-resolver');
 const { InitCommand } = require('./init');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('starters');
 
 class StartersCommand {
   constructor(spinner) {
     this.spinner = spinner || { text: '', start() {}, stop() {}, succeed() {}, fail() {} };
+  }
+
+  async execute(subcommand, ...args) {
+    if (subcommand === 'list') return this.printList();
+    if (subcommand === 'create') {
+      const [name, options] = args;
+      const type = (options && options.type) || (args[1] && args[1].type) || 'default';
+      return this.create(name, type, options || {});
+    }
+    return this.printList();
   }
 
   _getTemplatesDir() {
@@ -22,7 +34,8 @@ class StartersCommand {
     try {
       await fs.access(p);
       return true;
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
   }

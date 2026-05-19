@@ -8,18 +8,24 @@ const path = require('path');
 const chalk = require('chalk');
 const { findActiveChange, parseTasks } = require('../../utils/change-utils');
 const { ApplyCommand } = require('./apply');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('continue');
 
 class ContinueCommand {
   /**
    * Update a task's checkbox status in tasks.md.
    */
   updateTaskLine(filePath, task, newStatus) {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n');
-    const oldLine = lines[task.index];
-    if (!oldLine) return;
-    lines[task.index] = oldLine.replace(/\[([ ~x])\]/, `[${newStatus}]`);
-    fs.writeFileSync(filePath, lines.join('\n'));
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const lines = content.split('\n');
+      const oldLine = lines[task.index];
+      if (!oldLine) return;
+      lines[task.index] = oldLine.replace(/\[([ ~x])\]/, `[${newStatus}]`);
+      fs.writeFileSync(filePath, lines.join('\n'));
+    } catch (e) {
+      throw new Error(`Failed to update task in ${path.basename(filePath)}: ${e.message}`);
+    }
   }
 
   /**
@@ -49,7 +55,8 @@ class ContinueCommand {
         });
       if (candidates.length === 0) return null;
       return candidates[0];
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return null;
     }
   }
@@ -65,7 +72,8 @@ class ContinueCommand {
       if (!content) return null;
       const lines = content.split('\n');
       return lines[lines.length - 1];
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return null;
     }
   }
@@ -85,8 +93,8 @@ class ContinueCommand {
             const match = tasks.find(t => t.description === payload.task);
             if (match) return match;
           }
-        } catch {
-          // malformed log line, fall through
+        } catch (err) {
+          logger.warn(err.message);
         }
       }
       // No log entry; pick last completed task
@@ -108,8 +116,8 @@ class ContinueCommand {
           const match = tasks.find(t => !t.isDone && t.description === payload.task);
           if (match) return match;
         }
-      } catch {
-        // malformed line, ignore
+      } catch (err) {
+        logger.warn(err.message);
       }
     }
 
@@ -183,8 +191,8 @@ class ContinueCommand {
           console.log(chalk.red(`   Command: ${payload.command}`));
           console.log(chalk.yellow('   Retrying...\n'));
         }
-      } catch {
-        // ignore parse errors
+      } catch (err) {
+        logger.warn(err.message);
       }
     }
 

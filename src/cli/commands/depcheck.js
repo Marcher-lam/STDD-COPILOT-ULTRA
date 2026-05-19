@@ -6,7 +6,10 @@
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('depcheck');
 const { resolveWorkspace, detectWorkspaces } = require('../../utils/workspace-detector');
+const { mergePackageDeps } = require('../../utils/tech-stack-detector');
 
 const DEFAULT_SAFE_LIST = [
   'eslint', 'eslint-config-*', 'eslint-plugin-*', '@eslint/*',
@@ -28,6 +31,7 @@ const DEFAULT_SAFE_LIST = [
   'dotenv', 'dotenv-*',
   'npm-run-all', 'concurrently', 'wait-on',
   'stdd-copilot',
+  'playwright',
 ];
 
 function isSafeListed(pkgName) {
@@ -71,7 +75,7 @@ class DepcheckCommand {
     this._saveEvidence(results);
 
     if (results.unused.length > 0) {
-      process.exit(1);
+      process.exitCode = 1;
     }
 
     return results;
@@ -111,10 +115,7 @@ class DepcheckCommand {
     }
 
     const pkg = this._readJson(pkgJsonPath);
-    const allDeps = {
-      ...(pkg.dependencies || {}),
-      ...(pkg.devDependencies || {}),
-    };
+    const allDeps = mergePackageDeps(pkg);
     const depNames = Object.keys(allDeps);
 
     if (depNames.length === 0) {
@@ -150,6 +151,7 @@ class DepcheckCommand {
     const missing = [];
     for (const usedName of usedDeps) {
       if (!allDeps[usedName] && !this._isBuiltinModule(usedName)) {
+        if (isSafeListed(usedName)) continue;
         const parentDep = depModuleNames.get(usedName);
         if (!parentDep) {
           missing.push(usedName);
@@ -174,7 +176,8 @@ class DepcheckCommand {
   _readJson(filePath) {
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return {};
     }
   }
@@ -183,6 +186,11 @@ class DepcheckCommand {
     const usedPackages = new Set();
     const srcDir = path.join(dir, 'src');
     const scanDirs = fs.existsSync(srcDir) ? [srcDir] : [dir];
+
+    // Also scan root-level JS files (e.g. cli.js)
+    for (const entry of fs.readdirSync(dir).filter(f => /\.m?js$/.test(f))) {
+      this._extractImports(path.join(dir, entry), usedPackages);
+    }
 
     for (const scanDir of scanDirs) {
       this._scanDirForImports(scanDir, usedPackages);
@@ -211,6 +219,9 @@ class DepcheckCommand {
   _extractImports(filePath, usedPackages) {
     try {
       const content = fs.readFileSync(filePath, 'utf8');
+      // Remove template literal content to avoid false matches on generated code
+      const stripped = content.replace(/`[^`]*`/gs, '""');
+
       const importPatterns = [
         /(?:import\s+(?:(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)\s*,?\s*)*from\s+)?['"]([^'"]+)['"])/g,
         /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
@@ -219,7 +230,7 @@ class DepcheckCommand {
 
       for (const pattern of importPatterns) {
         let match;
-        while ((match = pattern.exec(content)) !== null) {
+        while ((match = pattern.exec(stripped)) !== null) {
           const mod = match[1];
           if (!mod.startsWith('.') && !mod.startsWith('/')) {
             const pkgName = this._extractPackageName(mod);
@@ -229,8 +240,8 @@ class DepcheckCommand {
           }
         }
       }
-    } catch {
-      // ignore read errors
+    } catch (err) {
+      logger.warn(`${path.basename(filePath)}: ${err.message}`);
     }
   }
 
@@ -265,8 +276,8 @@ class DepcheckCommand {
             if (!k.startsWith('.')) moduleNames.push(k);
           });
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        logger.warn(`${path.basename(depName)}: ${err.message}`);
       }
     }
 
@@ -276,8 +287,8 @@ class DepcheckCommand {
         entries
           .filter(e => e.endsWith('.js') || e.endsWith('.mjs') || e.endsWith('.cjs'))
           .forEach(e => moduleNames.push(path.join(depName, e)));
-      } catch {
-        // ignore
+      } catch (err) {
+        logger.warn(`${path.basename(depPath)}: ${err.message}`);
       }
     }
 
@@ -306,7 +317,8 @@ class DepcheckCommand {
     if (!fs.existsSync(evidenceDir)) {
       try {
         fs.mkdirSync(evidenceDir, { recursive: true });
-      } catch {
+      } catch (err) {
+        logger.warn(err.message);
         return;
       }
     }
@@ -322,8 +334,8 @@ class DepcheckCommand {
 
     try {
       fs.writeFileSync(evidencePath, JSON.stringify(evidence, null, 2));
-    } catch {
-      // ignore write errors
+    } catch (err) {
+      logger.warn(err.message);
     }
   }
 

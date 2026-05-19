@@ -9,36 +9,6 @@
  * - Article 8: Performance
  */
 
-
-let inputData = '';
-process.stdin.on('data', chunk => {
-  inputData += chunk;
-});
-
-process.stdin.on('end', async () => {
-  try {
-    if (process.env.STDD_HOOKS_DISABLED) {
-      process.exit(0);
-      return;
-    }
-
-    const data = JSON.parse(inputData);
-    const suggestions = await analyzeCode(data);
-
-    if (suggestions.length > 0) {
-      console.log(JSON.stringify({
-        message: formatSuggestions(suggestions),
-        suggestions
-      }));
-    }
-
-    process.exit(0);
-  } catch (error) {
-    console.error('STDD Hook error:', error.message);
-    process.exit(0);
-  }
-});
-
 async function analyzeCode(data) {
   const { tool_input, tool_name } = data;
 
@@ -89,7 +59,16 @@ function isSourceFile(filePath) {
 }
 
 function hasDocumentation(content) {
-  return /\/\*\*[\s\S]*?\*\//.test(content);
+  // JSDoc/TSDoc block comments: /** ... */
+  if (/\/\*\*[\s\S]*?\*\//.test(content)) return true;
+
+  // Single-line // comments with at least 10 chars after //
+  if (/\/\/.{10,}/.test(content)) return true;
+
+  // Block comments: /* ... */
+  if (/\/\*[\s\S]*?\*\//.test(content)) return true;
+
+  return false;
 }
 
 function hasEmptyCatch(content) {
@@ -97,9 +76,26 @@ function hasEmptyCatch(content) {
 }
 
 function hasNPlusOnePattern(content) {
-  const loopPatterns = /for\s*\(.*await.*\)/;
-  const dbPatterns = /\.findMany\(|\.findById\(/;
-  return loopPatterns.test(content) && dbPatterns.test(content);
+  const dbMethods = /(findMany|findById|query|select|findOne|findAll)\(/;
+  const loopPattern = /(?:for\s*\(|while\s*\()[^{]*\{/g;
+  let match;
+  while ((match = loopPattern.exec(content)) !== null) {
+    const bodyStart = match.index + match[0].length;
+    const body = extractBraceBody(content, bodyStart);
+    if (body && dbMethods.test(body)) return true;
+  }
+  return false;
+}
+
+function extractBraceBody(content, openBracePos) {
+  let depth = 1;
+  let i = openBracePos;
+  while (i < content.length && depth > 0) {
+    if (content[i] === '{') depth++;
+    else if (content[i] === '}') depth--;
+    i++;
+  }
+  return content.substring(openBracePos, i - 1);
 }
 
 function formatSuggestions(suggestions) {
@@ -112,4 +108,46 @@ function formatSuggestions(suggestions) {
   });
 
   return message;
+}
+
+module.exports = {
+  analyzeCode,
+  isSourceFile,
+  hasDocumentation,
+  hasEmptyCatch,
+  hasNPlusOnePattern,
+  extractBraceBody,
+  formatSuggestions,
+};
+
+// ─── stdin entry point (only runs when executed directly) ───
+if (require.main === module) {
+  let inputData = '';
+  process.stdin.on('data', chunk => {
+    inputData += chunk;
+  });
+
+  process.stdin.on('end', async () => {
+    try {
+      if (process.env.STDD_HOOKS_DISABLED) {
+        process.exit(0);
+        return;
+      }
+
+      const data = JSON.parse(inputData);
+      const suggestions = await analyzeCode(data);
+
+      if (suggestions.length > 0) {
+        console.log(JSON.stringify({
+          message: formatSuggestions(suggestions),
+          suggestions
+        }));
+      }
+
+      process.exit(0);
+    } catch (error) {
+      console.error('STDD Hook error:', error.message);
+      process.exit(0);
+    }
+  });
 }

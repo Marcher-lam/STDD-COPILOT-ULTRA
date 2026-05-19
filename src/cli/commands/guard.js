@@ -7,14 +7,17 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('guard');
 const { ConstitutionChecker } = require('./constitution-checker');
 const { TechStackDetector } = require('../../utils/tech-stack-detector');
 const EvidenceCapture = require('../../utils/evidence-capture');
-const { detectWorkspaces, resolveWorkspace } = require('../../utils/workspace-detector');
+const { detectWorkspaces, resolveWorkspace, collectSourceDirs } = require('../../utils/workspace-detector');
 const { resolveTestCommands } = require('../../utils/test-command-resolver');
 const { commandToWorkspaceScope, detectWorkspaceScopes, resolveWorkspaceScope } = require('../../utils/workspace-scope');
 const { parseCoverage } = require('../../utils/coverage-parser');
 const { findLatestMutationEvidence } = require('./mutation');
+const { walkFiles } = require('../../utils/file-walker');
 
 const LINTER_TIMEOUT = 10000;
 
@@ -25,19 +28,10 @@ class GuardCommand {
   }
 
   _getSourceDirs() {
-    const dirs = [];
-    if (this.focusWorkspace) {
-      if (fs.existsSync(this.focusWorkspace.sourceDir)) dirs.push(this.focusWorkspace.sourceDir);
-      return dirs;
-    }
-    const rootSrcDir = path.join(this.cwd, 'src');
-    if (fs.existsSync(rootSrcDir)) dirs.push(rootSrcDir);
-
-    for (const workspace of this.workspaces) {
-      if (fs.existsSync(workspace.sourceDir)) dirs.push(workspace.sourceDir);
-    }
-
-    return dirs;
+    return collectSourceDirs(this.cwd, {
+      workspace: this.focusWorkspace,
+      workspaces: this.workspaces,
+    });
   }
 
   async execute(options = {}) {
@@ -101,6 +95,7 @@ class GuardCommand {
         console.log(`  ${chalk.green('✓')} ${lintResult.type}: no issues`);
       } else {
         console.log(`  ${chalk.yellow('⚠')} ${lintResult.type}: ${lintResult.issueCount} issue(s)`);
+        console.log(chalk.dim(`    Fix: npx eslint . --fix`));
         if (options.strict) {
           report.lint.status = 'fail';
           failed = true;
@@ -124,6 +119,7 @@ class GuardCommand {
       console.log(`  Line coverage: ${coverageResult.lines.pct.toFixed(1)}%`);
       if (coverageResult.lines.pct < coverageThreshold) {
         console.log(`  ${chalk.yellow('⚠')} Line coverage below ${coverageThreshold}%`);
+        console.log(chalk.dim(`    Fix: add tests to uncovered files (run npm run test:coverage for details)`));
       } else {
         console.log(`  ${chalk.green('✓')} Line coverage acceptable`);
       }
@@ -132,6 +128,7 @@ class GuardCommand {
       console.log(`  Test ratio: ${coverageResult.ratio.toFixed(1)}%`);
       if (coverageResult.ratio < 20) {
         console.log(`  ${chalk.yellow('⚠')} Test ratio below 20%`);
+        console.log(chalk.dim(`    Fix: write tests alongside source files (e.g. src/app.js → src/__tests__/app.test.js)`));
       } else {
         console.log(`  ${chalk.green('✓')} Test ratio acceptable`);
       }
@@ -166,6 +163,7 @@ class GuardCommand {
     } else {
       report.testCommands.status = 'skip';
       console.log(`  ${chalk.yellow('⚠')} No test commands detected (skipped)`);
+      console.log(chalk.dim(`    Fix: add a "test" script to package.json or configure in stdd/config.yaml`));
     }
 
     // 5) Mutation Evidence Hint
@@ -257,7 +255,8 @@ class GuardCommand {
       let pkg;
       try {
         pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-      } catch {
+      } catch (err) {
+        logger.warn(err.message);
         return { available: false, reason: 'Cannot read package.json' };
       }
 
@@ -267,7 +266,7 @@ class GuardCommand {
       };
 
       if (deps.eslint) {
-        const result = spawnSync('npx', ['eslint', '.', '--no-error-on-unmatched-pattern', '--format', 'compact'], {
+        const result = spawnSync('npx eslint . --no-error-on-unmatched-pattern --format compact', {
           shell: true,
           timeout: LINTER_TIMEOUT,
           stdio: ['pipe', 'pipe', 'pipe'],
@@ -309,27 +308,17 @@ class GuardCommand {
     let sourceFiles = 0;
     let testFiles = 0;
 
-    const walkDir = (dir) => {
-      if (!fs.existsSync(dir)) return;
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) {
-            walkDir(fullPath);
-          }
-        } else if (entry.isFile() && /\.(js|ts|py)$/.test(entry.name)) {
-          const basename = entry.name;
-          if (basename.includes('.test.') || basename.includes('.spec.') || basename.startsWith('test_')) {
-            testFiles++;
-          } else {
-            sourceFiles++;
-          }
+    for (const srcDir of sourceDirs) {
+      const files = walkFiles(srcDir, { extensions: ['.js', '.ts', '.py'] });
+      for (const filePath of files) {
+        const basename = path.basename(filePath);
+        if (basename.includes('.test.') || basename.includes('.spec.') || basename.startsWith('test_')) {
+          testFiles++;
+        } else {
+          sourceFiles++;
         }
       }
-    };
-
-    sourceDirs.forEach(srcDir => walkDir(srcDir));
+    }
 
     const total = sourceFiles + testFiles;
     const ratio = total > 0 ? (testFiles / total) * 100 : 0;

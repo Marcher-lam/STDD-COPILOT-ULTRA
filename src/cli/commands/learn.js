@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 const { walkFiles: _walkFiles } = require('../../utils/file-walker');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('learn');
 
 const SOURCE_EXTENSIONS = ['.js', '.jsx', '.ts', '.tsx', '.py', '.go', '.rs'];
 
@@ -89,7 +91,8 @@ class LearnCommand {
       let content;
       try {
         content = fs.readFileSync(file, 'utf8');
-      } catch {
+      } catch (err) {
+        logger.warn(err.message);
         continue;
       }
       data.naming.camelCase += (content.match(/\b[a-z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b/g) || []).length;

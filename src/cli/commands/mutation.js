@@ -221,7 +221,7 @@ class MutationCommand {
       const testBase = testRel.slice(0, -testExt.length)
         .replace(/\.test$/, '')
         .replace(/\.spec$/, '')
-        .replace(/^test_/, '')
+        .replace(/(^|\/)test_/, '$1')
         .replace(/_test$/, '');
       return testBase.endsWith(base) || path.basename(testBase) === sourceBaseName;
     });

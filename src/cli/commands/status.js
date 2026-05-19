@@ -7,6 +7,9 @@ const fs = require('fs').promises;
 const path = require('path');
 const chalk = require('chalk');
 const { resolveChangeDir } = require('../../utils/change-utils');
+const { CHANGE_PHASES } = require('../../types');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('status');
 
 class StatusCommand {
   async execute(changeName, options = {}) {
@@ -38,13 +41,13 @@ class StatusCommand {
       return;
     }
 
-    console.log(chalk.bold('\n📊 STDD Copilot Status\n'));
-
     if (!isInitialized) {
-      console.log(chalk.yellow('⚠️  STDD not initialized in this directory.'));
-      console.log(chalk.dim('   Run `stdd init` to get started.'));
+      console.log(chalk.yellow('\n⚠️  STDD not initialized in this directory.'));
+      console.log(chalk.dim('   Run `stdd init` to get started.\n'));
       return;
     }
+
+    console.log(chalk.bold('\n📊 STDD Copilot Status\n'));
 
     const payload = await this.buildOverallStatusPayload(stddDir, { silent: false });
 
@@ -120,7 +123,8 @@ class StatusCommand {
     try {
       await fs.access(path);
       return true;
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
   }
@@ -129,7 +133,8 @@ class StatusCommand {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       return entries.filter(e => !e.name.startsWith('.')).length;
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return 0;
     }
   }
@@ -141,7 +146,8 @@ class StatusCommand {
         .filter(e => e.isDirectory() && !e.name.startsWith('.'))
         .filter(e => e.name !== 'archive')
         .map(e => e.name);
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return [];
     }
   }
@@ -200,8 +206,8 @@ class StatusCommand {
         status.title = titleMatch[1].replace('Proposal:', '').trim();
       }
     } catch (error) {
-      if (!silent && error.code !== 'ENOENT') {
-        console.error(chalk.dim(`Warning: could not check proposal.md - ${error.message}`));
+      if (!silent) {
+        logger.warn(`could not check proposal.md - ${error.message}`);
       }
     }
 
@@ -211,8 +217,8 @@ class StatusCommand {
       const files = await fs.readdir(specsDir);
       status.hasSpecs = files.some(f => f.endsWith('.md'));
     } catch (error) {
-      if (!silent && error.code !== 'ENOENT') {
-        console.error(chalk.dim(`Warning: could not read specs/ - ${error.message}`));
+      if (!silent) {
+        logger.warn(`could not read specs/ - ${error.message}`);
       }
     }
 
@@ -221,8 +227,8 @@ class StatusCommand {
       await fs.access(path.join(changeDir, 'design.md'));
       status.hasDesign = true;
     } catch (error) {
-      if (!silent && error.code !== 'ENOENT') {
-        console.error(chalk.dim(`Warning: could not check design.md - ${error.message}`));
+      if (!silent) {
+        logger.warn(`could not check design.md - ${error.message}`);
       }
     }
 
@@ -237,26 +243,26 @@ class StatusCommand {
         status.tasksProgress = `${status.tasksCompleted}/${status.totalTasks}`;
       }
     } catch (error) {
-      if (!silent && error.code !== 'ENOENT') {
-        console.error(chalk.dim(`Warning: could not read tasks.md - ${error.message}`));
+      if (!silent) {
+        logger.warn(`could not read tasks.md - ${error.message}`);
       }
     }
 
     // Determine phase
     if (!status.hasProposal) {
-      status.phase = 'Phase 1: Proposal (pending)';
-      status.icon = '📝';
+      status.phase = CHANGE_PHASES.PROPOSAL + ' (pending)';
+      status.icon = '\u{1F4DD}';
     } else if (!status.hasSpecs) {
-      status.phase = 'Phase 2: Specification';
-      status.icon = '📋';
+      status.phase = CHANGE_PHASES.SPECIFICATION;
+      status.icon = '\u{1F4CB}';
     } else if (!status.hasDesign) {
-      status.phase = 'Phase 3: Design';
-      status.icon = '🎨';
+      status.phase = CHANGE_PHASES.DESIGN;
+      status.icon = '\u{1F3A8}';
     } else if (status.totalTasks === 0 || status.tasksCompleted < status.totalTasks) {
-      status.phase = 'Phase 4: Implementation';
-      status.icon = '🔧';
+      status.phase = CHANGE_PHASES.IMPLEMENTATION;
+      status.icon = '\u{1F527}';
     } else {
-      status.phase = 'Phase 5: Verification';
+      status.phase = CHANGE_PHASES.VERIFICATION;
       status.icon = '✅';
     }
 

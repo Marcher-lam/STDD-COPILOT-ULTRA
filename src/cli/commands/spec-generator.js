@@ -309,6 +309,17 @@ ${thenLines}
 `;
   }
 
+  async execute(changeName, options = {}) {
+    const result = await this.generateFromTasks(changeName, options);
+    if (result.generated.length > 0) {
+      console.log(`Generated ${result.generated.length} spec(s) for '${changeName}'.`);
+    }
+    if (result.skipped.length > 0) {
+      console.log(`Skipped ${result.skipped.length} existing spec(s).`);
+    }
+    return result;
+  }
+
   async generateFromTasks(changeName, options = {}) {
     const changeDir = await this.ensureChangesDir(changeName);
     const workspace = options.workspace ? resolveWorkspace(process.cwd(), options.workspace) : null;

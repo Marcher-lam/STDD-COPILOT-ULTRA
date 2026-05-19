@@ -4,6 +4,8 @@
  */
 const { ElicitationEngine } = require('../../runtime/elicitation-engine');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('elicitation');
 
 class ElicitationCommand {
   constructor() {
@@ -19,7 +21,7 @@ class ElicitationCommand {
     const methodId = options.method;
 
     if (!topic) {
-      console.error(chalk.red('Error: Topic is required. Usage: stdd brainstorm "Design Auth System"'));
+      logger.error('Topic is required. Usage: stdd brainstorm "Design Auth System"');
       return;
     }
 
@@ -49,7 +51,7 @@ class ElicitationCommand {
   runMethod(methodId, topic) {
     const method = this.engine.getMethod(methodId);
     if (!method) {
-      console.error(chalk.red(`Method '${methodId}' not found. Run --list to see available methods.`));
+      logger.error(`Method '${methodId}' not found. Run --list to see available methods.`);
       return;
     }
     return this.applyMethod(method, topic);

@@ -51,6 +51,12 @@ benchmark-results.json
 # Docker
 docker-compose.override.yml
 
+# Claude Code session data
+.claude/
+
+# npm pack output
+*.tgz
+
 # OS generated files
 **/.DS_Store
 ._*

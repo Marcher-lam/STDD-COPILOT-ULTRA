@@ -6,6 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('doctor');
 
 const CHECKS = [
   { name: 'STDD directory', id: 'stddDir', severity: 'error' },
@@ -102,7 +104,8 @@ class DoctorCommand {
         return { status: 'pass', message: `Test command: ${cfg.test.command}` };
       }
       return { status: 'warn', message: 'No test command in config.yaml' };
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return { status: 'warn', message: 'Cannot parse config.yaml' };
     }
   }
@@ -141,7 +144,9 @@ class DoctorCommand {
         if (deps.husky) {
           return { status: 'info', message: 'Husky in dependencies but .husky/ directory not found' };
         }
-      } catch {}
+      } catch (err) {
+        logger.warn(err.message);
+      }
     }
     return { status: 'info', message: 'Husky not detected' };
   }
@@ -208,6 +213,37 @@ class DoctorCommand {
       const count = fs.readdirSync(evidenceDir).filter(f => f.endsWith('.json')).length;
       results.push({ status: 'info', severity: 'info', id: 'evidenceCount',
         message: `${count} evidence file(s)` });
+    }
+
+    // Coverage report availability
+    const coveragePaths = [
+      path.join(this.cwd, 'coverage', 'lcov.info'),
+      path.join(this.cwd, 'coverage', 'coverage-summary.json'),
+      path.join(this.cwd, 'coverage', 'coverage-final.json'),
+    ];
+    const hasCoverage = coveragePaths.some(p => fs.existsSync(p));
+    results.push({ status: hasCoverage ? 'pass' : 'warn', severity: 'info',
+      id: 'coverageReport', message: hasCoverage ? 'Coverage report found' : 'No coverage report found (run tests with --coverage)' });
+
+    // Constitution check quick scan
+    try {
+      const { ConstitutionChecker } = require('./constitution-checker');
+      const checker = new ConstitutionChecker(this.cwd);
+      checker.loadWaivers();
+      checker.run();
+      const blocking = (checker.issues.blocking || []).length;
+      const warnings = (checker.issues.warning || []).length;
+      if (blocking > 0) {
+        results.push({ status: 'fail', severity: 'warning', id: 'constitution',
+          message: `Constitution: ${blocking} blocking, ${warnings} warning(s)` });
+      } else {
+        results.push({ status: 'pass', severity: 'info', id: 'constitution',
+          message: `Constitution: ${warnings} warning(s), 0 blocking` });
+      }
+    } catch (err) {
+      logger.warn(err.message);
+      results.push({ status: 'warn', severity: 'info', id: 'constitution',
+        message: 'Could not run constitution check' });
     }
 
     return results;

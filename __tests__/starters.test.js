@@ -69,6 +69,60 @@ describe('StartersCommand', () => {
     });
   });
 
+  describe('execute()', () => {
+    it('should delegate to printList when subcommand is "list"', async () => {
+      const cmd = new StartersCommand(silentSpinner);
+      await cmd.execute('list');
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Available STDD Starters')
+      );
+    });
+
+    it('should delegate to printList when subcommand is undefined', async () => {
+      const cmd = new StartersCommand(silentSpinner);
+      await cmd.execute(undefined);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Available STDD Starters')
+      );
+    });
+
+    it('should delegate to printList for unknown subcommand', async () => {
+      const cmd = new StartersCommand(silentSpinner);
+      await cmd.execute('unknown');
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Available STDD Starters')
+      );
+    });
+
+    it('should use default type when options has no type', async () => {
+      const targetRoot = createTempDir();
+      const projectName = path.join(targetRoot, 'default-type-test');
+      const cmd = new StartersCommand(silentSpinner);
+
+      // 'default' type should throw because no such template exists
+      await expect(cmd.execute('create', projectName, { stdd: false })).rejects.toThrow(
+        /Template 'default' not found/
+      );
+    });
+
+    it('should use args[1].type when options.type is not set', async () => {
+      const targetRoot = createTempDir();
+      const projectName = path.join(targetRoot, 'args-type-test');
+      const cmd = new StartersCommand(silentSpinner);
+
+      // Pass options as second arg in args spread
+      await cmd.execute('create', projectName, { type: 'javascript', stdd: false });
+
+      expect(fs.existsSync(path.join(projectName, 'package.json'))).toBe(true);
+    });
+
+    it('should use default spinner when none provided', async () => {
+      const cmd = new StartersCommand(undefined);
+      const types = await cmd.list();
+      expect(types.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('printList()', () => {
     it('should print a formatted list header', async () => {
       const cmd = new StartersCommand(silentSpinner);

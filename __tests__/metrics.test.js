@@ -495,4 +495,115 @@ describe('MetricsCommand', () => {
       expect(printed).toContain('Top Complex Files');
     });
   });
+
+  describe('filterIssuesByWorkspace', () => {
+    it('filters issues by workspace root', () => {
+      const cmd = new MetricsCommand(process.cwd());
+      const issues = {
+        blocking: [
+          { file: 'packages/api/src/index.js', message: 'error' },
+          { file: 'packages/web/src/index.js', message: 'error' },
+        ],
+        warning: [
+          { file: 'packages/api/src/util.js', message: 'warning' },
+        ],
+        skipped: [],
+      };
+      const workspace = { root: path.join(process.cwd(), 'packages', 'api') };
+
+      const filtered = cmd.filterIssuesByWorkspace(issues, workspace);
+
+      expect(filtered.blocking).toHaveLength(1);
+      expect(filtered.blocking[0].file).toContain('api');
+      expect(filtered.warning).toHaveLength(1);
+      expect(filtered.skipped).toHaveLength(0);
+    });
+
+    it('returns all items when no workspace matches', () => {
+      const cmd = new MetricsCommand(process.cwd());
+      const issues = {
+        blocking: [{ file: 'other/path.js' }],
+        warning: [],
+        skipped: [],
+      };
+      const workspace = { root: path.join(process.cwd(), 'packages', 'api') };
+
+      const filtered = cmd.filterIssuesByWorkspace(issues, workspace);
+      expect(filtered.blocking).toHaveLength(0);
+    });
+
+    it('handles null issue arrays gracefully', () => {
+      const cmd = new MetricsCommand(process.cwd());
+      const issues = { blocking: null, warning: undefined, skipped: [] };
+      const workspace = { root: process.cwd() };
+
+      const filtered = cmd.filterIssuesByWorkspace(issues, workspace);
+      expect(filtered.blocking).toEqual([]);
+      expect(filtered.warning).toEqual([]);
+      expect(filtered.skipped).toEqual([]);
+    });
+
+    it('matches by various path properties', () => {
+      const cmd = new MetricsCommand(process.cwd());
+      const issues = {
+        blocking: [
+          { path: 'packages/api/feature.js' },
+          { filepath: 'packages/api/other.js' },
+          { filePath: 'packages/web/app.js' },
+        ],
+        warning: [],
+        skipped: [],
+      };
+      const workspace = { root: path.join(process.cwd(), 'packages', 'api') };
+
+      const filtered = cmd.filterIssuesByWorkspace(issues, workspace);
+      expect(filtered.blocking).toHaveLength(2);
+    });
+  });
+
+  describe('printChangeMetrics', () => {
+    let metricsCmd;
+
+    beforeEach(() => {
+      metricsCmd = new MetricsCommand();
+    });
+
+    it('prints full change metrics', () => {
+      logSpy.mockClear();
+      metricsCmd.printChangeMetrics({
+        change: 'feat-x',
+        workspace: { name: 'main', path: 'packages/main' },
+        specCoverage: { specs: 2, tasks: 5, coverage: 80 },
+        sourceFiles: 10,
+        testFiles: 8,
+        sourceLines: 500,
+        testLines: 300,
+        constitutionHealth: 'PASS',
+      });
+
+      const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
+      expect(output).toContain('feat-x');
+      expect(output).toContain('main');
+      expect(output).toContain('80%');
+      expect(output).toContain('500');
+      expect(output).toContain('PASS');
+    });
+
+    it('prints without workspace', () => {
+      logSpy.mockClear();
+      metricsCmd.printChangeMetrics({
+        change: 'feat-y',
+        specCoverage: { specs: 0, tasks: 0, coverage: 0 },
+        sourceFiles: 0,
+        testFiles: 0,
+        sourceLines: 0,
+        testLines: 0,
+        constitutionHealth: 'FAIL',
+      });
+
+      const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
+      expect(output).toContain('feat-y');
+      expect(output).toContain('FAIL');
+    });
+  });
 });

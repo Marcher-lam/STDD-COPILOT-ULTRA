@@ -6,6 +6,8 @@
 const fs = require('fs').promises;
 const path = require('path');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('list');
 
 class ListCommand {
   async execute(targetPath, options = {}) {
@@ -166,8 +168,8 @@ class ListCommand {
       if (titleMatch) {
         status.title = titleMatch[1].replace('Proposal:', '').trim();
       }
-    } catch {
-      // Proposal doesn't exist
+    } catch (err) {
+      logger.warn(err.message);
     }
 
     try {
@@ -177,8 +179,8 @@ class ListCommand {
       const total = (content.match(/\[[ x]\]/gi) || []).length;
       status.tasksCompleted = completed;
       status.totalTasks = total;
-    } catch {
-      // Tasks don't exist
+    } catch (err) {
+      logger.warn(err.message);
     }
 
     return status;

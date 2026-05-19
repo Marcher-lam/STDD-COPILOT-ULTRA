@@ -8,6 +8,8 @@
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('graph-history');
 const { evidenceMatchesWorkspace, extractEvidenceWorkspaceRefs } = require('../../utils/workspace-scope');
 
 function extractWorkspacesFromEvidence(data) {
@@ -209,9 +211,9 @@ class GraphHistoryCommand {
     );
 
     if (!entry) {
-      console.error(chalk.red("Execution '" + executionId + "' not found."));
+      logger.error("Execution '" + executionId + "' not found.");
       console.log(chalk.dim('Run `stdd graph history` to see available entries.'));
-      process.exit(1);
+      process.exitCode = 1;
       return;
     }
 
@@ -228,7 +230,7 @@ class GraphHistoryCommand {
 
     console.log('ID:        ' + entry.id);
     console.log('Type:      ' + entry.type);
-    var statusLabel = entry.status === 'pass' ? chalk.green('PASS') : entry.status === 'fail' ? chalk.red('FAIL') : chalk.yellow(entry.status.toUpperCase());
+    const statusLabel = entry.status === 'pass' ? chalk.green('PASS') : entry.status === 'fail' ? chalk.red('FAIL') : chalk.yellow(entry.status.toUpperCase());
     console.log('Status:    ' + statusLabel);
     console.log('Time:      ' + this._formatTime(entry.timestamp));
     if (entry.changeName) {
@@ -256,33 +258,33 @@ class GraphHistoryCommand {
 
   _printResults(results) {
     if (results.tasks) {
-      var taskResult = results.tasks;
+      const taskResult = results.tasks;
       console.log('  Tasks:     ' + (taskResult.allDone ? chalk.green('OK') : chalk.red('FAIL')) + ' ' + taskResult.done + '/' + taskResult.total + ' completed');
     }
     if (results.tests !== undefined && results.tests !== null) {
-      var testResult = results.tests;
+      const testResult = results.tests;
       if (testResult.passed === null) {
         console.log('  Tests:     SKIP');
       } else {
         console.log('  Tests:     ' + (testResult.passed ? chalk.green('pass') : chalk.red('fail')));
         if (!testResult.passed && testResult.error) {
-          var tail = testResult.error.trim().split('\n').slice(-3).join('\n      ');
+          const tail = testResult.error.trim().split('\n').slice(-3).join('\n      ');
           console.log(chalk.dim('    ' + tail));
         }
       }
     }
     if (results.constitution) {
-      var c = results.constitution;
+      const c = results.constitution;
       console.log('  Constitution: ' + (c.status === 'pass' ? chalk.green('pass') : chalk.red('fail')));
       if (c.issues && c.issues.blocking && c.issues.blocking.length > 0) {
-        for (var i = 0; i < c.issues.blocking.length; i++) {
-          var b = c.issues.blocking[i];
+        for (let i = 0; i < c.issues.blocking.length; i++) {
+          const b = c.issues.blocking[i];
           console.log('    ' + chalk.red('FAIL') + ' Article ' + b.article + ': ' + b.message);
         }
       }
     }
     if (results.lint) {
-      var l = results.lint;
+      const l = results.lint;
       if (l.passed === null) {
         console.log('  Lint:      SKIP');
       } else {
@@ -293,7 +295,7 @@ class GraphHistoryCommand {
 
   _formatTime(timestamp) {
     try {
-      var d = new Date(timestamp);
+      const d = new Date(timestamp);
       return d.toLocaleString();
     } catch (err) {
       return String(timestamp).slice(0, 19);

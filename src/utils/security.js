@@ -6,6 +6,8 @@
  */
 
 const crypto = require('crypto');
+const { createLogger } = require('./logger');
+const logger = createLogger('security');
 
 /**
  * Sanitize user input to prevent injection attacks
@@ -49,7 +51,8 @@ function sanitizeInput(input, options = {}) {
  */
 function isPathSafe(filePath, baseDir) {
   const path = require('path');
-  
+  const fs = require('fs');
+
   if (!filePath || !baseDir) {
     return false;
   }
@@ -67,6 +70,17 @@ function isPathSafe(filePath, baseDir) {
     return false;
   }
 
+  // Check for symlink escape: resolve real path if it exists
+  try {
+    const realPath = fs.realpathSync(resolvedPath);
+    const realBase = fs.realpathSync(resolvedBase);
+    if (realPath !== realBase && !realPath.startsWith(realBase + path.sep)) {
+      return false;
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
+  }
+
   return true;
 }
 
@@ -77,27 +91,22 @@ function isPathSafe(filePath, baseDir) {
  */
 function detectSecrets(content) {
   const secrets = [];
-  
+
   const patterns = [
-    // API keys
-    { name: 'API Key', pattern: /(?:api[_-]?key|apikey|api_secret)\s*[:=]\s*['"][A-Za-z0-9+/=]{20,}['"]/gi },
-    // Passwords
-    { name: 'Password', pattern: /(?:password|passwd|pwd)\s*[:=]\s*['"][^'"]{6,}['"]/gi },
-    // Tokens
-    { name: 'Token', pattern: /(?:token|secret|jwt)\s*[:=]\s*['"][A-Za-z0-9._-]{20,}['"]/gi },
-    // Private keys
-    { name: 'Private Key', pattern: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g },
-    // AWS keys
-    { name: 'AWS Key', pattern: /AKIA[0-9A-Z]{16}/g },
+    { name: 'API Key', re: /(?:api[_-]?key|apikey|api_secret)\s*[:=]\s*['"][A-Za-z0-9+/=]{20,}['"]/gi },
+    { name: 'Password', re: /(?:password|passwd|pwd)\s*[:=]\s*['"][^'"]{6,}['"]/gi },
+    { name: 'Token', re: /(?:token|secret|jwt)\s*[:=]\s*['"][A-Za-z0-9._-]{20,}['"]/gi },
+    { name: 'Private Key', re: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g },
+    { name: 'AWS Key', re: /AKIA[0-9A-Z]{16}/g },
   ];
 
   const lines = content.split('\n');
-  
-  for (const { name, pattern } of patterns) {
+
+  for (const { name, re } of patterns) {
     for (let i = 0; i < lines.length; i++) {
-      if (pattern.test(lines[i])) {
+      re.lastIndex = 0;
+      if (re.test(lines[i])) {
         secrets.push({ name, line: i + 1 });
-        pattern.lastIndex = 0; // Reset for next line
       }
     }
   }

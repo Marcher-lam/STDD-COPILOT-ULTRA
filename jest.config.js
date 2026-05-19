@@ -18,6 +18,7 @@ module.exports = {
   verbose: true,
   detectOpenHandles: true,
   forceExit: true,
+  testTimeout: 15000,
   collectCoverageFrom: [
     'cli.js',
     'src/**/*.js',
@@ -31,46 +32,52 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     './src/utils/security.js': {
-      branches: 80,
+      branches: 90,
       functions: 100,
+      lines: 95,
+      statements: 95,
+    },
+    './src/utils/change-utils.js': {
+      branches: 80,
+      functions: 85,
       lines: 90,
       statements: 90,
     },
-    './src/utils/change-utils.js': {
+    './src/utils/command-runner.js': {
       branches: 75,
       functions: 80,
       lines: 85,
       statements: 85,
     },
-    './src/utils/command-runner.js': {
+    './src/utils/file-walker.js': {
       branches: 70,
-      functions: 80,
+      functions: 85,
       lines: 80,
       statements: 80,
     },
-    './src/utils/file-walker.js': {
-      branches: 60,
-      functions: 80,
-      lines: 75,
-      statements: 75,
-    },
     './src/utils/dynamic-router.js': {
-      branches: 60,
-      functions: 75,
-      lines: 75,
-      statements: 75,
+      branches: 100,
+      functions: 100,
+      lines: 100,
+      statements: 100,
     },
     './src/utils/path-resolver.js': {
-      branches: 50,
+      branches: 100,
       functions: 100,
-      lines: 70,
-      statements: 70,
+      lines: 100,
+      statements: 100,
+    },
+    './src/utils/logger.js': {
+      branches: 90,
+      functions: 100,
+      lines: 95,
+      statements: 95,
     },
     './src/utils/workspace-detector.js': {
-      branches: 50,
-      functions: 60,
-      lines: 60,
-      statements: 60,
+      branches: 85,
+      functions: 100,
+      lines: 95,
+      statements: 95,
     },
   },
 };

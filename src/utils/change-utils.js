@@ -6,6 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 const { detectTestCommand } = require('./test-command-resolver');
+const { createLogger } = require('./logger');
+const logger = createLogger('change-utils');
 
 const TASK_PATTERN = /^(\s*- )\[([ ~x])\]\s*(.*)$/;
 
@@ -66,7 +68,8 @@ function findActiveChange(stddDir, changeName) {
       return null;
     }
     return path.join(changesDir, active[0].name);
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
     return null;
   }
 }

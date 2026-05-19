@@ -11,6 +11,8 @@ const {
   resolveTestCommands,
   _detectPackageManager: detectPackageManager,
 } = require('../../utils/test-command-resolver');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('ci-generator');
 
 const CI_FILE_NAME = 'stdd-ci.yml';
 
@@ -233,7 +235,8 @@ ${testSteps}
   _readRootPackageJson() {
     try {
       return JSON.parse(fs.readFileSync(path.join(this.cwd, 'package.json'), 'utf-8'));
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return null;
     }
   }

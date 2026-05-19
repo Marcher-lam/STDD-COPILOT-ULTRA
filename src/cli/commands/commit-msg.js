@@ -7,6 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 const { findActiveChange, parseTasks } = require('../../utils/change-utils');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('commit-msg');
 
 const MAX_SUBJECT_LENGTH = 50;
 
@@ -124,8 +126,8 @@ function buildBody(completedTasks, changeName, changeDir) {
           lines.push(`- ${f}`);
         });
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      logger.warn(err.message);
     }
   }
 
@@ -147,7 +149,7 @@ class CommitCommand {
     if (!changeDir) {
       throw new Error(resolvedName
         ? `Change '${resolvedName}' not found.`
-        : 'No active changes found.'
+        : 'No active changes found. Create one with `stdd new change <name>`.'
       );
     }
 
@@ -213,4 +215,4 @@ class CommitCommand {
   }
 }
 
-module.exports = { CommitCommand, buildSubject, buildPhaseSubject, extractProposalTitle, detectType, detectTddPhase, extractIssue, extractScopeFromChangeName };
+module.exports = { CommitCommand, buildSubject, buildPhaseSubject, extractProposalTitle, detectType, detectTddPhase, extractIssue, extractScopeFromChangeName, buildBody };

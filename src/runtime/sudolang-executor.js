@@ -6,6 +6,8 @@ const { SudoLangParser } = require('./sudolang-parser');
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { createLogger } = require('../utils/logger');
+const log = createLogger('SudoExecutor');
 
 class SudoExecutor {
   constructor(cwd = process.cwd()) {
@@ -16,7 +18,8 @@ class SudoExecutor {
 
   async executeFile(filePath, options = {}) {
     const parsed = this.parser.parse(filePath);
-    return this.run(parsed, { ...options, sourceFile: path.basename(filePath) });
+    const result = this.run(parsed, { ...options, sourceFile: path.basename(filePath) });
+    return result;
   }
 
   run(parsedData, _options = {}) {
@@ -27,7 +30,7 @@ class SudoExecutor {
     const testFile = path.join(this.tempDir, `sudo-test-${Date.now()}.js`);
     fs.writeFileSync(testFile, testCode, 'utf8');
 
-    console.log('[SudoExecutor] Running generated logic...');
+    log.info('Running generated logic...');
 
     // 2. Execute
     try {
@@ -39,10 +42,10 @@ class SudoExecutor {
       if (result.status !== 0) {
         throw new Error(`SudoLang execution failed with exit code ${result.status}`);
       }
-      console.log('[SudoExecutor] Execution PASSED');
+      log.info('Execution PASSED');
       return { success: true };
     } catch (error) {
-      console.error('[SudoExecutor] Execution FAILED');
+      log.error('Execution FAILED');
       return { success: false, error: error.message };
     } finally {
       try { fs.unlinkSync(testFile); } catch (_) { /* ignore cleanup errors */ }

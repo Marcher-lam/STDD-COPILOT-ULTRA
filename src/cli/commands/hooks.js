@@ -599,9 +599,9 @@ Examples:
       const aiOk = verifyHooks(options);
       if (options.git) {
         const gitOk = verifyGitHooks(options);
-        process.exit(aiOk && gitOk ? 0 : 1);
+        if (!aiOk || !gitOk) process.exitCode = 1;
       } else {
-        process.exit(aiOk ? 0 : 1);
+        if (!aiOk) process.exitCode = 1;
       }
     });
 

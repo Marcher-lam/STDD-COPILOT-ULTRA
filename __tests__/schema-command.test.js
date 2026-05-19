@@ -295,6 +295,155 @@ describe('SchemaCommand', () => {
     });
   });
 
+  describe('create', () => {
+    it('should create a workflow schema file', () => {
+      setup();
+      const cmd = new SchemaCommand(tempDir);
+      const result = cmd.create('my-workflow');
+      expect(result.status).toBe('created');
+      expect(result.path).toContain('my-workflow.yaml');
+      expect(fs.existsSync(result.path)).toBe(true);
+      const yaml = require('js-yaml');
+      const doc = yaml.load(fs.readFileSync(result.path, 'utf8'));
+      expect(doc.name).toBe('my-workflow');
+      expect(doc.version).toBe('1.0');
+      expect(doc.artifacts).toBeDefined();
+      teardown();
+    });
+
+    it('should throw when name is not provided', () => {
+      setup();
+      const cmd = new SchemaCommand(tempDir);
+      expect(() => cmd.create()).toThrow('Schema name is required');
+      teardown();
+    });
+
+    it('should throw when schema already exists without force', () => {
+      setup();
+      const cmd = new SchemaCommand(tempDir);
+      cmd.create('existing');
+      expect(() => cmd.create('existing')).toThrow("already exists. Use --force to overwrite");
+      teardown();
+    });
+
+    it('should overwrite existing schema with force flag', () => {
+      setup();
+      const cmd = new SchemaCommand(tempDir);
+      cmd.create('overwrite-me');
+      const result = cmd.create('overwrite-me', { force: true });
+      expect(result.status).toBe('created');
+      expect(fs.existsSync(result.path)).toBe(true);
+      teardown();
+    });
+
+    it('should output JSON when --json flag is set', () => {
+      setup();
+      let capturedOutput = '';
+      const originalLog = console.log;
+      console.log = (msg) => { capturedOutput = msg; };
+      try {
+        const cmd = new SchemaCommand(tempDir);
+        cmd.create('json-test', { json: true });
+        const parsed = JSON.parse(capturedOutput);
+        expect(parsed.status).toBe('created');
+        expect(parsed.path).toContain('json-test.yaml');
+      } finally {
+        console.log = originalLog;
+      }
+      teardown();
+    });
+  });
+
+  describe('fork', () => {
+    it('should fork an existing schema file', () => {
+      setup();
+      const schemasDir = path.join(tempDir, 'schemas', 'workflows');
+      fs.mkdirSync(schemasDir, { recursive: true });
+      const sourcePath = path.join(schemasDir, 'source.yaml');
+      fs.writeFileSync(sourcePath, 'version: "1.0"\nname: source\n', 'utf8');
+
+      const cmd = new SchemaCommand(tempDir);
+      const result = cmd.fork(
+        path.join('schemas', 'workflows', 'source.yaml'),
+        'forked'
+      );
+      expect(result.status).toBe('forked');
+      expect(result.source).toBe(sourcePath);
+      expect(fs.existsSync(result.path)).toBe(true);
+      const content = fs.readFileSync(result.path, 'utf8');
+      expect(content).toContain('name: source');
+      teardown();
+    });
+
+    it('should throw when source is missing', () => {
+      setup();
+      const cmd = new SchemaCommand(tempDir);
+      expect(() => cmd.fork('nonexistent.yaml', 'target'))
+        .toThrow('Source schema not found');
+      teardown();
+    });
+
+    it('should throw when source or name is not provided', () => {
+      setup();
+      const cmd = new SchemaCommand(tempDir);
+      expect(() => cmd.fork(null, 'target')).toThrow('Usage: stdd schema fork');
+      expect(() => cmd.fork('source.yaml', null)).toThrow('Usage: stdd schema fork');
+      teardown();
+    });
+
+    it('should throw when target already exists without force', () => {
+      setup();
+      const schemasDir = path.join(tempDir, 'schemas', 'workflows');
+      fs.mkdirSync(schemasDir, { recursive: true });
+      const sourcePath = path.join(schemasDir, 'source.yaml');
+      fs.writeFileSync(sourcePath, 'version: "1.0"\n', 'utf8');
+      // Pre-create the target
+      fs.writeFileSync(path.join(schemasDir, 'target.yaml'), '', 'utf8');
+
+      const cmd = new SchemaCommand(tempDir);
+      expect(() => cmd.fork(path.join('schemas', 'workflows', 'source.yaml'), 'target'))
+        .toThrow("already exists. Use --force to overwrite");
+      teardown();
+    });
+
+    it('should overwrite target with force flag', () => {
+      setup();
+      const schemasDir = path.join(tempDir, 'schemas', 'workflows');
+      fs.mkdirSync(schemasDir, { recursive: true });
+      const sourcePath = path.join(schemasDir, 'source.yaml');
+      fs.writeFileSync(sourcePath, 'version: "1.0"\nname: original\n', 'utf8');
+      fs.writeFileSync(path.join(schemasDir, 'target.yaml'), '', 'utf8');
+
+      const cmd = new SchemaCommand(tempDir);
+      const result = cmd.fork(path.join('schemas', 'workflows', 'source.yaml'), 'target', { force: true });
+      expect(result.status).toBe('forked');
+      expect(fs.readFileSync(result.path, 'utf8')).toContain('original');
+      teardown();
+    });
+
+    it('should output JSON when --json flag is set', () => {
+      setup();
+      const schemasDir = path.join(tempDir, 'schemas', 'workflows');
+      fs.mkdirSync(schemasDir, { recursive: true });
+      const sourcePath = path.join(schemasDir, 'source.yaml');
+      fs.writeFileSync(sourcePath, 'version: "1.0"\n', 'utf8');
+
+      let capturedOutput = '';
+      const originalLog = console.log;
+      console.log = (msg) => { capturedOutput = msg; };
+      try {
+        const cmd = new SchemaCommand(tempDir);
+        cmd.fork(path.join('schemas', 'workflows', 'source.yaml'), 'json-fork', { json: true });
+        const parsed = JSON.parse(capturedOutput);
+        expect(parsed.status).toBe('forked');
+        expect(parsed.source).toBe(sourcePath);
+      } finally {
+        console.log = originalLog;
+      }
+      teardown();
+    });
+  });
+
   describe('JSON output', () => {
     it('should produce valid JSON output when --json flag is set', () => {
       setup();

@@ -34,7 +34,7 @@ class FixPacketCommand {
     if (!fs.existsSync(stddDir)) throw new Error('STDD not initialized. Run `stdd init` first.');
 
     const changeDir = findActiveChange(stddDir, changeName);
-    if (!changeDir) throw new Error(changeName ? `Change '${changeName}' not found.` : 'No active changes found.');
+    if (!changeDir) throw new Error(changeName ? `Change '${changeName}' not found.` : 'No active changes found. Create one with `stdd new change <name>`.');
 
     const packet = this.buildPacket(changeDir, options);
     const output = this.writePacket(changeDir, packet);

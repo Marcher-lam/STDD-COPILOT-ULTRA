@@ -29,7 +29,8 @@ const {
   ConstitutionFixCommand, MutationCommand, AgentEngine, SudoLangParser,
   BabyStepsCommand, SudoExecutor, ElicitationCommand,
   createAgentExecutor, ProductProposalCommand,
-  StartCommand, DoctorCommand
+  StartCommand, DoctorCommand,
+  SkillsCommand, CommandsCommand
 } = require('./src/cli/commands/index');
 
 const { ProgressCommand } = require('./src/cli/commands/progress');
@@ -41,7 +42,7 @@ const { MemoryScanner } = require('./src/cli/commands/memory-scan');
 const { TddInitCommand } = require('./src/cli/commands/tdd-init');
 const { ConstitutionStatusCommand } = require('./src/cli/commands/constitution-status');
 const hooksCommand = require('./src/cli/commands/hooks');
-const graphCommand = require('./src/cli/commands/graph');
+const { graphCommand } = require('./src/cli/commands/graph');
 const { ConstitutionChecker } = require('./src/cli/commands/constitution-checker');
 const { WaiverManager } = require('./src/cli/commands/waiver-manager');
 
@@ -87,6 +88,13 @@ function createSpinner(text) {
   };
 }
 
+// ─── Safe action wrapper — eliminates repeated try/catch + process.exit(1) ───
+function safeAction(fn) {
+  return async (...args) => {
+    try { await fn(...args); } catch (e) { console.error(chalk.red(e.message)); process.exitCode = 1; }
+  };
+}
+
 program
   .name('stdd')
   .description('STDD Copilot - Spec + Test Driven Development Framework')
@@ -113,21 +121,19 @@ const commandFactories = {
   SchemaCommand, ContractCommand, MockGenCommand, ValidateCommand,
   LearnCommand, RolesCommand, ExtensionsCommand, StoryCommand,
   UserTestCommand, PipelineCommand, FixPacketCommand, OutsideInCommand,
-  RecommendCommand: RecommendEngine,
   MutationCommand,
   ElicitationCommand,
   BabyStepsCommand,
   SudoExecutorCommand: SudoExecutor,
   BrowserCommand,
-  BrowserSnapshotCommand: BrowserCommand,
-  BrowserInspectCommand: BrowserCommand,
-  BrowserDoctorCommand: BrowserCommand,
   RuntimeAgentCommand: AgentEngine,
   RuntimeSudoCommand: SudoLangParser,
   SpecGenerator,
   ApiSpecCommand,
   MemoryCommand: MemoryScanner,
   TddInitCommand,
+  SkillsCommand,
+  CommandsCommand,
   ProductProposalCommand,
 };
 
@@ -142,17 +148,17 @@ loader.registerAll();
 program.command('start')
   .description('Interactive quick-start wizard for STDD')
   .option('--json')
-  .action(async (options) => {
-    try { await new StartCommand().execute(options); } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (options) => {
+    await new StartCommand().execute(options);
+  }));
 
 program.command('doctor')
   .description('Check project health')
   .option('--json')
   .option('--deep', 'Run deep checks including audit and lint availability')
-  .action(async (options) => {
-    try { await new DoctorCommand(process.cwd()).execute(options); } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (options) => {
+    await new DoctorCommand(process.cwd()).execute(options);
+  }));
 
 program.command('progress')
   .description('Track and view progress')
@@ -160,56 +166,48 @@ program.command('progress')
   .option('--resume')
   .option('--clear')
   .option('--json')
-  .action(async (options) => {
-    try { await new ProgressCommand().execute(options); } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (options) => {
+    await new ProgressCommand().execute(options);
+  }));
 
 program.command('recommend [change]')
   .description('Recommend next step')
   .option('--workspace <workspace>')
   .option('--json')
-  .action(async (change, options) => {
-    try {
-      const engine = new RecommendEngine(process.cwd());
-      const recs = engine.recommend(change, options);
-      if (options.json) console.log(JSON.stringify(recs, null, 2));
-      else printRecommendations(recs);
-    } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (change, options) => {
+    const engine = new RecommendEngine(process.cwd());
+    const recs = engine.recommend(change, options);
+    if (options.json) console.log(JSON.stringify(recs, null, 2));
+    else printRecommendations(recs);
+  }));
 
 program.command('memory <action> [args...]')
   .description('Manage memory artifacts')
   .option('--source-dir <dir>')
   .option('--json')
-  .action(async (action, args, options) => {
-    try {
-      const scanner = new MemoryScanner(process.cwd());
-      if (action === 'scan') await scanner.scan(options);
-      else if (action === 'list') scanner.listMemory({ json: options.json });
-    } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (action, args, options) => {
+    const scanner = new MemoryScanner(process.cwd());
+    if (action === 'scan') await scanner.scan(options);
+    else if (action === 'list') scanner.listMemory({ json: options.json });
+  }));
 
 program.command('baby-steps [task]')
   .description('Interactive TDD guessing game guide')
-  .action(async (task) => {
-    try {
-      const { findActiveChange } = require('./src/utils/change-utils');
-      const stddDir = path.join(process.cwd(), 'stdd');
-      if (!fs.existsSync(stddDir)) throw new Error('Not initialized.');
-      const changeDir = findActiveChange(stddDir);
-      if (!changeDir) throw new Error('No active changes.');
-      await new BabyStepsCommand(changeDir).execute(task || 'Next Step');
-    } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (task) => {
+    const { findActiveChange } = require('./src/utils/change-utils');
+    const stddDir = path.join(process.cwd(), 'stdd');
+    if (!fs.existsSync(stddDir)) throw new Error('Not initialized.');
+    const changeDir = findActiveChange(stddDir);
+    if (!changeDir) throw new Error('No active changes.');
+    await new BabyStepsCommand(changeDir).execute(task || 'Next Step');
+  }));
 
 program.command('sudo run [file]')
   .description('Execute SudoLang logic and return validation results')
-  .action(async (file) => {
-    try {
-      if (!file) throw new Error('File path is required.');
-      await new SudoExecutor(process.cwd()).executeFile(path.resolve(file));
-    } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (file) => {
+    if (!file) throw new Error('File path is required.');
+    await new SudoExecutor(process.cwd()).executeFile(path.resolve(file));
+  }));
 
 // List & Status (custom wiring)
 program.command('list')
@@ -220,17 +218,17 @@ program.command('list')
   .option('--archived')
   .option('--json')
   .addHelpText('after', 'Examples:\n  stdd list\n  stdd list --specs\n  stdd list --archived\n  stdd list --json\n\n`--archived` applies to change listings, not spec listings.')
-  .action(async (options = {}) => {
-    try { await new ListCommand().execute('.', options); } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (options = {}) => {
+    await new ListCommand().execute('.', options);
+  }));
 
 program.command('status [change]')
   .description('Show status of a change')
   .option('--json')
   .addHelpText('after', 'Examples:\n  stdd status\n  stdd status add-dark-mode\n  stdd status --json\n  stdd status add-dark-mode --json')
-  .action(async (change, options = {}) => {
-    try { await new StatusCommand().execute(change, options); } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
-  });
+  .action(safeAction(async (change, options = {}) => {
+    await new StatusCommand().execute(change, options);
+  }));
 
 // ─── Constitution (inline – complex routing) ───
 program.command('constitution [action] [target]')
@@ -245,62 +243,50 @@ program.command('constitution [action] [target]')
   .option('--lint')
   .option('--dry-run')
   .addHelpText('after', 'Examples:\n  stdd constitution\n  stdd constitution show 2\n  stdd constitution check\n\nSupported: show, check, fix, status, audit, waive')
-  .action(async (action, target, options) => {
+  .action(safeAction(async (action, target, options) => {
     action = action || 'show';
     if (action === 'show') {
-      try {
-        if (options.article) target = options.article;
-        if (target && !options.json) {
-          const article = CONSTITUTION_ARTICLES.find(a => String(a.n) === String(target));
-          if (article) {
-            console.log(`\n  Article ${article.n}: ${article.name} [${article.priority}]\n`);
-            const artFile = path.join(__dirname, 'schemas', 'constitution', 'articles', `${String(article.n).padStart(2,'0')}-${article.name.toLowerCase().replace(/ /g,'-')}.md`);
-            if (fs.existsSync(artFile)) console.log(fs.readFileSync(artFile, 'utf8'));
-          } else {
-            CONSTITUTION_ARTICLES.forEach(a => console.log(`  Article ${a.n}: ${a.name} [${a.priority}]`));
-          }
+      if (options.article) target = options.article;
+      if (target && !options.json) {
+        const article = CONSTITUTION_ARTICLES.find(a => String(a.n) === String(target));
+        if (article) {
+          console.log(`\n  Article ${article.n}: ${article.name} [${article.priority}]\n`);
+          const artFile = path.join(__dirname, 'schemas', 'constitution', 'articles', `${String(article.n).padStart(2,'0')}-${article.name.toLowerCase().replace(/ /g,'-')}.md`);
+          if (fs.existsSync(artFile)) console.log(fs.readFileSync(artFile, 'utf8'));
         } else {
           CONSTITUTION_ARTICLES.forEach(a => console.log(`  Article ${a.n}: ${a.name} [${a.priority}]`));
         }
-      } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
+      } else {
+        CONSTITUTION_ARTICLES.forEach(a => console.log(`  Article ${a.n}: ${a.name} [${a.priority}]`));
+      }
     } else if (action === 'check') {
       const spinner = createSpinner('Running constitution check...').start();
-      try {
-        const checker = new ConstitutionChecker(process.cwd());
-        checker.loadWaivers();
-        checker.checkAll();
-        const violations = checker.issues;
-        const hasBlocking = (violations.blocking || []).length > 0;
-        if (hasBlocking) process.exitCode = 1;
-        if (options.json) {
-          console.log(JSON.stringify({ status: hasBlocking ? 'fail' : 'pass', ...violations, workspace: options.workspace || null }, null, 2));
-        } else {
-          const all = [...(violations.blocking || []), ...(violations.warning || []), ...(violations.suggestion || [])];
-          all.forEach(v => console.log(`  ${v.severity === 'blocking' ? chalk.red('✗') : v.severity === 'warning' ? chalk.yellow('⚠') : chalk.dim('ℹ')} Article ${v.article}: ${v.message}`));
-          console.log(all.length ? '' : chalk.green('✓ All articles pass\n'));
-        }
-        spinner.succeed(hasBlocking ? 'Constitution check completed with violations' : 'Constitution check passed');
-      } catch (e) { spinner.fail(e.message); process.exit(1); }
+      const checker = new ConstitutionChecker(process.cwd());
+      checker.loadWaivers();
+      checker.run();
+      const violations = checker.issues;
+      const hasBlocking = (violations.blocking || []).length > 0;
+      if (hasBlocking) process.exitCode = 1;
+      if (options.json) {
+        console.log(JSON.stringify({ status: hasBlocking ? 'fail' : 'pass', ...violations, workspace: options.workspace || null }, null, 2));
+      } else {
+        const all = [...(violations.blocking || []), ...(violations.warning || []), ...(violations.suggestion || [])];
+        all.forEach(v => console.log(`  ${v.severity === 'blocking' ? chalk.red('✗') : v.severity === 'warning' ? chalk.yellow('⚠') : chalk.dim('ℹ')} Article ${v.article}: ${v.message}`));
+        console.log(all.length ? '' : chalk.green('✓ All articles pass\n'));
+      }
+      spinner.succeed(hasBlocking ? 'Constitution check completed with violations' : 'Constitution check passed');
     } else if (action === 'fix') {
-      try {
-        await new ConstitutionFixCommand(createSpinner('Fixing constitution violations...')).execute(process.cwd(), { article: options.article ? Number(options.article) : null, dryRun: options.dryRun, workspace: options.workspace });
-      } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
+      await new ConstitutionFixCommand(createSpinner('Fixing constitution violations...')).execute(process.cwd(), { article: options.article ? Number(options.article) : null, dryRun: options.dryRun, workspace: options.workspace });
     } else if (action === 'status') {
-      try {
-        await new ConstitutionStatusCommand().execute(options);
-      } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
+      await new ConstitutionStatusCommand().execute(options);
     } else if (action === 'audit') {
-      try {
-        await new AuditCommand().execute(process.cwd(), options);
-      } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
+      await new AuditCommand().execute(process.cwd(), options);
     } else if (action === 'waive') {
-      try {
-        await new WaiverManager(process.cwd()).add(target, options);
-      } catch (e) { console.error(chalk.red(e.message)); process.exit(1); }
+      await new WaiverManager(process.cwd()).add(target, options);
     } else {
       console.log(chalk.yellow(`Unknown action: ${action}. Supported: show, check, fix, status, audit, waive.`));
     }
-  });
+  }));
 
 // ─── Hooks (uses module's own registration) ───
 hooksCommand(program);
@@ -319,7 +305,7 @@ agentCmd.command('agent <action> [topic]')
   .option('--allowed-bin <bins>', 'Comma-separated shell executor binary allowlist')
   .option('--role <role>', 'Agent role for run action')
   .option('--json')
-  .action(async (action, topic, options) => {
+  .action(safeAction(async (action, topic, options) => {
     const engine = new AgentEngine();
     if (action === 'start') {
       if (!topic) throw new Error('Topic is required to start.');
@@ -350,32 +336,27 @@ agentCmd.command('agent <action> [topic]')
       if (options.json) console.log(JSON.stringify(result, null, 2));
       else console.log(result.output || JSON.stringify(result, null, 2));
     }
-  });
+  }));
 
 agentCmd.command('sudo [file]')
   .description('Interpret SudoLang pseudo-code and generate artifacts')
   .option('--generate')
   .option('--json')
-  .action(async (file, options) => {
+  .action(safeAction(async (file, options) => {
     const parser = new SudoLangParser();
     if (!file) throw new Error('Source file path is required.');
-    try {
-      const parsed = parser.parse(file);
-      if (options.generate) {
-        const artifacts = parser.generateArtifacts(parsed);
-        console.log(chalk.green('Generated artifacts:'));
-        for (const [name, artifactPath] of Object.entries(artifacts)) {
-          console.log(`  ${name}: ${artifactPath}`);
-        }
-        if (options.json) console.log(JSON.stringify(artifacts, null, 2));
-      } else {
-        console.log(JSON.stringify(parsed, null, 2));
+    const parsed = parser.parse(file);
+    if (options.generate) {
+      const artifacts = parser.generateArtifacts(parsed);
+      console.log(chalk.green('Generated artifacts:'));
+      for (const [name, artifactPath] of Object.entries(artifacts)) {
+        console.log(`  ${name}: ${artifactPath}`);
       }
-    } catch (e) {
-      console.error(chalk.red(e.message));
-      process.exit(1);
+      if (options.json) console.log(JSON.stringify(artifacts, null, 2));
+    } else {
+      console.log(JSON.stringify(parsed, null, 2));
     }
-  });
+  }));
 
 // ─── Parse with progress tracking ───
 const { progress: getProgress, installSignals, active, setActive, clearActive } = require('./src/utils/session-progress');

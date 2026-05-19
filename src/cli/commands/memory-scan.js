@@ -7,6 +7,8 @@ const fs = require('fs').promises;
 const path = require('path');
 const yaml = require('js-yaml');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('memory-scan');
 
 class MemoryScanner {
   constructor(cwd = process.cwd()) {
@@ -21,8 +23,8 @@ class MemoryScanner {
     try {
       const content = await fs.readFile(configPath, 'utf-8');
       config = yaml.load(content) || {};
-    } catch {
-      // No config, use defaults
+    } catch (err) {
+      logger.warn(err.message);
     }
     this.sourceRoot = config.source_root
       ? path.resolve(this.cwd, config.source_root)
@@ -71,8 +73,8 @@ class MemoryScanner {
           }
         }
       }
-    } catch {
-      // Skip unreadable directories
+    } catch (err) {
+      logger.warn(err.message);
     }
     return results;
   }
@@ -364,8 +366,8 @@ ${tree}
           });
         }
       }
-    } catch {
-      // Skip unreadable files
+    } catch (err) {
+      logger.warn(err.message);
     }
     return symbols;
   }
@@ -398,8 +400,8 @@ ${tree}
           });
         }
       }
-    } catch {
-      // Skip unreadable files
+    } catch (err) {
+      logger.warn(err.message);
     }
     return symbols;
   }

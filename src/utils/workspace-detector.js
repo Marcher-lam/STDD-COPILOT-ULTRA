@@ -150,4 +150,37 @@ function resolveWorkspace(cwd, selector) {
   }) || null;
 }
 
-module.exports = { detectWorkspaces, loadWorkspaceRegistry, resolveWorkspace };
+/**
+ * Collect source directories for the project.
+ * Shared by metrics, guard, constitution-checker, tdd-init, constitution-fix.
+ */
+function collectSourceDirs(cwd, options = {}) {
+  const { workspace, sourceDir, workspaces, includeTests = false } = options;
+
+  if (sourceDir) return [path.resolve(cwd, sourceDir)];
+
+  const dirs = [];
+
+  if (workspace) {
+    if (fs.existsSync(workspace.sourceDir)) dirs.push(path.resolve(workspace.sourceDir));
+    if (includeTests) {
+      const testsDir = path.join(workspace.root, 'tests');
+      if (fs.existsSync(testsDir)) dirs.push(testsDir);
+      const srcDir = path.join(workspace.root, 'src');
+      if (fs.existsSync(srcDir) && !dirs.includes(path.resolve(srcDir))) dirs.push(srcDir);
+    }
+    return dirs;
+  }
+
+  const rootSrc = path.join(cwd, 'src');
+  if (fs.existsSync(rootSrc)) dirs.push(rootSrc);
+
+  const detectedWorkspaces = workspaces || detectWorkspaces(cwd);
+  for (const ws of detectedWorkspaces) {
+    if (fs.existsSync(ws.sourceDir)) dirs.push(ws.sourceDir);
+  }
+
+  return [...new Set(dirs.map(dir => path.resolve(dir)))];
+}
+
+module.exports = { detectWorkspaces, loadWorkspaceRegistry, resolveWorkspace, collectSourceDirs };

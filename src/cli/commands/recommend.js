@@ -8,6 +8,9 @@ const path = require('path');
 const chalk = require('chalk');
 const { findActiveChange, parseTasks } = require('../../utils/change-utils');
 const { resolveWorkspace } = require('../../utils/workspace-detector');
+const { walkFiles: walkShared } = require('../../utils/file-walker');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('recommend');
 
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.py', '.go', '.java', '.rb', '.php', '.rs']);
 const TEST_PATTERN = /(?:^|[.\/-])(test|spec)\.[^.\/]+$|__tests__|tests?/;
@@ -29,7 +32,8 @@ class RecommendEngine {
       return entries
         .filter(e => e.isDirectory() && !e.name.startsWith('.') && e.name !== 'archive')
         .map(e => path.join(changesDir, e.name));
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return [];
     }
   }
@@ -113,7 +117,8 @@ class RecommendEngine {
       if (!fs.existsSync(dir)) return false;
       const files = fs.readdirSync(dir);
       return files.some(f => f.endsWith('.md'));
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
   }
@@ -132,10 +137,12 @@ class RecommendEngine {
       try {
         const payload = JSON.parse(lastLine.replace(/^\[.*?\] /, ''));
         return payload && payload.status === 'failed';
-      } catch {
+      } catch (err) {
+        logger.warn(err.message);
         return false;
       }
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
   }
@@ -153,11 +160,12 @@ class RecommendEngine {
         try {
           const data = JSON.parse(fs.readFileSync(path.join(evidenceDir, file), 'utf-8'));
           if (data.status === 'pass') return true;
-        } catch {
-          // ignore malformed files
+        } catch (err) {
+          logger.warn(err.message);
         }
       }
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
     return false;
@@ -177,11 +185,12 @@ class RecommendEngine {
           if (workspaces.some(result => this.workspaceEvidenceMatches(result, workspace) && result.passed !== false)) {
             return true;
           }
-        } catch {
-          // ignore malformed files
+        } catch (err) {
+          logger.warn(err.message);
         }
       }
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
     return false;
@@ -205,26 +214,8 @@ class RecommendEngine {
     return this.normalizePath(path.relative(this.cwd, workspace.root) || workspace.name);
   }
 
-  walkFiles(dir, files = []) {
-    if (!fs.existsSync(dir)) return files;
-    try {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (entry.name === 'node_modules' || entry.name === '.git') continue;
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          this.walkFiles(fullPath, files);
-        } else {
-          files.push(fullPath);
-        }
-      }
-    } catch {
-      // ignore unreadable directories
-    }
-    return files;
-  }
-
   analyzeWorkspace(workspace) {
-    const files = this.walkFiles(workspace.sourceDir);
+    const files = walkShared(workspace.sourceDir);
     const sourceFiles = files.filter(file => SOURCE_EXTENSIONS.has(path.extname(file)) && !TEST_PATTERN.test(this.normalizePath(file)));
     const testFiles = files.filter(file => TEST_PATTERN.test(this.normalizePath(file)));
     const changes = this.getActiveChanges();

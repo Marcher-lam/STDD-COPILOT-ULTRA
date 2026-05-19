@@ -1,5 +1,10 @@
 /**
  * STDD CLI Commands Index
+ *
+ * Only symbols imported via destructuring in cli.js are exported here.
+ * Symbols imported directly from their source modules (e.g. graphCommand from
+ * ./graph, MemoryScanner from ./memory-scan) are NOT re-exported to avoid
+ * redundant aliasing and circular-reference risk.
  */
 
 module.exports = {
@@ -26,7 +31,6 @@ module.exports = {
   RecommendEngine: require('./recommend').RecommendEngine,
   printRecommendations: require('./recommend').printRecommendations,
   ApiSpecCommand: require('./api-spec').ApiSpecCommand,
-  GraphRunCommand: require('./graph-run').GraphRunCommand,
   ConstitutionFixCommand: require('./constitution-fix').ConstitutionFixCommand,
   AuditCommand: require('./audit').AuditCommand,
   WorkspaceCommand: require('./workspace').WorkspaceCommand,
@@ -48,9 +52,10 @@ module.exports = {
   BabyStepsCommand: require('./baby-steps').BabyStepsCommand,
   ElicitationCommand: require('./elicitation').ElicitationCommand,
   SudoExecutor: require('../../runtime/sudolang-executor').SudoExecutor,
-  BrowserDoctor: require('../../runtime/browser-doctor').BrowserDoctor,
   createAgentExecutor: require('../../runtime/agents').createAgentExecutor,
   StartCommand: require('./start').StartCommand,
   DoctorCommand: require('./doctor').DoctorCommand,
+  SkillsCommand: require('./skills').SkillsCommand,
+  CommandsCommand: require('./commands').CommandsCommand,
   ProductProposalCommand: require('./product-proposal').ProductProposalCommand,
 };

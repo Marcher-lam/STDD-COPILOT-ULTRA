@@ -2,8 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { TddInitCommand } = require('./tdd-init');
-const { detectWorkspaces, resolveWorkspace } = require('../../utils/workspace-detector');
+const { detectWorkspaces, resolveWorkspace, collectSourceDirs } = require('../../utils/workspace-detector');
 const { workspaceToScope } = require('../../utils/workspace-scope');
+const { detectSecrets } = require('../../utils/security');
+const { CiGeneratorCommand, CI_FILE_NAME } = require('./ci-generator');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('constitution-fix');
 const LINT_TIMEOUT = 10000;
 
 class ConstitutionFixCommand {
@@ -36,11 +40,24 @@ class ConstitutionFixCommand {
     if (!article || article === 1) {
       fixes.push({ article: 1, name: 'Library-First - Suggestions', fn: () => this._fixArticle1(cwd, dryRun) });
     }
+    if (!article || article === 6) {
+      fixes.push({ article: 6, name: 'Error Handling - Empty Catch Blocks', fn: () => this._fixArticle6(cwd, dryRun, workspace) });
+    }
+    if (!article || article === 7) {
+      fixes.push({ article: 7, name: 'Security - Hardcoded Secrets', fn: () => this._fixArticle7(cwd, dryRun, workspace) });
+    }
+    if (!article || article === 9) {
+      fixes.push({ article: 9, name: 'CI/CD - Generate GitHub Actions', fn: () => this._fixArticle9(cwd, dryRun) });
+    }
 
     const results = [];
     for (const fix of fixes) {
       const result = await fix.fn();
       results.push({ article: fix.article, name: fix.name, workspace: workspaceScope, ...result });
+    }
+
+    if (article && results.length === 0) {
+      console.log(`No auto-fix available for Article ${article}. Supported articles: 1, 2, 4, 5, 6, 7, 9.`);
     }
 
     return results;
@@ -82,19 +99,7 @@ class ConstitutionFixCommand {
   }
 
   _getSourceDirs(cwd, workspace = null) {
-    if (workspace) {
-      return fs.existsSync(workspace.sourceDir) ? [path.resolve(workspace.sourceDir)] : [];
-    }
-
-    const dirs = [];
-    const rootSrc = path.join(cwd, 'src');
-    if (fs.existsSync(rootSrc)) dirs.push(rootSrc);
-
-    for (const workspace of detectWorkspaces(cwd)) {
-      if (fs.existsSync(workspace.sourceDir)) dirs.push(workspace.sourceDir);
-    }
-
-    return [...new Set(dirs.map(dir => path.resolve(dir)))];
+    return collectSourceDirs(cwd, { workspace });
   }
 
   _hasJsdocBeforeLine(lines, lineIndex) {
@@ -260,6 +265,118 @@ class ConstitutionFixCommand {
     return { fixed: [...new Set(modified)], dryRun };
   }
 
+  async _fixArticle6(cwd, dryRun, workspace = null) {
+    const sourceDirs = this._getSourceDirs(cwd, workspace);
+    const sourceFiles = sourceDirs.flatMap(d => this._findSourceFiles(d));
+    const modified = [];
+
+    for (const sf of sourceFiles) {
+      const ext = path.extname(sf);
+      if (ext !== '.js' && ext !== '.ts') continue;
+
+      let content;
+      try { content = fs.readFileSync(sf, 'utf8'); } catch (err) {
+        logger.warn(err.message);
+        continue;
+      }
+
+      let changed = false;
+      const catchWordPat = /catch\s*\([^)]*\)/g;
+      let match;
+
+      while ((match = catchWordPat.exec(content)) !== null) {
+        const catchEnd = match.index + match[0].length;
+        const afterCatch = content.substring(catchEnd);
+        const firstBrace = afterCatch.indexOf('{');
+        if (firstBrace === -1) continue;
+
+        const openBracePos = catchEnd + firstBrace;
+        let braceCount = 0;
+        let closePos = -1;
+        for (let k = openBracePos; k < content.length; k++) {
+          if (content[k] === '{') braceCount++;
+          if (content[k] === '}') braceCount--;
+          if (braceCount === 0) { closePos = k; break; }
+        }
+        if (closePos === -1) continue;
+
+        const inner = content.substring(openBracePos + 1, closePos);
+        const stripped = inner.replace(/\/\/.*/g, '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
+        if (stripped.length > 0) continue;
+
+        const catchVar = match[0].match(/catch\s*\((\w+)\)/);
+        const varName = catchVar ? catchVar[1] : 'err';
+        const indent = content.substring(content.lastIndexOf('\n', match.index) + 1, match.index).match(/^\s*/)[0];
+        const replacement = `${indent}  console.error(${varName});`;
+
+        const before = content.substring(0, openBracePos + 1);
+        const after = content.substring(closePos);
+        content = before + '\n' + replacement + '\n' + indent + after;
+        changed = true;
+        catchWordPat.lastIndex = 0;
+      }
+
+      if (changed) {
+        if (dryRun) {
+          modified.push(path.relative(cwd, sf));
+        } else {
+          fs.writeFileSync(sf, content, 'utf8');
+          modified.push(path.relative(cwd, sf));
+        }
+      }
+    }
+
+    if (dryRun && modified.length > 0) {
+      console.log(`\nDry run - Article 6 (Error Handling) would fix empty catch blocks in:\n`);
+      modified.forEach(f => console.log(`  ${f}`));
+    }
+
+    return { fixed: modified, dryRun };
+  }
+
+  _fixArticle7(cwd, dryRun, workspace = null) {
+    const sourceDirs = this._getSourceDirs(cwd, workspace);
+    const sourceFiles = sourceDirs.flatMap(d => this._findSourceFiles(d));
+    const warnings = [];
+
+    for (const sf of sourceFiles) {
+      let content;
+      try { content = fs.readFileSync(sf, 'utf8'); } catch (err) {
+        logger.warn(err.message);
+        continue;
+      }
+
+      const secrets = detectSecrets(content);
+      if (secrets.length > 0) {
+        const relPath = path.relative(cwd, sf);
+        for (const s of secrets) {
+          warnings.push({ file: relPath, line: s.line, type: s.name });
+        }
+
+        if (!dryRun) {
+          const lines = content.split('\n');
+          for (const s of secrets) {
+            const line = lines[s.line - 1];
+            if (line) {
+              lines[s.line - 1] = line.replace(
+                /['"][A-Za-z0-9+/=._-]{20,}['"]/,
+                `process.env.SECRET_${s.name.toUpperCase().replace(/\s+/g, '_')} || '***REDACTED***'`
+              );
+            }
+          }
+          fs.writeFileSync(sf, lines.join('\n'), 'utf8');
+        }
+      }
+    }
+
+    if (dryRun && warnings.length > 0) {
+      console.log(`\nDry run - Article 7 (Security) found hardcoded secrets:\n`);
+      warnings.forEach(w => console.log(`  ${w.file}:${w.line} [${w.type}]`));
+    }
+
+    return { fixed: dryRun ? warnings.map(w => w.file) : [...new Set(warnings.map(w => w.file))], warnings, dryRun };
+  }
+
   async _fixArticle1(cwd, dryRun) {
     const checkerModule = require('./constitution-checker');
     const { ConstitutionChecker } = checkerModule;
@@ -282,6 +399,45 @@ class ConstitutionFixCommand {
     }
 
     return { suggestions: warnings.length, dryRun };
+  }
+
+  _hasCiConfig(cwd) {
+    const ciConfigs = [
+      path.join(cwd, '.github', 'workflows'),
+      path.join(cwd, '.circleci', 'config.yml'),
+      path.join(cwd, '.gitlab-ci.yml'),
+      path.join(cwd, 'Jenkinsfile'),
+    ];
+    return ciConfigs.some(configPath => fs.existsSync(configPath));
+  }
+
+  async _fixArticle9(cwd, dryRun) {
+    const ciPath = path.join(cwd, '.github', 'workflows', CI_FILE_NAME);
+    if (this._hasCiConfig(cwd)) {
+      return {
+        created: [],
+        skipped: true,
+        reason: 'CI configuration already exists',
+        path: fs.existsSync(ciPath) ? path.relative(cwd, ciPath) : null,
+        dryRun,
+      };
+    }
+
+    const relPath = path.relative(cwd, ciPath).replace(/\\/g, '/');
+    if (dryRun) {
+      console.log(`\nDry run - Article 9 (CI/CD) would generate ${relPath}`);
+      return { created: [relPath], skipped: false, dryRun };
+    }
+
+    const generator = new CiGeneratorCommand(cwd);
+    const result = await generator.execute('github');
+    return {
+      created: [path.relative(cwd, result.path).replace(/\\/g, '/')],
+      skipped: false,
+      platform: result.platform,
+      techStack: result.techStack,
+      dryRun,
+    };
   }
 
   _detectLinter(cwd) {

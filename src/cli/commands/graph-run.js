@@ -9,8 +9,12 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('graph-run');
 const DynamicGraphRouter = require('../../utils/dynamic-router');
 const { getPackageRoot } = require('../../utils/path-resolver');
+const { walkFiles } = require('../../utils/file-walker');
+const { parseCommand, runCommand: runParsedCommand } = require('../../utils/command-runner');
 const { FFCommand } = require('./ff');
 const { SpecGenerator } = require('./spec-generator');
 const { ApplyCommand } = require('./apply');
@@ -19,6 +23,68 @@ const { ArchiveCommand } = require('./archive');
 const { FixPacketCommand } = require('./fix-packet');
 const { OutsideInCommand } = require('./outside-in');
 const { resolveWorkspace } = require('../../utils/workspace-detector');
+
+function toPosixPath(value) {
+  return String(value || '').replace(/\\/g, '/');
+}
+
+function globPatternToRegex(pattern) {
+  const normalized = toPosixPath(pattern).replace(/^\.\//, '');
+  let source = '^';
+  for (let i = 0; i < normalized.length; i++) {
+    const char = normalized[i];
+    const next = normalized[i + 1];
+    if (char === '*' && next === '*') {
+      const after = normalized[i + 2];
+      if (after === '/') {
+        source += '(?:.*\/)?';
+        i += 2;
+      } else {
+        source += '.*';
+        i += 1;
+      }
+    } else if (char === '*') {
+      source += '[^/]*';
+    } else if (char === '?') {
+      source += '[^/]';
+    } else {
+      source += char.replace(/[|\\{}()[\]^$+?.]/g, '\\$&');
+    }
+  }
+  return new RegExp(source + '$');
+}
+
+function getValueAtPath(data, jsonPath) {
+  const normalized = String(jsonPath || '').trim().replace(/^\$\.?/, '');
+  if (!normalized) return data;
+  const parts = normalized.match(/[^.[\]]+|\[(\d+)\]/g) || [];
+  let current = data;
+  for (const rawPart of parts) {
+    const part = rawPart.startsWith('[') ? rawPart.slice(1, -1) : rawPart;
+    if (current === null || current === undefined || !Object.prototype.hasOwnProperty.call(Object(current), part)) {
+      return undefined;
+    }
+    current = current[part];
+  }
+  return current;
+}
+
+function compareValues(actual, operator, expected) {
+  switch (operator || 'exists') {
+    case 'exists': return actual !== undefined && actual !== null;
+    case 'equals': return String(actual) === String(expected);
+    case 'not_equals': return String(actual) !== String(expected);
+    case 'contains': return String(actual).includes(String(expected));
+    case 'matches': return new RegExp(String(expected)).test(String(actual));
+    case 'greater_than': return Number(actual) > Number(expected);
+    case 'less_than': return Number(actual) < Number(expected);
+    case 'greater_or_equal': return Number(actual) >= Number(expected);
+    case 'less_or_equal': return Number(actual) <= Number(expected);
+    default: return false;
+  }
+}
+
+const ALLOWED_CONDITION_COMMANDS = new Set(['npm', 'git', 'node', 'npx', 'yarn', 'pnpm']);
 
 const NODE_COMMAND_MAP = {
   'stdd-propose': 'propose',
@@ -30,6 +96,10 @@ const NODE_COMMAND_MAP = {
   'stdd-verify': 'verify',
   'stdd-archive': 'archive',
   'stdd-commit': 'commit',
+  'stdd-explore': 'explore',
+  'stdd-brainstorm': 'brainstorm',
+  'stdd-final-doc': 'final-doc',
+  'stdd-init': 'init',
 };
 
 class GraphRunCommand {
@@ -135,6 +205,21 @@ class GraphRunCommand {
         return { status: 'success', node: nodeName };
       }
 
+      case 'stdd-commit': {
+        const cwd = process.cwd();
+        try {
+          const { stdout: diffStdout } = await execAsync('git diff --cached --stat', { cwd });
+          if (!diffStdout.trim()) {
+            await execAsync('git add -A', { cwd });
+          }
+          const msg = `stdd: complete graph run for ${changeName}`;
+          await execAsync(`git commit -m ${JSON.stringify(msg)} --allow-empty`, { cwd });
+          return { status: 'success', node: nodeName, detail: msg };
+        } catch (err) {
+          return { status: 'success', node: nodeName, detail: `commit skipped: ${err.message}` };
+        }
+      }
+
       case 'stdd-type-check': {
         try {
           const { stdout, stderr } = await execAsync('npx tsc --noEmit', {
@@ -150,12 +235,48 @@ class GraphRunCommand {
         }
       }
 
+      case 'stdd-explore': {
+        const { ExploreCommand } = require('./explore');
+        const explore = new ExploreCommand();
+        await explore.execute('project', { output: null, json: false });
+        return { status: 'success', node: nodeName };
+      }
+
+      case 'stdd-brainstorm': {
+        const { ElicitationCommand } = require('./elicitation');
+        const brainstorm = new ElicitationCommand();
+        const topic = options.description || changeName;
+        await brainstorm.execute(topic, { method: 'first-principles', list: false, json: false });
+        return { status: 'success', node: nodeName };
+      }
+
+      case 'stdd-final-doc': {
+        const docPath = path.join(process.cwd(), 'stdd', 'changes', changeName, 'FINAL-DOC.md');
+        const heading = `# Final Documentation: ${changeName}\n\nGenerated by graph run.\n`;
+        fs.mkdirSync(path.dirname(docPath), { recursive: true });
+        fs.writeFileSync(docPath, heading, 'utf8');
+        console.log(chalk.green(`    Final doc written: ${path.relative(process.cwd(), docPath)}`));
+        return { status: 'success', node: nodeName };
+      }
+
+      case 'stdd-init': {
+        const { InitCommand } = require('./init');
+        const init = new InitCommand();
+        await init.execute(process.cwd(), { force: false, skipSkills: false, yes: true });
+        return { status: 'success', node: nodeName };
+      }
+
       default:
         return { status: 'unknown', node: nodeName };
     }
   }
 
   async execute(intent = 'feature', options = {}) {
+    const stddDir = path.join(process.cwd(), 'stdd');
+    if (!fs.existsSync(stddDir)) {
+      throw new Error('STDD not initialized. Run `stdd init` first.');
+    }
+
     let router;
     try {
       router = new DynamicGraphRouter();
@@ -306,9 +427,19 @@ class GraphRunCommand {
   }
 
   _evaluateCondition(condition) {
+    if (!condition || typeof condition !== 'object') return false;
+
+    if (condition.all) return Array.isArray(condition.all) && condition.all.every(item => this._evaluateCondition(item));
+    if (condition.any) return Array.isArray(condition.any) && condition.any.some(item => this._evaluateCondition(item));
+    if (condition.not) return !this._evaluateCondition(condition.not);
+
     if (condition.has_file) {
       const filePath = path.join(process.cwd(), condition.has_file);
       return fs.existsSync(filePath);
+    }
+
+    if (condition.has_file_pattern || condition.file_pattern) {
+      return this._evaluateFilePattern(condition.has_file_pattern || condition.file_pattern);
     }
 
     if (condition.has_dependency) {
@@ -319,14 +450,103 @@ class GraphRunCommand {
         const deps = {
           ...(pkg.dependencies || {}),
           ...(pkg.devDependencies || {}),
+          ...(pkg.peerDependencies || {}),
+          ...(pkg.optionalDependencies || {}),
         };
         return condition.has_dependency in deps;
-      } catch {
+      } catch (err) {
+        logger.warn(err.message);
         return false;
       }
     }
 
+    if (condition.variable || condition.env) {
+      return this._evaluateVariable(condition.variable || condition.env, condition);
+    }
+
+    if (condition.json_path) {
+      return this._evaluateJsonPath(condition.json_path, condition);
+    }
+
+    if (condition.command) {
+      return this._evaluateCommand(condition.command, condition);
+    }
+
+    if (condition.git_branch) {
+      return this._evaluateGitBranch(condition.git_branch, condition);
+    }
+
+    if (condition.git_status) {
+      return this._evaluateGitStatus(condition.git_status, condition);
+    }
+
     return false;
+  }
+
+  _evaluateFilePattern(pattern) {
+    if (!pattern) return false;
+    const regex = globPatternToRegex(pattern);
+    return walkFiles(process.cwd()).some(file => regex.test(toPosixPath(path.relative(process.cwd(), file))));
+  }
+
+  _evaluateVariable(name, condition) {
+    const value = process.env[String(name)];
+    return compareValues(value, condition.operator, condition.value);
+  }
+
+  _evaluateJsonPath(config, condition) {
+    const file = typeof config === 'string' ? config : config.file;
+    const query = typeof config === 'string' ? condition.path : config.path;
+    if (!file || !query) return false;
+
+    try {
+      const content = fs.readFileSync(path.join(process.cwd(), file), 'utf8');
+      const value = getValueAtPath(JSON.parse(content), query);
+      const operator = condition.operator || config.operator;
+      const expected = Object.prototype.hasOwnProperty.call(condition, 'value') ? condition.value : config.value;
+      return compareValues(value, operator, expected);
+    } catch (err) {
+      logger.warn(err.message);
+      return false;
+    }
+  }
+
+  _evaluateCommand(command, condition) {
+    try {
+      const { bin } = parseCommand(command, 'Condition command');
+      if (!ALLOWED_CONDITION_COMMANDS.has(bin)) return false;
+      const result = runParsedCommand(command, { cwd: process.cwd(), stdio: 'pipe', timeout: condition.timeout || 30000 });
+      const output = `${result.stdout || ''}${result.stderr || ''}`.trim();
+      if (condition.operator) return compareValues(output, condition.operator, condition.value);
+      return result.status === 0;
+    } catch (err) {
+      logger.warn(err.message);
+      return false;
+    }
+  }
+
+  _evaluateGitBranch(expected, condition) {
+    try {
+      const result = runParsedCommand('git branch --show-current', { cwd: process.cwd(), stdio: 'pipe', timeout: 10000 });
+      if (result.status !== 0) return false;
+      return compareValues(String(result.stdout || '').trim(), condition.operator || 'equals', expected);
+    } catch (err) {
+      logger.warn(err.message);
+      return false;
+    }
+  }
+
+  _evaluateGitStatus(expected, condition) {
+    try {
+      const result = runParsedCommand('git status --porcelain', { cwd: process.cwd(), stdio: 'pipe', timeout: 10000 });
+      if (result.status !== 0) return false;
+      const clean = String(result.stdout || '').trim().length === 0;
+      const value = expected === 'clean' ? clean : !clean;
+      return condition.operator ? compareValues(value, condition.operator, condition.value) : value;
+    } catch (err) {
+      logger.warn(err.message);
+      return false;
+    }
   }
 }
 

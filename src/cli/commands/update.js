@@ -10,6 +10,8 @@ const yaml = require('js-yaml');
 const { getPackageRoot } = require('../../utils/path-resolver');
 const { detectWorkspaces } = require('../../utils/workspace-detector');
 const chalk = require('chalk');
+const { createLogger } = require('../../utils/logger');
+const logger = createLogger('update');
 
 const enginesConfig = require('../../config/engines.json');
 
@@ -169,7 +171,8 @@ class UpdateCommand {
     try {
       await fs.access(filePath);
       return true;
-    } catch {
+    } catch (err) {
+      logger.warn(err.message);
       return false;
     }
   }
@@ -271,75 +274,31 @@ class UpdateCommand {
   }
 
   async syncSkillsDirectory(sourceDir, targetDir, options = {}) {
-    const { force = false, dryRun = false, scope = 'sync' } = options;
+    const { scope = 'sync' } = options;
     const result = { updated: 0, skipped: 0, added: 0, localChanges: 0, filesUpdated: [], filesAdded: [], filesSkipped: [], filesLocalChanges: [] };
 
     const entries = await fs.readdir(sourceDir, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
+      if (!entry.isDirectory()) continue;
 
       const skillName = entry.name;
       const sourceSkillDir = path.join(sourceDir, skillName);
       const targetSkillDir = path.join(targetDir, skillName);
 
-      const skillFiles = await this.collectFiles(sourceSkillDir);
+      const subResult = await this.syncDirectory(sourceSkillDir, targetSkillDir, {
+        ...options,
+        scope: `${scope}/${skillName}`,
+      });
 
-      for (const srcFile of skillFiles) {
-        const relativePath = path.relative(sourceSkillDir, srcFile);
-        const targetFile = path.join(targetSkillDir, relativePath);
-        const displayPath = `${scope}/${skillName}/${relativePath}`;
-
-        const targetExists = await this.exists(targetFile);
-
-        if (!targetExists) {
-          if (!dryRun) {
-            await fs.mkdir(path.dirname(targetFile), { recursive: true });
-            try {
-              const content = await fs.readFile(srcFile, 'utf-8');
-              await fs.writeFile(targetFile, content);
-              result.added++;
-              result.filesAdded.push(displayPath);
-            } catch (error) {
-              this.addError(scope, `Failed to add file '${relativePath}'`, error, targetFile);
-            }
-          } else {
-            result.added++;
-            result.filesAdded.push(displayPath);
-          }
-          continue;
-        }
-
-        const srcContent = await fs.readFile(srcFile, 'utf-8');
-        const targetContent = await fs.readFile(targetFile, 'utf-8');
-
-        if (this.hashContent(srcContent) === this.hashContent(targetContent)) {
-          result.skipped++;
-          result.filesSkipped.push(displayPath);
-          continue;
-        }
-
-        if (!force) {
-          result.localChanges++;
-          result.filesLocalChanges.push(displayPath);
-          continue;
-        }
-
-        if (!dryRun) {
-          try {
-            await fs.writeFile(targetFile, srcContent);
-            result.updated++;
-            result.filesUpdated.push(displayPath);
-          } catch (error) {
-            this.addError(scope, `Failed to update file '${relativePath}'`, error, targetFile);
-          }
-        } else {
-          result.updated++;
-          result.filesUpdated.push(displayPath);
-        }
-      }
+      result.updated += subResult.updated;
+      result.skipped += subResult.skipped;
+      result.added += subResult.added;
+      result.localChanges += subResult.localChanges;
+      result.filesUpdated.push(...subResult.filesUpdated);
+      result.filesAdded.push(...subResult.filesAdded);
+      result.filesSkipped.push(...subResult.filesSkipped);
+      result.filesLocalChanges.push(...subResult.filesLocalChanges);
     }
 
     return result;

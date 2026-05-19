@@ -10,30 +10,7 @@
  */
 
 const fs = require('fs');
-
-let inputData = '';
-process.stdin.on('data', chunk => {
-  inputData += chunk;
-});
-
-process.stdin.on('end', async () => {
-  try {
-    if (process.env.STDD_HOOKS_DISABLED) {
-      console.log(JSON.stringify({ block: false }));
-      process.exit(0);
-      return;
-    }
-
-    const data = JSON.parse(inputData);
-    const result = await runChecks(data);
-
-    console.log(JSON.stringify(result));
-    process.exit(result.block ? 1 : 0);
-  } catch (error) {
-    console.error('STDD Hook error:', error.message);
-    process.exit(0);
-  }
-});
+const path = require('path');
 
 async function runChecks(data) {
   const { tool_input, tool_name } = data;
@@ -76,18 +53,73 @@ async function runChecks(data) {
 }
 
 function isImplementationFile(filePath) {
-  const srcPattern = /\/src\//;
+  const implPattern = /\/(src|lib|app|server|modules|services|components|pages)\//;
   const testPattern = /\.(test|spec)\./;
-  return srcPattern.test(filePath) && !testPattern.test(filePath);
+  const declPattern = /\.d\.ts$/;
+  return implPattern.test(filePath) && !testPattern.test(filePath) && !declPattern.test(filePath);
 }
 
 function getCorrespondingTestFile(filePath) {
-  return filePath
-    .replace('/src/', '/src/__tests__/')
-    .replace(/\.ts$/, '.test.ts')
-    .replace(/\.js$/, '.test.js')
-    .replace(/\.py$/, '_test.py')
-    .replace(/\.go$/, '_test.go');
+  const ext = path.extname(filePath);
+  const base = path.basename(filePath, ext);
+  const dir = path.dirname(filePath);
+
+  // Derive test file name for the extension
+  function testFileName(name, extension) {
+    switch (extension) {
+      case '.ts':
+      case '.js':
+        return `${name}.test${extension}`;
+      case '.py':
+        return `${name}_test.py`;
+      case '.go':
+        return `${name}_test.go`;
+      default:
+        return `${name}.test${extension}`;
+    }
+  }
+
+  // Find project root by looking up for package.json or using cwd
+  const cwd = process.cwd();
+  const candidates = [];
+
+  // 1. Co-located test (same directory, .test./.spec. pattern)
+  candidates.push(path.join(dir, testFileName(base, ext)));
+  candidates.push(path.join(dir, base + '.spec' + ext));
+
+  // 2. __tests__/ in the same parent directory
+  candidates.push(path.join(dir, '__tests__', testFileName(base, ext)));
+
+  // 3. test/ directory at project root
+  candidates.push(path.join(cwd, 'test', testFileName(base, ext)));
+
+  // 4. tests/ directory at project root
+  candidates.push(path.join(cwd, 'tests', testFileName(base, ext)));
+
+  // 5. __tests__/ at project root
+  candidates.push(path.join(cwd, '__tests__', testFileName(base, ext)));
+
+  // 6. Original convention: replace impl dir segment with __tests__
+  const implDirPattern = /\/(src|lib|app|server|modules|services|components|pages)\//;
+  if (implDirPattern.test(filePath)) {
+    candidates.push(
+      filePath
+        .replace(implDirPattern, '/$1/__tests__/')
+        .replace(/\.ts$/, '.test.ts')
+        .replace(/\.js$/, '.test.js')
+        .replace(/\.py$/, '_test.py')
+        .replace(/\.go$/, '_test.go')
+    );
+  }
+
+  // Return the first candidate that exists, or the first candidate as default
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
 }
 
 function checkCodeStyle(content) {
@@ -152,4 +184,40 @@ function formatViolationMessage(violations) {
   }
 
   return message;
+}
+
+module.exports = {
+  runChecks,
+  isImplementationFile,
+  getCorrespondingTestFile,
+  checkCodeStyle,
+  checkSecurity,
+  formatViolationMessage,
+};
+
+// ─── stdin entry point (only runs when executed directly) ───
+if (require.main === module) {
+  let inputData = '';
+  process.stdin.on('data', chunk => {
+    inputData += chunk;
+  });
+
+  process.stdin.on('end', async () => {
+    try {
+      if (process.env.STDD_HOOKS_DISABLED) {
+        console.log(JSON.stringify({ block: false }));
+        process.exit(0);
+        return;
+      }
+
+      const data = JSON.parse(inputData);
+      const result = await runChecks(data);
+
+      console.log(JSON.stringify(result));
+      process.exit(result.block ? 1 : 0);
+    } catch (error) {
+      console.error('STDD Hook error:', error.message);
+      process.exit(0);
+    }
+  });
 }

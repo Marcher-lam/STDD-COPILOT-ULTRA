@@ -5,6 +5,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createLogger } = require('./logger');
+const logger = createLogger('reporter-injector');
 
 const STDD_REPORTERS = path.resolve(__dirname, '../../stdd/reporters');
 
@@ -12,7 +14,8 @@ function _readPackageJson(cwd) {
   const pkgPath = path.join(cwd, 'package.json');
   try {
     return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
     return {};
   }
 }
@@ -38,8 +41,8 @@ function _detectFramework(cwd) {
         try {
           const content = fs.readFileSync(fp, 'utf-8').toLowerCase();
           if (content.includes('pytest')) return 'pytest';
-        } catch {
-          // ignore
+        } catch (err) {
+          if (err.code !== 'ENOENT' && err.code !== 'EACCES') logger.warn(err.message);
         }
       }
     }
@@ -59,13 +62,16 @@ function _resolveReporter(framework) {
   return null;
 }
 
-function injectReporter(testCmd, cwd) {
-  const framework = _detectFramework(cwd);
+function injectReporter(testCmd, cwd, _deps) {
+  const detectFn = (_deps && _deps._detectFramework) || _detectFramework;
+  const resolveFn = (_deps && _deps._resolveReporter) || _resolveReporter;
+
+  const framework = detectFn(cwd);
   if (!framework) {
     return { command: testCmd, env: undefined };
   }
 
-  const reporterPath = _resolveReporter(framework);
+  const reporterPath = resolveFn(framework);
   if (!reporterPath) {
     return { command: testCmd, env: undefined };
   }

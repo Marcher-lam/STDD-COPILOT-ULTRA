@@ -1,4 +1,9 @@
-# /stdd:fix-packet
+---
+description: Generate a diagnostic fix packet from a failed task for AI-assisted repair
+version: "1.0"
+---
+
+# STDD Skill: /stdd:fix-packet
 
 > Generate a diagnostic fix packet from a failed task for AI-assisted repair.
 
