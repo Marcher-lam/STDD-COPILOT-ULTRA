@@ -1,32 +1,97 @@
 ---
-description: User test script generation
-version: "1.0"
+id: stdd.user-test
+command: /stdd:user-test
+description: 从 BDD 场景生成人工验收测试脚本
+version: "2.0"
+category: collaboration
+phase: verification
+read_only: true
+risk_level: low
+supports:
+  greenfield: true
+  brownfield: true
+  monorepo: true
+depends_on: [stdd.spec]
+next: []
+on_failure: []
+inputs:
+  - BDD specs
+  - 验收对象
+  - 测试数据
+outputs:
+  - user-test.md
+  - 验收数据说明
+evidence:
+  required: true
+  path: stdd/changes/<change-id>/evidence/
+constitution_articles:
+  blocking: []
+  warning: []
+  suggestion: [5]
+graph:
+  node_id: stdd.user-test
+  parallelizable: true
+  resumable: true
+  checkpoint: per-change
 ---
 
 # STDD Skill: /stdd:user-test
 
 ## Purpose
-Generate user acceptance test scripts from BDD specifications, enabling non-technical validation of implemented features.
+从 BDD 场景生成人工验收测试脚本。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
 
 ## When to Use
-- Need to validate implemented features from user perspective
-- Generating acceptance test scripts for QA or stakeholders
-- Creating demo/test scripts for stakeholders
+- 需要执行 /stdd:user-test 对应能力时。
+- greenfield 项目用于建立或推进规范化工作流。
+- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
+- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+
+## Preconditions
+- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
+- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
+- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+
+## Inputs
+- BDD specs
+- 验收对象
+- 测试数据
 
 ## Workflow
-1. Parse BDD scenarios from current specs
-2. Generate step-by-step user test scripts in plain language
-3. Include expected outcomes and screenshots/recordings placeholders
-4. Generate test data needed for script execution
-5. Output test script for manual or automated execution
+- 从 BDD 场景转换为非技术用户可执行步骤。
+- 包含前置数据、操作、预期结果和截图/录屏占位。
+- 支持人工验收和 AI/browser 自动验收衔接。
 
-## Rules
-- Scripts must be understandable by non-technical users
-- Each BDD scenario maps to a user test script
-- Include setup/teardown steps
-- Expected results must be verifiable
+## CLI Runtime
+```bash
+stdd user-test <change-id>
+stdd user-test <change-id> --workspace packages/api
+```
+支持 CLI 与 `/stdd:user-test` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
 
-## Output
-- stdd/changes/xxx/user-test.md - User test scripts
-- Test data files for script execution
-- Expected results documentation
+## Graph Semantics
+- 节点 ID 为 stdd.user-test，由 frontmatter 暴露给 Skill Graph。
+- checkpoint=per-change；resumable=true；parallelizable=true。
+- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+
+## Constitution Gates
+- Blocking 条例失败时停止并返回修复建议。
+- Warning 条例必须在报告中列出，可由用户决定是否继续。
+- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+
+## Evidence Contract
+- 默认证据路径：stdd/changes/<change-id>/evidence/
+- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
+- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
+
+## Error Handling
+- 缺少 STDD 初始化时提示 stdd init。
+- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
+- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
+- workspace 不存在时提示 stdd workspace validate / repair。
+
+## Outputs
+- user-test.md
+- 验收数据说明
+
+## Related Skills
+- stdd.spec

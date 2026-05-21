@@ -1,44 +1,105 @@
 ---
-description: Graph engine - visualize, analyze, run, parallel, history, replay, recommend
-version: "1.0"
+id: stdd.graph
+command: /stdd:graph
+description: Skill Graph 的 DAG 分析、推荐、运行、历史和 replay
+version: "2.0"
+category: orchestration
+phase: orchestration
+read_only: true
+risk_level: low
+supports:
+  greenfield: true
+  brownfield: true
+  monorepo: true
+depends_on: [stdd.init]
+next: [stdd.parallel]
+on_failure: []
+inputs:
+  - skill metadata
+  - status
+  - progress
+  - intent
+outputs:
+  - DAG analysis
+  - execution logs
+  - recommendations
+evidence:
+  required: true
+  path: stdd/evidence/
+constitution_articles:
+  blocking: []
+  warning: []
+  suggestion: []
+graph:
+  node_id: stdd.graph
+  parallelizable: true
+  resumable: true
+  checkpoint: per-phase
 ---
 
 # STDD Skill: /stdd:graph
 
 ## Purpose
-DAG-based skill orchestration engine for visualization, analysis, execution, parallelism, history, replay, and recommendations.
+Skill Graph 的 DAG 分析、推荐、运行、历史和 replay。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
 
 ## When to Use
-- Visualizing skill dependencies (graph visualize)
-- Analyzing execution state and bottlenecks (graph analyze)
-- Running skills from specific points (graph run)
-- Showing TDD repair and outside-in nodes in the active DAG
-- Detecting and executing parallel tasks (graph parallel)
-- Viewing execution history (graph history)
-- Replaying past executions (graph replay)
-- Getting intelligent next-step recommendations (graph recommend)
+- 需要执行 /stdd:graph 对应能力时。
+- greenfield 项目用于建立或推进规范化工作流。
+- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
+- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+
+## Preconditions
+- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
+- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
+- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+
+## Inputs
+- skill metadata
+- status
+- progress
+- intent
 
 ## Workflow
-1. **visualize**: Generate Mermaid/HTML/SVG dependency graphs
-2. **analyze**: Detect current state, available paths, and bottlenecks
-3. **run**: Execute skills respecting DAG dependencies, skip completed if requested
-4. **parallel**: Detect independent nodes, spawn workers, coordinate execution
-5. **history**: Query execution logs, filter by status/time/failure
-6. **replay**: Restore past execution state, optionally re-execute
-7. **recommend**: Analyze current state + goal to recommend next skills
-8. **repair intent**: `stdd graph run --intent repair --change-name <change>` starts with `stdd-fix-packet`
-9. **feature intent**: includes `stdd-outside-in` between plan and apply to generate layer registry/scaffolds
+- 读取 skill frontmatter、状态和 progress 历史。
+- analyze/recommend 给出下一步；run 按 DAG 依赖执行。
+- feature intent 包含 outside-in；repair intent 从 fix-packet 开始。
+- history/replay 支持恢复和审计。
 
-## Rules
-- Always respect DAG dependency order
-- Never execute a skill before its dependencies complete
-- Skip completed skills unless --no-skip requested
-- Parallel execution limited by --max-workers
-- History stored in stdd/graph/execution-logs/
+## CLI Runtime
+```bash
+stdd graph run feature --change-name <change-id>
+stdd graph run --intent repair --change-name <change-id>
+stdd graph history
+stdd graph recommend
+```
+支持 CLI 与 `/stdd:graph` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
 
-## Output
-- Visual graphs (Mermaid/HTML/SVG)
-- Execution state analysis
-- Execution history records
-- Next-step recommendations
-- Dynamic DAG nodes for `stdd-outside-in` and `stdd-fix-packet`
+## Graph Semantics
+- 节点 ID 为 stdd.graph，由 frontmatter 暴露给 Skill Graph。
+- checkpoint=per-phase；resumable=true；parallelizable=true。
+- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+
+## Constitution Gates
+- Blocking 条例失败时停止并返回修复建议。
+- Warning 条例必须在报告中列出，可由用户决定是否继续。
+- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+
+## Evidence Contract
+- 默认证据路径：stdd/evidence/
+- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
+- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
+
+## Error Handling
+- 缺少 STDD 初始化时提示 stdd init。
+- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
+- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
+- workspace 不存在时提示 stdd workspace validate / repair。
+
+## Outputs
+- DAG analysis
+- execution logs
+- recommendations
+
+## Related Skills
+- stdd.init
+- stdd.parallel

@@ -1,32 +1,104 @@
 ---
-description: One-shot full workflow - turbo mode for clear requirements
-version: "1.0"
+id: stdd.turbo
+command: /stdd:turbo
+description: 一键编排从需求到 TDD scaffold 与验证准备
+version: "2.0"
+category: lifecycle
+phase: orchestration
+read_only: false
+risk_level: high
+supports:
+  greenfield: true
+  brownfield: true
+  monorepo: true
+depends_on: [stdd.init]
+next: [stdd.verify]
+on_failure: [stdd.fix-packet]
+inputs:
+  - 需求描述
+  - 自动化策略
+  - workspace
+  - HITL 策略
+outputs:
+  - 核心产物
+  - TDD scaffold
+  - graph/progress/evidence
+evidence:
+  required: true
+  path: stdd/changes/<change-id>/evidence/
+constitution_articles:
+  blocking: [2, 7, 9]
+  warning: []
+  suggestion: []
+graph:
+  node_id: stdd.turbo
+  parallelizable: false
+  resumable: true
+  checkpoint: per-phase
 ---
 
 # STDD Skill: /stdd:turbo
 
 ## Purpose
-One-shot execution of all pre-implementation phases (propose → spec → design → plan) for small, well-defined requirements, optionally continuing to implementation.
+一键编排从需求到 TDD scaffold 与验证准备。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
 
 ## When to Use
-- Small, well-understood requirements
-- Want to skip interactive steps and get artifacts fast
-- Suitable for bug fixes, small features, utility functions
+- 需要执行 /stdd:turbo 对应能力时。
+- greenfield 项目用于建立或推进规范化工作流。
+- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
+- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+
+## Preconditions
+- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
+- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
+- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+
+## Inputs
+- 需求描述
+- 自动化策略
+- workspace
+- HITL 策略
 
 ## Workflow
-1. Auto-propose: generate proposal from requirement description
-2. Auto-spec: generate BDD specs from proposal
-3. Auto-design: generate technical design from specs
-4. Auto-plan: generate tasks from design
-5. Optionally run /stdd:apply to implement (flag-based)
-6. All phases run without intermediate confirmation
+- 运行 ff、spec 校验、TDD scaffold、可选 apply、mutation、verify。
+- 仅在需求确认和归档确认门暂停。
+- 失败三次自动生成 fix-packet 并熔断。
+- 保存 graph/progress/evidence，便于 resume。
 
-## Rules
-- Only for small, clear requirements - suggest /stdd:new for complex ones
-- Each phase uses output of previous phase
-- Review artifacts after turbo completes
-- Can still use /stdd:apply, /stdd:verify, /stdd:archive after turbo
+## CLI Runtime
+```bash
+stdd turbo "需求" --workspace packages/api
+stdd turbo "需求" --no-spec
+```
+支持 CLI 与 `/stdd:turbo` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
 
-## Output
-- All four artifacts: proposal.md, specs/, design.md, tasks.md
-- Optional implementation results (if auto-apply enabled)
+## Graph Semantics
+- 节点 ID 为 stdd.turbo，由 frontmatter 暴露给 Skill Graph。
+- checkpoint=per-phase；resumable=true；parallelizable=false。
+- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+
+## Constitution Gates
+- Blocking 条例失败时停止并返回修复建议。
+- Warning 条例必须在报告中列出，可由用户决定是否继续。
+- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+
+## Evidence Contract
+- 默认证据路径：stdd/changes/<change-id>/evidence/
+- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
+- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
+
+## Error Handling
+- 缺少 STDD 初始化时提示 stdd init。
+- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
+- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
+- workspace 不存在时提示 stdd workspace validate / repair。
+
+## Outputs
+- 核心产物
+- TDD scaffold
+- graph/progress/evidence
+
+## Related Skills
+- stdd.fix-packet
+- stdd.init
+- stdd.verify

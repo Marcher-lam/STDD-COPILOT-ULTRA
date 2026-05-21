@@ -1,44 +1,103 @@
 ---
-description: Adaptive learning from feedback
-version: "1.0"
+id: stdd.learn
+command: /stdd:learn
+description: 从项目代码和反馈学习本地模式与偏好
+version: "2.0"
+category: workspace
+phase: all
+read_only: false
+risk_level: medium
+supports:
+  greenfield: true
+  brownfield: true
+  monorepo: true
+depends_on: [stdd.init]
+next: []
+on_failure: []
+inputs:
+  - 源码/测试
+  - 用户反馈
+  - 已有学习状态
+outputs:
+  - feedback.jsonl
+  - code-patterns.json
+  - styleguide.md
+evidence:
+  required: true
+  path: stdd/evidence/
+constitution_articles:
+  blocking: []
+  warning: [4, 6]
+  suggestion: []
+graph:
+  node_id: stdd.learn
+  parallelizable: true
+  resumable: true
+  checkpoint: none
 ---
 
 # STDD Skill: /stdd:learn
 
 ## Purpose
-Adapt STDD behavior based on user feedback and Pattern Teaching scans that extract project-local code, test, naming, module, and error-handling conventions.
+从项目代码和反馈学习本地模式与偏好。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
 
 ## When to Use
-- User provides positive/negative feedback
-- User suggests improvements to the process
-- Checking current learning state and preferences
+- 需要执行 /stdd:learn 对应能力时。
+- greenfield 项目用于建立或推进规范化工作流。
+- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
+- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+
+## Preconditions
+- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
+- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
+- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+
+## Inputs
+- 源码/测试
+- 用户反馈
+- 已有学习状态
 
 ## Workflow
-1. **scan / analyze-patterns**: Extract module style, test style, naming distribution, async style, error handling, comments, and common imports
-2. **good "feedback"**: Record positive pattern, increase weight of related strategies
-3. **bad "feedback"**: Record negative pattern, decrease weight, add to avoid list
-4. **suggest "improvement"**: Record enhancement suggestion, add to improvement backlog
-5. **status**: Display learning state, extracted pattern availability, and feedback count
-6. Adapt templates, defaults, and suggestions based on learned patterns
+- 扫描代码、测试、命名、错误处理、导入和注释模式。
+- 记录 good/bad/suggest 反馈并加权。
+- 更新 styleguide，不覆盖 Constitution。
+- 将学习结果用于 propose/plan/apply 的默认建议。
 
 ## CLI Runtime
 ```bash
 stdd learn scan
 stdd learn analyze-patterns
-stdd learn good "prefer explicit error objects"
-stdd learn bad "avoid implicit any in tests"
+stdd learn good "prefer explicit errors"
+stdd learn bad "avoid implicit any"
 stdd learn status --json
 ```
+支持 CLI 与 `/stdd:learn` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
 
-## Rules
-- Learning is per-project (stored in stdd/)
-- Never learn harmful patterns (security risks, anti-patterns)
-- User can review and reset learned preferences
-- Patterns are weighted by frequency and recency
+## Graph Semantics
+- 节点 ID 为 stdd.learn，由 frontmatter 暴露给 Skill Graph。
+- checkpoint=none；resumable=true；parallelizable=true。
+- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
 
-## Output
-- Stored feedback in `stdd/memory/learning/feedback.jsonl`
-- Extracted patterns in `stdd/memory/learning/code-patterns.json`
-- Human-readable guide in `stdd/memory/learning/styleguide.md`
-- Learning status display
-- Improvement suggestions
+## Constitution Gates
+- Blocking 条例失败时停止并返回修复建议。
+- Warning 条例必须在报告中列出，可由用户决定是否继续。
+- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+
+## Evidence Contract
+- 默认证据路径：stdd/evidence/
+- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
+- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
+
+## Error Handling
+- 缺少 STDD 初始化时提示 stdd init。
+- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
+- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
+- workspace 不存在时提示 stdd workspace validate / repair。
+
+## Outputs
+- feedback.jsonl
+- code-patterns.json
+- styleguide.md
+
+## Related Skills
+- stdd.init
