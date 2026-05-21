@@ -136,14 +136,13 @@
 
 | 指标 | 数量 | 说明 |
 |------|------|------|
-| **Skill 模板** (SKILL.md) | **47** | `.claude/skills/stdd/{name}/SKILL.md` |
-| **Command 模板** (.md) | **20** | `.claude/commands/stdd/{name}.md` |
-| **唯一斜杠命令** (`/stdd:*`) | **47** | Skill 驱动，Claude Code 中使用 |
-| **CLI 命令** (含子命令) | **66** | `stdd xxx` 终端命令 |
-| **全三者覆盖** (CLI + Skill + Command) | **20** | 同时拥有 CLI、Skill、Command 三种入口 |
-| **仅 Skill 驱动** (无 CLI) | **10** | design/final-doc/factory/iterate/parallel/prp/supervisor/vision/help/confirm |
-| **仅 CLI** (无斜杠命令) | **~22** | status/list/skills/commands/progress/start/doctor/depcheck/update/hooks/audit/tdd-init/baby-steps/workspace/extensions/starters/ci/browser/story/pipeline/runtime 等 |
-| **总唯一入口** | **69** | 47 斜杠 + 22 CLI-only |
+| **Skill 模板** (SKILL.md) | **47** | `src/templates/skills/stdd/{name}/SKILL.md` |
+| **Command 模板** (.md) | **75** | `src/templates/commands/{name}.md` |
+| **唯一斜杠命令** (`/stdd:*`) | **76** | 去重后的 Skill + Command 入口 |
+| **CLI 命令** (含子命令) | **67** | `stdd xxx` 终端命令 |
+| **Skill 驱动入口** | **47** | 有 Skill 模板的命令 |
+| **Command 文件入口** | **75** | 有 Command 模板的命令 |
+| **总唯一入口** | **122** | 75 Command + 47 Skill，去重后 76 个唯一入口 |
 | **AI 引擎适配** | **22** | 4 Tier 兼容体系 |
 | **Constitution 条例** | **9** | 3 Blocking + 4 Warning + 2 Suggestion |
 | **Agent 角色** | **12** | 4 基础 + 8 专用 |

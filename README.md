@@ -79,9 +79,9 @@ stdd progress --clear        # 清空进度
 ## 核心特性
 
 <details>
-<summary>全部 110 个斜杠命令（63 Command 模板 + 47 Skill 模板）</summary>
+<summary>全部 122 个斜杠命令（75 Command 模板 + 47 Skill 模板）</summary>
 
-**Command 模板 (63)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:audit` `/stdd:baby-steps` `/stdd:brainstorm` `/stdd:browser` `/stdd:ci-generator` `/stdd:clarify` `/stdd:commands` `/stdd:commit-msg` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:depcheck` `/stdd:doctor` `/stdd:elicitation` `/stdd:execute` `/stdd:explore` `/stdd:extensions` `/stdd:ff` `/stdd:final-doc` `/stdd:fix-packet` `/stdd:graph` `/stdd:graph-history` `/stdd:graph-run` `/stdd:guard` `/stdd:hooks` `/stdd:init` `/stdd:issue` `/stdd:learn` `/stdd:list` `/stdd:memory-scan` `/stdd:metrics` `/stdd:mock-gen` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:pipeline` `/stdd:plan` `/stdd:product-proposal` `/stdd:progress` `/stdd:propose` `/stdd:recommend` `/stdd:roles` `/stdd:schema` `/stdd:skills` `/stdd:spec` `/stdd:spec-generator` `/stdd:start` `/stdd:starters` `/stdd:status` `/stdd:story` `/stdd:tdd-init` `/stdd:turbo` `/stdd:update` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:waiver-manager` `/stdd:workspace`
+**Command 模板 (75)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:audit` `/stdd:baby-steps` `/stdd:brainstorm` `/stdd:browser` `/stdd:certainty` `/stdd:ci-generator` `/stdd:clarify` `/stdd:commands` `/stdd:commit-msg` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:depcheck` `/stdd:design` `/stdd:doctor` `/stdd:elicitation` `/stdd:execute` `/stdd:explore` `/stdd:extensions` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:fix-packet` `/stdd:graph` `/stdd:graph-history` `/stdd:graph-run` `/stdd:guard` `/stdd:help` `/stdd:hooks` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:list` `/stdd:memory` `/stdd:memory-scan` `/stdd:metrics` `/stdd:mock` `/stdd:mock-gen` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:pipeline` `/stdd:plan` `/stdd:prp` `/stdd:product-proposal` `/stdd:progress` `/stdd:propose` `/stdd:recommend` `/stdd:roles` `/stdd:schema` `/stdd:skills` `/stdd:spec` `/stdd:spec-generator` `/stdd:start` `/stdd:starters` `/stdd:status` `/stdd:story` `/stdd:supervisor` `/stdd:tdd-init` `/stdd:turbo` `/stdd:update` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision` `/stdd:waiver-manager` `/stdd:workspace`
 
 **Skill 模板 (47)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:brainstorm` `/stdd:certainty` `/stdd:clarify` `/stdd:commit` `/stdd:complexity` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:design` `/stdd:execute` `/stdd:explore` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:fix-packet` `/stdd:graph` `/stdd:guard` `/stdd:help` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:plan` `/stdd:product-proposal` `/stdd:propose` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:spec` `/stdd:supervisor` `/stdd:turbo` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision`
 
@@ -246,7 +246,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd runtime sudo` | SudoLang 伪代码解析引擎 |
 
 <details>
-<summary>查看完整 CLI 命令列表 (55 个)</summary>
+<summary>查看完整 CLI 命令列表 (67 个)</summary>
 
 ```bash
 # 核心流程

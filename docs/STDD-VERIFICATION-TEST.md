@@ -2,7 +2,7 @@
 
 > **项目**: STDD Copilot CLI v1.0.1
 > **验证日期**: 2026-05-19
-> **覆盖范围**: 67 个 CLI 命令 + 63 个 Command 模板 + 47 个 Skill 模板
+> **覆盖范围**: 67 个 CLI 命令 + 75 个 Command 模板 + 47 个 Skill 模板
 > **质量基线**: `npm run premerge` (audit + zero-warning lint + docs + coverage)
 
 ---
@@ -78,7 +78,7 @@ stdd commands
 
 **验证点:**
 - [ ] 列出 47 个 Skill 模板
-- [ ] 列出 20 个 Command 模板
+- [ ] 列出 75 个 Command 模板
 
 ### T04 — `stdd list` / `stdd status`
 ```bash
@@ -683,7 +683,7 @@ stdd start
 | 浏览器 | T41 | 1 |
 | 进度追踪 | T42-T43 | 2 |
 | 辅助工具 | T44 | 1 |
-| Command 模板 | T45-T64 | 20 |
+| Command 模板 | T45-T119 | 75 |
 | Skill 模板 | 47 个 | - |
 | **总计 CLI 用例** | **T01-T44** | **44** |
 
@@ -710,5 +710,5 @@ T42-T44  → 进度追踪与辅助工具
 
 ---
 
-> 本文档覆盖 STDD Copilot v1.0.1 全部 67 个 CLI 命令 + 63 个 Command 模板 + 47 个 Skill 模板。
+> 本文档覆盖 STDD Copilot v1.0.1 全部 67 个 CLI 命令 + 75 个 Command 模板 + 47 个 Skill 模板。
 > 请在终端中按 Phase 顺序逐条执行验证。

@@ -2,6 +2,24 @@
 
 All notable changes to STDD Copilot will be documented in this file.
 
+## [1.0.3] - 2026-05-21
+
+### Added
+- **12 个新 Command 模板**: vision.md, supervisor.md, prp.md, parallel.md, mock.md, memory.md, iterate.md, help.md, factory.md, design.md, complexity.md, certainty.md
+- **12 个新 CLI 命令实现**: vision, supervisor, prp, parallel, mock, memory, iterate, help, factory, design, complexity, certainty
+- **commit-tdd 命令**: 原子化 TDD 前缀 Git 提交信息生成
+
+### Changed
+- **Command 模板数量**: 63 → 75
+- **斜杠命令总数**: 110 → 122 (75 Command + 47 Skill)
+- **CLI 命令实现**: 66 → 67
+- **全面文档更新**: CHANGELOG.md, README.md, README_EN.md, USAGE.md, docs/command-reference.md, docs/EvoRL.md, docs/PRODUCT-PROPOSAL.md, docs/STDD-VERIFICATION-TEST.md, ARCHITECTURE.md
+- **测试契约更新**: test-support/docs-contracts.js, __tests__/docs-taxonomy-consistency.test.js
+
+### Fixed
+- 修复所有文档中的命令数量不一致问题
+- 所有 122 个斜杠命令和 67 个 CLI 命令已完全覆盖
+
 ## [1.0.2] - 2026-05-20
 
 ### Added
@@ -10,15 +28,15 @@ All notable changes to STDD Copilot will be documented in this file.
 - **43 个辅助命令模板**: api-spec, audit, baby-steps, browser, ci-generator, commands, commit-msg, context, contract, depcheck, doctor, elicitation, extensions, fix-packet, graph-history, graph-run, guard, hooks, learn, list, memory-scan, metrics, mock-gen, mutation, outside-in, pipeline, product-proposal, progress, recommend, roles, schema, skills, spec-generator, start, starters, status, story, tdd-init, update, user-test, validate, waiver-manager, workspace
 
 ### Changed
-- **Command 模板数量**: 61 → 63
-- **斜杠命令总数**: 108 → 110 (63 Command + 47 Skill)
+- **Command 模板数量**: 63 → 75
+- **斜杠命令总数**: 110 → 122 (75 Command + 47 Skill)
 - **CLI 命令实现**: 66 → 67
 - **文档同步更新**: CLAUDE.md, AGENTS.md, CLAUDE_CODE_GUIDE.md, README.md, USAGE.md, docs/commands.md, docs/EvoRL.md, docs/STDD-VERIFICATION-TEST.md
 - **测试更新**: docs-taxonomy-consistency.test.js, test-support/docs-contracts.js
 
 ### Fixed
 - 修复文档中命令数量不一致的问题
-- 所有 110 个斜杠命令和 67 个 CLI 命令已完全覆盖
+- 所有 122 个斜杠命令和 67 个 CLI 命令已完全覆盖
 
 ## [1.0.1] - 2026-05-19
 

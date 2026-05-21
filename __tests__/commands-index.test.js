@@ -16,6 +16,13 @@ describe('commands/index.js re-exports', () => {
     'BabyStepsCommand', 'ElicitationCommand', 'SudoExecutor',
     'createAgentExecutor', 'StartCommand', 'DoctorCommand', 'SkillsCommand',
     'CommandsCommand', 'ProductProposalCommand',
+    // New CLI commands for previously Skill-only features
+    'VisionCommand', 'PrpCommand', 'DesignCommand', 'CertaintyCommand', 'ComplexityCommand',
+    'FactoryCommand', 'MockCommand', 'MemoryCommand', 'IterateCommand', 'HelpCommand',
+    'ParallelCommand', 'SupervisorCommand',
+    // Skill-based workflow commands
+    'ProposeCommand', 'ClarifyCommand', 'ConfirmCommand', 'PlanCommand',
+    'ExecuteCommand', 'FinalDocCommand', 'CommitTddCommand',
   ];
 
   it('exports all expected command classes', () => {

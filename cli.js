@@ -30,7 +30,14 @@ const {
   BabyStepsCommand, SudoExecutor, ElicitationCommand,
   createAgentExecutor, ProductProposalCommand,
   StartCommand, DoctorCommand,
-  SkillsCommand, CommandsCommand
+  SkillsCommand, CommandsCommand,
+  // New CLI commands for previously Skill-only features
+  VisionCommand, PrpCommand, DesignCommand, CertaintyCommand, ComplexityCommand,
+  FactoryCommand, MockCommand, MemoryCommand, IterateCommand, HelpCommand,
+  ParallelCommand, SupervisorCommand,
+  // Skill-based workflow commands
+  ProposeCommand, ClarifyCommand, ConfirmCommand, PlanCommand,
+  ExecuteCommand, FinalDocCommand, CommitTddCommand,
 } = require('./src/cli/commands/index');
 
 const { ProgressCommand } = require('./src/cli/commands/progress');
@@ -135,12 +142,32 @@ const commandFactories = {
   SkillsCommand,
   CommandsCommand,
   ProductProposalCommand,
+  // New CLI commands for previously Skill-only features
+  VisionCommand,
+  PrpCommand,
+  DesignCommand,
+  CertaintyCommand,
+  ComplexityCommand,
+  FactoryCommand,
+  MockCommand,
+  IterateCommand,
+  HelpCommand,
+  ParallelCommand,
+  SupervisorCommand,
+  // Skill-based workflow commands
+  ProposeCommand,
+  ClarifyCommand,
+  ConfirmCommand,
+  PlanCommand,
+  ExecuteCommand,
+  FinalDocCommand,
+  CommitTddCommand,
 };
 
 const loader = new CommandLoader(program, {
   commandFactories,
   createSpinner,
-  skipNames: ['constitution [action] [target]', 'hooks', 'graph', 'runtime', 'recommend', 'doctor', 'start', 'memory <action> [args...]', 'baby-steps [task]', 'sudo run [file]', 'list', 'status [change]', 'progress'],
+  skipNames: ['constitution [action] [target]', 'hooks', 'graph', 'runtime', 'recommend', 'doctor', 'start', 'memory <action> [args...]', 'baby-steps [task]', 'sudo run [file]', 'list', 'status [change]', 'progress', 'vision [action]', 'prp [action]', 'design [action]', 'certainty [action]', 'complexity [action]', 'factory [action]', 'iterate [action]', 'help [topic]', 'parallel [action]', 'supervisor [action]'],
 });
 loader.registerAll();
 
@@ -356,6 +383,110 @@ agentCmd.command('sudo [file]')
     } else {
       console.log(JSON.stringify(parsed, null, 2));
     }
+  }));
+
+// ─── New CLI commands for previously Skill-only features ───
+program.command('vision [action]')
+  .description('Project vision document management')
+  .option('--json', 'JSON output')
+  .option('--force', 'Force overwrite')
+  .action(safeAction(async (action, options) => {
+    const cmd = new VisionCommand(process.cwd());
+    await cmd.execute(action || 'show', [], options);
+  }));
+
+program.command('prp [action] [title...]')
+  .description('What/Why/How/Success structured planning')
+  .option('--json', 'JSON output')
+  .option('--what <text>', 'What section content')
+  .option('--why <text>', 'Why section content')
+  .option('--how <text>', 'How section content')
+  .option('--force', 'Force overwrite')
+  .action(safeAction(async (action, title, options) => {
+    const cmd = new PrpCommand(process.cwd());
+    await cmd.execute(action || 'create', title, options);
+  }));
+
+program.command('design [action]')
+  .description('Design system document generation')
+  .option('--json', 'JSON output')
+  .option('--preset <name>', 'Design preset (modern, dark, minimal)')
+  .option('-p <name>', 'Design preset (shorthand)')
+  .option('--force', 'Force overwrite')
+  .action(safeAction(async (action, options) => {
+    const cmd = new DesignCommand(process.cwd());
+    await cmd.execute(action || 'create', [], options);
+  }));
+
+program.command('certainty [action] [args...]')
+  .description('5-dimension confidence scoring')
+  .option('--json', 'JSON output')
+  .option('--scores <scores>', 'Pre-defined scores (req:4,tech:5,...)')
+  .option('--set <thresholds>', 'Configure thresholds')
+  .action(safeAction(async (action, args, options) => {
+    const cmd = new CertaintyCommand(process.cwd());
+    await cmd.execute(action || 'assess', args, options);
+  }));
+
+program.command('complexity [action] [path]')
+  .description('Code complexity analysis')
+  .option('--json', 'JSON output')
+  .option('--limit <n>', 'Limit results')
+  .action(safeAction(async (action, target, options) => {
+    const cmd = new ComplexityCommand(process.cwd());
+    await cmd.execute(action || 'analyze', [target || ''], options);
+  }));
+
+program.command('factory [action] [typeName]')
+  .description('Test data factory generation')
+  .option('--json', 'JSON output')
+  .option('--fields <list>', 'Comma-separated field list')
+  .option('--locale <locale>', 'Faker locale')
+  .option('--force', 'Force overwrite')
+  .action(safeAction(async (action, typeName, options) => {
+    const cmd = new FactoryCommand(process.cwd());
+    await cmd.execute(action || 'list', [typeName || ''], options);
+  }));
+
+program.command('iterate [action] [args...]')
+  .description('Plan-Execute-Reflect iteration loop')
+  .option('--json', 'JSON output')
+  .option('--plan <text>', 'Plan content')
+  .option('--reflection <text>', 'Reflection content')
+  .option('--next <text>', 'Next steps')
+  .action(safeAction(async (action, args, options) => {
+    const cmd = new IterateCommand(process.cwd());
+    await cmd.execute(action || 'status', args, options);
+  }));
+
+program.command('help [topic]')
+  .description('Context-aware help system')
+  .option('--json', 'JSON output')
+  .action(safeAction(async (topic, options) => {
+    const cmd = new HelpCommand(process.cwd());
+    await cmd.execute(topic, [], options);
+  }));
+
+program.command('parallel [action] [intent]')
+  .description('DAG parallel execution')
+  .option('--json', 'JSON output')
+  .option('-p <n>', 'Max parallel tasks')
+  .option('--parallel <n>', 'Max parallel tasks (full)')
+  .option('--strategy <name>', 'Parallel strategy (all, any, race)')
+  .option('--dry-run', 'Plan without executing')
+  .action(safeAction(async (action, intent, options) => {
+    const cmd = new ParallelCommand(process.cwd());
+    await cmd.execute(action || 'status', [intent || ''], options);
+  }));
+
+program.command('supervisor [action] [args...]')
+  .description('Multi-agent coordination and supervision')
+  .option('--json', 'JSON output')
+  .option('--roles <list>', 'Comma-separated role list')
+  .option('--rounds <n>', 'Number of discussion rounds')
+  .action(safeAction(async (action, args, options) => {
+    const cmd = new SupervisorCommand(process.cwd());
+    await cmd.execute(action || 'status', args, options);
   }));
 
 // ─── Parse with progress tracking ───

@@ -4,13 +4,16 @@
 
 ---
 
-## 全部能力入口 (47 个 = 63 Command 模板 + 47 Skill 模板，去重后)
+## 全部能力入口 (47 个 = 75 Command 模板 + 47 Skill 模板，去重后)
 
-### Command 模板入口 (63)
+### Command 模板入口 (75)
 - `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm`
 - `/stdd:spec` `/stdd:plan` `/stdd:apply` `/stdd:execute` `/stdd:verify` `/stdd:archive`
 - `/stdd:final-doc` `/stdd:brainstorm` `/stdd:issue` `/stdd:constitution`
 - `/stdd:ff` `/stdd:continue` `/stdd:explore` `/stdd:graph` `/stdd:turbo`
+- `/stdd:vision` `/stdd:supervisor` `/stdd:prp` `/stdd:parallel` `/stdd:mock`
+- `/stdd:memory` `/stdd:iterate` `/stdd:help` `/stdd:factory` `/stdd:design`
+- `/stdd:complexity` `/stdd:certainty` `/stdd:metrics`
 
 ---
 

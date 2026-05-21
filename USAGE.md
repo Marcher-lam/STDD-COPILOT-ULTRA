@@ -10,7 +10,7 @@ STDD Copilot 提供双入口设计：CLI 命令行工具 (`stdd`) 和 Claude Cod
 
 | 概念 | 路径 | 说明 |
 |------|------|------|
-| **Commands** | `.claude/commands/stdd/` | 63 个 `/stdd:*` 斜杠命令模板初始化后的副本 |
+| **Commands** | `.claude/commands/stdd/` | 75 个 `/stdd:*` 斜杠命令模板初始化后的副本 |
 | **Skills** | `.claude/skills/stdd/` | 47 个可被命令调用的技能模块 |
 | **Changes** | `stdd/changes/` | 变更管理 (提案→规格→实现→归档) |
 | **Specs** | `stdd/specs/` | BDD 规格文件 (Source of Truth) |
@@ -20,13 +20,13 @@ STDD Copilot 提供双入口设计：CLI 命令行工具 (`stdd`) 和 Claude Cod
 
 ### 斜杠命令完整列表
 
-STDD Copilot 提供 110 个斜杠命令（63 个 Command 模板 + 47 个 Skill 模板，去重后）：
+STDD Copilot 提供 122 个斜杠命令（75 个 Command 模板 + 47 个 Skill 模板，去重后）：
 
 **核心流程**: `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm` `/stdd:spec` `/stdd:plan` `/stdd:apply` `/stdd:execute` `/stdd:verify` `/stdd:archive` `/stdd:final-doc` `/stdd:brainstorm` `/stdd:issue` `/stdd:constitution` `/stdd:ff` `/stdd:continue` `/stdd:explore` `/stdd:graph` `/stdd:turbo`
 
-**辅助功能**: `/stdd:api-spec` `/stdd:audit` `/stdd:baby-steps` `/stdd:browser` `/stdd:ci-generator` `/stdd:commands` `/stdd:commit-msg` `/stdd:context` `/stdd:contract` `/stdd:depcheck` `/stdd:doctor` `/stdd:elicitation` `/stdd:extensions` `/stdd:fix-packet` `/stdd:graph-history` `/stdd:graph-run` `/stdd:guard` `/stdd:hooks` `/stdd:learn` `/stdd:list` `/stdd:memory-scan` `/stdd:metrics` `/stdd:mock-gen` `/stdd:mutation` `/stdd:outside-in` `/stdd:pipeline` `/stdd:plan` `/stdd:product-proposal` `/stdd:progress` `/stdd:recommend` `/stdd:roles` `/stdd:schema` `/stdd:skills` `/stdd:spec-generator` `/stdd:start` `/stdd:starters` `/stdd:status` `/stdd:story` `/stdd:tdd-init` `/stdd:update` `/stdd:user-test` `/stdd:validate` `/stdd:waiver-manager` `/stdd:workspace`
+**辅助功能**: `/stdd:api-spec` `/stdd:audit` `/stdd:baby-steps` `/stdd:browser` `/stdd:certainty` `/stdd:ci-generator` `/stdd:clarify` `/stdd:commands` `/stdd:commit-msg` `/stdd:complexity` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:depcheck` `/stdd:design` `/stdd:doctor` `/stdd:elicitation` `/stdd:execute` `/stdd:explore` `/stdd:extensions` `/stdd:factory` `/stdd:fix-packet` `/stdd:graph-history` `/stdd:graph-run` `/stdd:guard` `/stdd:help` `/stdd:hooks` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:list` `/stdd:memory` `/stdd:memory-scan` `/stdd:metrics` `/stdd:mock` `/stdd:mock-gen` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:pipeline` `/stdd:plan` `/stdd:prp` `/stdd:product-proposal` `/stdd:progress` `/stdd:propose` `/stdd:recommend` `/stdd:roles` `/stdd:schema` `/stdd:skills` `/stdd:spec` `/stdd:spec-generator` `/stdd:start` `/stdd:starters` `/stdd:status` `/stdd:story` `/stdd:supervisor` `/stdd:tdd-init` `/stdd:turbo` `/stdd:update` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision` `/stdd:waiver-manager` `/stdd:workspace`
 
-**技能模块**: `/stdd:certainty` `/stdd:commit` `/stdd:complexity` `/stdd:design` `/stdd:factory` `/stdd:help` `/stdd:iterate` `/stdd:memory` `/stdd:mock` `/stdd:parallel` `/stdd:product-proposal` `/stdd:prp` `/stdd:supervisor` `/stdd:vision`
+**技能模块**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:brainstorm` `/stdd:certainty` `/stdd:clarify` `/stdd:commit` `/stdd:complexity` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:design` `/stdd:execute` `/stdd:explore` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:fix-packet` `/stdd:graph` `/stdd:guard` `/stdd:help` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:plan` `/stdd:product-proposal` `/stdd:propose` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:spec` `/stdd:supervisor` `/stdd:turbo` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision`
 
 ---
 

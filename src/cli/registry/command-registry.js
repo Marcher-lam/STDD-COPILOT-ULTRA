@@ -430,12 +430,15 @@ const commandRegistry = [
     action: 'ContractCommand',
   },
   {
-    name: 'mock [change]',
-    description: 'Generate mocks',
+    name: 'mock [action] [target]',
+    description: 'Mock generation (alias to mock-gen with additional functionality)',
     options: [
-      { flags: '--workspace <workspace>', description: 'Scope to workspace' },
+      { flags: '--json', description: 'JSON output' },
+      { flags: '--type <type>', description: 'Mock type (module, function, api)' },
+      { flags: '--methods <list>', description: 'API methods' },
+      { flags: '--force', description: 'Force overwrite' },
     ],
-    action: 'MockGenCommand',
+    action: 'MockCommand',
   },
   {
     name: 'tdd-init [path]',
@@ -560,6 +563,86 @@ const commandRegistry = [
     action: 'ProductProposalCommand',
     spinner: 'Generating product proposal',
     success: 'Product proposal generated!',
+  },
+  {
+    name: 'propose [action] [name]',
+    description: 'Draft requirement proposals with boundary clarification',
+    options: [
+      { flags: '--description <text>', description: 'Requirement description' },
+      { flags: '--force', description: 'Overwrite existing proposal' },
+      { flags: '--dry-run', description: 'Show proposal without saving' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'ProposeCommand',
+    helpText: `Actions: draft, show, refine, validate, split\n\nExamples:\n  stdd propose draft add-user-auth\n  stdd propose show\n  stdd propose validate`,
+  },
+  {
+    name: 'clarify [action] [change]',
+    description: 'Multi-round requirement clarification',
+    options: [
+      { flags: '--rounds <n>', description: 'Number of clarification rounds', default: '3' },
+      { flags: '--focus <area>', description: 'Focus on specific area' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'ClarifyCommand',
+    helpText: `Actions: clarify, questions, edge-cases, constraints\n\nExamples:\n  stdd clarify add-user-auth\n  stdd clarify questions`,
+  },
+  {
+    name: 'confirm [change]',
+    description: 'User confirmation gate before specification',
+    options: [
+      { flags: '--skip', description: 'Skip confirmation (auto-confirm)' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'ConfirmCommand',
+    helpText: `Examples:\n  stdd confirm\n  stdd confirm add-user-auth\n\nDisplays proposal summary and requests approval.`,
+  },
+  {
+    name: 'plan [action] [change]',
+    description: 'Evaluate architecture and generate micro-task list',
+    options: [
+      { flags: '--tasks <n>', description: 'Target number of tasks (default: 5-6)' },
+      { flags: '--estimate', description: 'Include time estimates' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'PlanCommand',
+    helpText: `Actions: generate, show, estimate, dependencies\n\nExamples:\n  stdd plan add-user-auth\n  stdd plan estimate\n  stdd plan dependencies`,
+  },
+  {
+    name: 'execute [action] [change]',
+    description: 'Run Ralph Loop TDD closed-loop execution',
+    options: [
+      { flags: '--phase <phase>', description: 'Specific phase: red, green, refactor' },
+      { flags: '--max-tasks <n>', description: 'Maximum tasks to execute' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'ExecuteCommand',
+    helpText: `Actions: run, status, evidence, retry\n\nLoop: RED → CHECK → GREEN → MUTATION → REFACTOR\n\nExamples:\n  stdd execute run\n  stdd execute status`,
+  },
+  {
+    name: 'final-doc [change]',
+    description: 'Generate final aggregated requirement document',
+    options: [
+      { flags: '--output <file>', description: 'Output file name', default: 'FINAL_REQUIREMENT.md' },
+      { flags: '--include-evidence', description: 'Include execution evidence' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'FinalDocCommand',
+    helpText: `Examples:\n  stdd final-doc\n  stdd final-doc add-user-auth --include-evidence\n\nAggregates all phase artifacts into comprehensive document.`,
+  },
+  {
+    name: 'commit-tdd [action] [change]',
+    description: 'Atomic git commit with TDD phase prefix',
+    options: [
+      { flags: '--phase <phase>', description: 'TDD phase: red, green, refactor' },
+      { flags: '--all', description: 'Stage all files' },
+      { flags: '--amend', description: 'Amend last commit' },
+      { flags: '--dry-run', description: 'Preview commit message' },
+      { flags: '--skip-constitution', description: 'Skip constitution check' },
+      { flags: '-y, --yes', description: 'Skip confirmation' },
+    ],
+    action: 'CommitTddCommand',
+    helpText: `Actions: commit, check, amend, status\n\nExamples:\n  stdd commit-tdd commit\n  stdd commit-tdd check\n  stdd commit-tdd commit --phase green\n\nCreates atomic commits with red:/green:/refactor: prefix.`,
   },
 ];
 
