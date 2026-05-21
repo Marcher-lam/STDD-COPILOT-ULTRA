@@ -55,7 +55,7 @@ stdd progress --clear        # Clear progress
 
 ### All Slash Commands (122)
 
-**Command Templates (75)**: `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm` `/stdd:spec` `/stdd:plan` `/stdd:apply` `/stdd:execute` `/stdd:verify` `/stdd:archive` `/stdd:final-doc` `/stdd:brainstorm` `/stdd:issue` `/stdd:constitution` `/stdd:ff` `/stdd:continue` `/stdd:explore` `/stdd:graph` `/stdd:turbo`
+**Command Templates (75)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:audit` `/stdd:baby-steps` `/stdd:brainstorm` `/stdd:browser` `/stdd:certainty` `/stdd:ci-generator` `/stdd:clarify` `/stdd:commands` `/stdd:commit-msg` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:depcheck` `/stdd:design` `/stdd:doctor` `/stdd:elicitation` `/stdd:execute` `/stdd:explore` `/stdd:extensions` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:fix-packet` `/stdd:graph` `/stdd:graph-history` `/stdd:graph-run` `/stdd:guard` `/stdd:help` `/stdd:hooks` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:list` `/stdd:memory` `/stdd:memory-scan` `/stdd:metrics` `/stdd:mock` `/stdd:mock-gen` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:pipeline` `/stdd:plan` `/stdd:prp` `/stdd:product-proposal` `/stdd:progress` `/stdd:propose` `/stdd:recommend` `/stdd:roles` `/stdd:schema` `/stdd:skills` `/stdd:spec` `/stdd:spec-generator` `/stdd:start` `/stdd:starters` `/stdd:status` `/stdd:story` `/stdd:supervisor` `/stdd:tdd-init` `/stdd:turbo` `/stdd:update` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision` `/stdd:waiver-manager` `/stdd:workspace`
 
 **Skill Templates (47)**: `/stdd:api-spec` `/stdd:apply` `/stdd:archive` `/stdd:brainstorm` `/stdd:certainty` `/stdd:clarify` `/stdd:commit` `/stdd:complexity` `/stdd:confirm` `/stdd:constitution` `/stdd:context` `/stdd:continue` `/stdd:contract` `/stdd:design` `/stdd:execute` `/stdd:explore` `/stdd:factory` `/stdd:ff` `/stdd:final-doc` `/stdd:fix-packet` `/stdd:graph` `/stdd:guard` `/stdd:help` `/stdd:init` `/stdd:issue` `/stdd:iterate` `/stdd:learn` `/stdd:memory` `/stdd:metrics` `/stdd:mock` `/stdd:mutation` `/stdd:new` `/stdd:outside-in` `/stdd:parallel` `/stdd:plan` `/stdd:product-proposal` `/stdd:propose` `/stdd:prp` `/stdd:roles` `/stdd:schema` `/stdd:spec` `/stdd:supervisor` `/stdd:turbo` `/stdd:user-test` `/stdd:validate` `/stdd:verify` `/stdd:vision`
 
@@ -209,7 +209,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 
 ## Implementation Boundary
 
-**CLI-ified** (66 commands): init, start, doctor, new, ff, spec, api-spec, apply, continue, mutation, verify, archive, commit, constitution, guard, hooks, graph, workspace, metrics, context, ci, starters, depcheck, schema, contract, validate, fix-packet, outside-in, learn, roles, story, user-test, pipeline, extensions, progress, recommend, explore, brainstorm, issue, turbo, runtime, etc.
+**CLI-ified** (75 commands): init, start, doctor, new, ff, spec, api-spec, apply, continue, mutation, verify, archive, commit, constitution, guard, hooks, graph, workspace, metrics, context, ci, starters, depcheck, schema, contract, validate, fix-packet, outside-in, learn, roles, story, user-test, pipeline, extensions, progress, recommend, explore, brainstorm, issue, turbo, runtime, etc.
 
 **Runtime Engines**: Agent state machine (Party Mode), SudoLang parser, built-in browser driver (Playwright), dynamic Graph orchestration (DAG), breakpoint-resume progress tracking, evidence capture & audit.
 

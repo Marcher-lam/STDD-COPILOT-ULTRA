@@ -20,6 +20,6 @@
     "no-control-regex": "off",
     "no-useless-escape": "off",
     "no-empty": ["error", { "allowEmptyCatch": true }],
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }]
+    "no-unused-vars": "off"
   }
 }

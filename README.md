@@ -246,7 +246,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd runtime sudo` | SudoLang 伪代码解析引擎 |
 
 <details>
-<summary>查看完整 CLI 命令列表 (67 个)</summary>
+<summary>查看完整 CLI 命令列表 (75 个)</summary>
 
 ```bash
 # 核心流程
@@ -337,7 +337,7 @@ stdd constitution waive 2 --reason "Legacy" --days 7  # 临时豁免
 stdd-copilot/
 ├── cli.js                       # CLI 入口 (Commander.js)
 ├── src/
-│   ├── cli/commands/            # 66 个命令实现
+│   ├── cli/commands/            # 75 个命令实现
 │   ├── cli/registry/            # 命令注册与动态加载
 │   ├── utils/                   # 21 个工具模块
 │   │   ├── graph-executor.js    #   Graph 执行引擎
@@ -348,7 +348,7 @@ stdd-copilot/
 │   └── types/                   # TypeScript/JSDoc 类型定义
 ├── src/templates/
 │   ├── skills/                  # 47 个 Skill 定义
-│   └── commands/                # 20 个斜杠命令模板
+│   └── commands/                # 75 个斜杠命令模板
 ├── __tests__/                   # 171 个测试套件
 ├── stdd/                        # 运行时工作目录
 │   ├── changes/                 # 变更管理
@@ -367,7 +367,7 @@ stdd-copilot/
 
 ## 已实现边界
 
-**已 CLI 化** (66 个命令): init、start、doctor、new、ff、spec、api-spec、apply、continue、mutation、verify、archive、commit、constitution、guard、hooks、graph、workspace、metrics、context、ci、starters、depcheck、schema、contract、validate、fix-packet、outside-in、learn、roles、story、user-test、pipeline、extensions、progress、recommend、explore、brainstorm、issue、turbo、runtime 等。
+**已 CLI 化** (75 个命令): init、start、doctor、new、ff、spec、api-spec、apply、continue、mutation、verify、archive、commit、constitution、guard、hooks、graph、workspace、metrics、context、ci、starters、depcheck、schema、contract、validate、fix-packet、outside-in、learn、roles、story、user-test、pipeline、extensions、progress、recommend、explore、brainstorm、issue、turbo、runtime 等。
 
 **Runtime 引擎**: Agent 状态机、SudoLang 解析引擎、Playwright 浏览器驱动、动态 Graph 编排 (DAG)、断点续传进度追踪、证据采集与审计。
 

@@ -4,7 +4,7 @@
 
 ---
 
-## 全部能力入口 (47 个 = 75 Command 模板 + 47 Skill 模板，去重后)
+## 全部能力入口 (76 个 = 75 Command 模板 + 47 Skill 模板，去重后)
 
 ### Command 模板入口 (75)
 - `/stdd:init` `/stdd:new` `/stdd:propose` `/stdd:clarify` `/stdd:confirm`

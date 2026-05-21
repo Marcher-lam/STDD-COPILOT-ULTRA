@@ -126,7 +126,7 @@ stdd doctor --deep
 
 ```bash
 stdd skills        # 列出 47 个 Skill 模板
-stdd commands      # 列出 20 个斜杠命令模板
+stdd commands      # 列出 75 个斜杠命令模板
 stdd --help        # 列出全部 CLI 命令
 ```
 
@@ -744,5 +744,5 @@ node --test
 
 ---
 
-> STDD Copilot 共提供 67 个 CLI 命令、75 个 Command 模板和 47 个 Skill 模板。
+> STDD Copilot 共提供 75 个 CLI 命令、75 个 Command 模板和 47 个 Skill 模板。
 > 完整列表见 `stdd --help`、`stdd skills`、`stdd commands`。

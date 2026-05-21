@@ -265,7 +265,7 @@ class FactoryCommand {
       return { factories: [] };
     }
 
-    const files = fs.readdirSync(this.factoriesDir)
+    const factories = fs.readdirSync(this.factoriesDir)
       .filter(f => f.endsWith('.factory.js'))
       .map(f => {
         const typeName = f.replace('.factory.js', '').replace(/(^|\\s)\\S/g, t => t.toUpperCase());
@@ -279,20 +279,20 @@ class FactoryCommand {
       });
 
     if (options.json) {
-      console.log(JSON.stringify({ factories, count: files.length }, null, 2));
+      console.log(JSON.stringify({ factories, count: factories.length }, null, 2));
     } else {
       console.log(chalk.bold('\nTest Data Factories\n'));
-      if (files.length === 0) {
+      if (factories.length === 0) {
         console.log('  No factories found.\n');
       } else {
-        files.forEach((factory, i) => {
+        factories.forEach((factory, i) => {
           console.log(`  ${chalk.cyan((i + 1).toString() + '.')} ${chalk.bold(factory.typeName)}`);
           console.log(`      ${chalk.dim(factory.file)} · ${chalk.dim(factory.modified.toLocaleDateString())}\n`);
         });
       }
     }
 
-    return { factories, count: files.length };
+    return { factories, count: factories.length };
   }
 
   scan(options = {}) {

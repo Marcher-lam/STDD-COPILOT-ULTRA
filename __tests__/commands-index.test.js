@@ -15,7 +15,8 @@ describe('commands/index.js re-exports', () => {
     'FixPacketCommand', 'OutsideInCommand', 'AgentEngine', 'SudoLangParser',
     'BabyStepsCommand', 'ElicitationCommand', 'SudoExecutor',
     'createAgentExecutor', 'StartCommand', 'DoctorCommand', 'SkillsCommand',
-    'CommandsCommand', 'ProductProposalCommand',
+    'CommandsCommand', 'GraphHistoryCommand', 'GraphRunCommand',
+    'WaiverManagerCommand', 'ProductProposalCommand',
     // New CLI commands for previously Skill-only features
     'VisionCommand', 'PrpCommand', 'DesignCommand', 'CertaintyCommand', 'ComplexityCommand',
     'FactoryCommand', 'MockCommand', 'MemoryCommand', 'IterateCommand', 'HelpCommand',

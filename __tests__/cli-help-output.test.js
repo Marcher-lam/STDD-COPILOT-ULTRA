@@ -51,6 +51,31 @@ describe('CLI help output alignment', () => {
     }
   });
 
+  it('root help should expose command-template named CLI entries', () => {
+    const output = runCli(['--help']);
+    const commandNames = [
+      'ci-generator',
+      'commit-msg',
+      'memory-scan',
+      'graph-run',
+      'graph-history',
+      'waiver-manager',
+      'runtime'
+    ];
+
+    for (const commandName of commandNames) {
+      expect(output).toContain(commandName);
+    }
+  });
+
+  it('legacy aliases should remain available', () => {
+    const output = runCli(['--help']);
+
+    for (const commandName of ['ci', 'commit']) {
+      expect(output).toContain(commandName);
+    }
+  });
+
   it('contract help should include consumer and provider options', () => {
     const output = runCli(['contract', '--help']);
 

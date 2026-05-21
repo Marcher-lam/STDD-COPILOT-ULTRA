@@ -57,6 +57,9 @@ module.exports = {
   DoctorCommand: require('./doctor').DoctorCommand,
   SkillsCommand: require('./skills').SkillsCommand,
   CommandsCommand: require('./commands').CommandsCommand,
+  GraphHistoryCommand: require('./graph-history').GraphHistoryCommand,
+  GraphRunCommand: require('./graph-run').GraphRunCommand,
+  WaiverManagerCommand: require('./waiver-manager-command').WaiverManagerCommand,
   ProductProposalCommand: require('./product-proposal').ProductProposalCommand,
   // New CLI commands for previously Skill-only features
   VisionCommand: require('./vision').VisionCommand,

@@ -139,7 +139,7 @@
 | **Skill 模板** (SKILL.md) | **47** | `src/templates/skills/stdd/{name}/SKILL.md` |
 | **Command 模板** (.md) | **75** | `src/templates/commands/{name}.md` |
 | **唯一斜杠命令** (`/stdd:*`) | **76** | 去重后的 Skill + Command 入口 |
-| **CLI 命令** (含子命令) | **67** | `stdd xxx` 终端命令 |
+| **CLI 命令** (含子命令) | **75** | `stdd xxx` 终端命令 |
 | **Skill 驱动入口** | **47** | 有 Skill 模板的命令 |
 | **Command 文件入口** | **75** | 有 Command 模板的命令 |
 | **总唯一入口** | **122** | 75 Command + 47 Skill，去重后 76 个唯一入口 |

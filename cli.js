@@ -31,9 +31,11 @@ const {
   createAgentExecutor, ProductProposalCommand,
   StartCommand, DoctorCommand,
   SkillsCommand, CommandsCommand,
+  GraphHistoryCommand, GraphRunCommand,
+  WaiverManagerCommand,
   // New CLI commands for previously Skill-only features
   VisionCommand, PrpCommand, DesignCommand, CertaintyCommand, ComplexityCommand,
-  FactoryCommand, MockCommand, MemoryCommand, IterateCommand, HelpCommand,
+  FactoryCommand, MockCommand, IterateCommand, HelpCommand,
   ParallelCommand, SupervisorCommand,
   // Skill-based workflow commands
   ProposeCommand, ClarifyCommand, ConfirmCommand, PlanCommand,
@@ -138,6 +140,9 @@ const commandFactories = {
   SpecGenerator,
   ApiSpecCommand,
   MemoryCommand: MemoryScanner,
+  GraphHistoryCommand,
+  GraphRunCommand,
+  WaiverManagerCommand,
   TddInitCommand,
   SkillsCommand,
   CommandsCommand,
@@ -167,7 +172,7 @@ const commandFactories = {
 const loader = new CommandLoader(program, {
   commandFactories,
   createSpinner,
-  skipNames: ['constitution [action] [target]', 'hooks', 'graph', 'runtime', 'recommend', 'doctor', 'start', 'memory <action> [args...]', 'baby-steps [task]', 'sudo run [file]', 'list', 'status [change]', 'progress', 'vision [action]', 'prp [action]', 'design [action]', 'certainty [action]', 'complexity [action]', 'factory [action]', 'iterate [action]', 'help [topic]', 'parallel [action]', 'supervisor [action]'],
+  skipNames: ['constitution [action] [target]', 'hooks', 'graph', 'runtime', 'recommend', 'doctor', 'start', 'memory <action> [args...]', 'baby-steps [task]', 'sudo run [file]', 'list', 'status [change]', 'progress', 'vision [action]', 'prp [action]', 'design [action]', 'certainty [action]', 'complexity [action]', 'factory [action]', 'iterate [action]', 'help [topic]', 'parallel [action]', 'supervisor [action]', 'memory-scan [action]', 'graph-history [action] [id]'],
 });
 loader.registerAll();
 
@@ -216,6 +221,35 @@ program.command('memory <action> [args...]')
     const scanner = new MemoryScanner(process.cwd());
     if (action === 'scan') await scanner.scan(options);
     else if (action === 'list') scanner.listMemory({ json: options.json });
+  }));
+
+program.command('memory-scan [action]')
+  .description('Scan project source code into memory artifacts')
+  .option('--source-dir <dir>')
+  .option('--json')
+  .action(safeAction(async (action, options) => {
+    const scanner = new MemoryScanner(process.cwd());
+    if (!action || action === 'scan') {
+      const result = await scanner.scan(options);
+      if (options.json) console.log(JSON.stringify(result, null, 2));
+    } else if (action === 'list') {
+      scanner.listMemory({ json: options.json });
+    } else {
+      throw new Error(`Unknown memory-scan action: ${action}. Supported: scan, list.`);
+    }
+  }));
+
+program.command('graph-history [action] [id]')
+  .description('View graph execution history and replay evidence')
+  .option('--json')
+  .option('--change <name>')
+  .option('--workspace <workspace>')
+  .option('--verbose')
+  .option('--no-verbose')
+  .action(safeAction(async (action, id, options) => {
+    const history = new GraphHistoryCommand(process.cwd());
+    if (action === 'replay') history.replay(id, options);
+    else history.list(options);
   }));
 
 program.command('baby-steps [task]')

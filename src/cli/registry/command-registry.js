@@ -327,6 +327,14 @@ const commandRegistry = [
     action: 'CiGeneratorCommand',
   },
   {
+    name: 'ci-generator [platform]',
+    description: 'Generate CI config',
+    options: [
+      { flags: '--force', description: 'Overwrite existing' },
+    ],
+    action: 'CiGeneratorCommand',
+  },
+  {
     name: 'starters <subcommand> [args...]',
     description: 'Manage project starters',
     action: 'StartersCommand',
@@ -383,6 +391,15 @@ const commandRegistry = [
     action: 'MemoryCommand',
   },
   {
+    name: 'memory-scan [action]',
+    description: 'Scan project source code into memory artifacts',
+    options: [
+      { flags: '--source-dir <dir>', description: 'Source directory' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'MemoryCommand',
+  },
+  {
     name: 'learn [action] [args...]',
     description: 'Learn project patterns and record feedback',
     options: [
@@ -392,6 +409,18 @@ const commandRegistry = [
   },
   {
     name: 'commit [change]',
+    description: 'Generate commit message',
+    options: [
+      { flags: '--format <format>', description: 'Output format (text|json)', default: 'text' },
+      { flags: '--tdd', description: 'Use TDG red/green/refactor commit prefix' },
+      { flags: '--phase <phase>', description: 'TDD phase prefix: red, green, refactor' },
+      { flags: '--issue <number>', description: 'Issue number for traceability' },
+      { flags: '--require-issue', description: 'Fail when no issue number is available' },
+    ],
+    action: 'CommitCommand',
+  },
+  {
+    name: 'commit-msg [change]',
     description: 'Generate commit message',
     options: [
       { flags: '--format <format>', description: 'Output format (text|json)', default: 'text' },
@@ -477,6 +506,42 @@ const commandRegistry = [
       { flags: '--json', description: 'JSON output' },
     ],
     action: 'MutationCommand',
+  },
+  {
+    name: 'graph-run [intent]',
+    description: 'Execute the full STDD workflow based on intent DAG',
+    options: [
+      { flags: '--change-name <name>', description: 'Custom change name' },
+      { flags: '--workspace <workspace>', description: 'Run with workspace context' },
+      { flags: '--skip-apply', description: 'Skip apply and verify steps' },
+      { flags: '--skip-archive', description: 'Skip archive step' },
+      { flags: '--description <text>', description: 'Feature description for generated change' },
+    ],
+    action: 'GraphRunCommand',
+  },
+  {
+    name: 'graph-history [action] [id]',
+    description: 'View graph execution history and replay evidence',
+    options: [
+      { flags: '--json', description: 'Output as JSON' },
+      { flags: '--change <name>', description: 'Filter by change name' },
+      { flags: '--workspace <workspace>', description: 'Filter by workspace' },
+      { flags: '--verbose', description: 'Show full results' },
+      { flags: '--no-verbose', description: 'Hide results detail' },
+    ],
+    action: 'GraphHistoryCommand',
+  },
+  {
+    name: 'waiver-manager [action]',
+    description: 'Manage constitution waivers',
+    options: [
+      { flags: '--article <n>', description: 'Article number' },
+      { flags: '--reason <reason>', description: 'Waiver reason' },
+      { flags: '--days <days>', description: 'Waiver duration in days' },
+      { flags: '--force', description: 'Replace an existing waiver' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'WaiverManagerCommand',
   },
   {
     name: 'runtime',
