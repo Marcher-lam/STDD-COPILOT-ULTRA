@@ -82,11 +82,11 @@ describe('ApiSpecCommand', () => {
 
     createFeatureFile(projectPath, 'list-items', 'list-items.feature', `Feature: List Items
 
-  Scenario: Fetch all items
-    Given the items exist in the system
-    When GET /api/items is called
-    Then the response should be 200 OK
-    And the response body contains a list of items
+Scenario: Fetch all items
+  Given the items exist in the system
+  When GET /api/items is called
+  Then the response should be 200 OK
+  And the response body contains a list of items
 `);
 
     const cmd = new ApiSpecCommand();
@@ -224,14 +224,14 @@ describe('ApiSpecCommand', () => {
     const projectPath = createTempProject('default-response-project');
     process.chdir(projectPath);
 
-    createFeatureFile(projectPath, 'default-cbange', 'simple.feature', `Feature: Simple API
+    createFeatureFile(projectPath, 'default-change', 'simple.feature', `Feature: Simple API
 
   Scenario: Make request
     When POST /api/data is called
 `);
 
     const cmd = new ApiSpecCommand();
-    const result = await cmd.execute('default-cbange');
+    const result = await cmd.execute('default-change');
 
     const content = fs.readFileSync(result.outputPath, 'utf8');
     const doc = yaml.load(content);
@@ -456,7 +456,6 @@ Feature: Other
   @workspace:packages-other
   Scenario: Other endpoint
     When GET /other/endpoint is called
-    Then the response should be 200 OK
 `);
 
     const cmd = new ApiSpecCommand();
@@ -616,5 +615,584 @@ Then the response should be 200 OK
     const tempFile3 = path.join(projectPath, 'plain.feature');
     fs.writeFileSync(tempFile3, `Feature: Plain\n  Scenario: Test\n    When GET /api/test is called`);
     expect(cmd.featureHasWorkspaceScope(tempFile3)).toBe(false);
+  });
+
+  // ===== NEW TESTS FOR ENHANCED FEATURES =====
+
+  describe('TypeScript Types Generation', () => {
+    it('should generate TypeScript types when --full flag is provided', async () => {
+      const projectPath = createTempProject('ts-types-project');
+      process.chdir(projectPath);
+      // Add package.json for language detection
+      fs.writeFileSync(path.join(projectPath, 'package.json'), JSON.stringify({ name: 'test' }, null, 2));
+
+      createFeatureFile(projectPath, 'users-api', 'users.feature', `Feature: Users API
+
+  Scenario: Create user
+    When POST /api/users is called
+    Then the response should be 201 Created
+
+  Scenario: Get user
+    When GET /api/users/{id} is called
+    Then the response should be 200 OK
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('users-api', { full: true });
+
+      expect(result.results.types).toBeDefined();
+      const typesPath = path.join(projectPath, result.results.types.path);
+      expect(fs.existsSync(typesPath)).toBe(true);
+
+      const typesContent = fs.readFileSync(typesPath, 'utf8');
+      expect(typesContent).toContain('export interface User');
+      expect(typesContent).toContain('export interface ApiResponse<T>');
+    });
+
+    it('should generate TypeScript types only when --types-only flag is provided', async () => {
+      const projectPath = createTempProject('ts-only-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'items-api', 'items.feature', `Feature: Items API
+
+  Scenario: List items
+    When GET /api/items is called
+    Then the response should be 200 OK
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('items-api', { language: 'typescript', typesOnly: true });
+
+      expect(result.results.types).toBeDefined();
+      expect(result.results.mocks).toBeUndefined();
+      expect(result.results.validators).toBeUndefined();
+    });
+  });
+
+  describe('MSW Handlers Generation', () => {
+    it('should generate MSW handlers when --full flag is provided', async () => {
+      const projectPath = createTempProject('msw-handlers-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'package.json'), JSON.stringify({ name: 'test' }, null, 2));
+
+      createFeatureFile(projectPath, 'products-api', 'products.feature', `Feature: Products API
+
+  Scenario: Create product
+    When POST /api/products is called
+    Then the response should be 201 Created
+
+  Scenario: Get product
+    When GET /api/products/{id} is called
+    Then the response should be 200 OK
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('products-api', { full: true });
+
+      expect(result.results.mocks).toBeDefined();
+      const mswPath = path.join(projectPath, result.results.mocks.path);
+      expect(fs.existsSync(mswPath)).toBe(true);
+
+      const mswContent = fs.readFileSync(mswPath, 'utf8');
+      expect(mswContent).toContain("import { http, HttpResponse } from 'msw'");
+      expect(mswContent).toContain('productHandlers');
+      expect(mswContent).toContain('http.post');
+      expect(mswContent).toContain('http.get');
+      expect(mswContent).toContain('HttpResponse.json');
+    });
+
+    it('should generate MSW handlers with DELETE returning 204', async () => {
+      const projectPath = createTempProject('msw-delete-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'delete-api', 'delete.feature', `Feature: Delete API
+
+  Scenario: Delete item
+    When DELETE /api/items/{id} is called
+    Then the response should be 204 No Content
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('delete-api', { language: 'ts', mswOnly: true });
+
+      const mswPath = path.join(projectPath, result.results.mocks.path);
+      const mswContent = fs.readFileSync(mswPath, 'utf8');
+
+      expect(mswContent).toContain('http.delete');
+      expect(mswContent).toContain('new HttpResponse(null, { status: 204 })');
+    });
+  });
+
+  describe('Zod Schemas Generation', () => {
+    it('should generate Zod schemas when --full flag is provided', async () => {
+      const projectPath = createTempProject('zod-schemas-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'package.json'), JSON.stringify({ name: 'test' }, null, 2));
+
+      createFeatureFile(projectPath, 'orders-api', 'orders.feature', `Feature: Orders API
+
+  Scenario: Create order
+    When POST /api/orders is called
+    Then the response should be 201 Created
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('orders-api', { full: true });
+
+      expect(result.results.validators).toBeDefined();
+      const zodPath = path.join(projectPath, result.results.validators.path);
+      expect(fs.existsSync(zodPath)).toBe(true);
+
+      const zodContent = fs.readFileSync(zodPath, 'utf8');
+      expect(zodContent).toContain("import { z } from 'zod'");
+      expect(zodContent).toContain('OrderSchema');
+      expect(zodContent).toContain('z.object({');
+      expect(zodContent).toContain('z.infer<typeof');
+    });
+
+    it('should generate Zod schemas with ApiResponse wrapper', async () => {
+      const projectPath = createTempProject('zod-api-response-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'wrapped-api', 'wrapped.feature', `Feature: Wrapped API
+
+  Scenario: Get wrapped
+    When GET /api/wrapped is called
+    Then the response should be 200 OK
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('wrapped-api', { language: 'typescript', zodOnly: true });
+
+      const zodPath = path.join(projectPath, result.results.validators.path);
+      const zodContent = fs.readFileSync(zodPath, 'utf8');
+
+      expect(zodContent).toContain('ApiResponseSchema');
+      expect(zodContent).toContain('dataSchema');
+    });
+  });
+
+  describe('Type Inference', () => {
+    it('should infer resource name from path', () => {
+      const cmd = new ApiSpecCommand();
+
+      expect(cmd.inferResourceName('/api/users', 'GET')).toBe('User');
+      expect(cmd.inferResourceName('/api/users/{id}', 'GET')).toBe('User');
+      expect(cmd.inferResourceName('/api/products', 'POST')).toBe('Product');
+      expect(cmd.inferResourceName('/api/user-preferences', 'GET')).toBe('UserPreference');
+    });
+
+    it('should infer operation name from method and resource', () => {
+      const cmd = new ApiSpecCommand();
+
+      expect(cmd.inferOperationName('GET', 'User')).toBe('getUser');
+      expect(cmd.inferOperationName('POST', 'User')).toBe('createUser');
+      expect(cmd.inferOperationName('PUT', 'User')).toBe('updateUser');
+      expect(cmd.inferOperationName('PATCH', 'User')).toBe('patchUser');
+      expect(cmd.inferOperationName('DELETE', 'User')).toBe('deleteUser');
+    });
+
+    it('should singularize resource names', () => {
+      const cmd = new ApiSpecCommand();
+
+      expect(cmd.singularize('users')).toBe('user');
+      expect(cmd.singularize('items')).toBe('item');
+      expect(cmd.singularize('categories')).toBe('category');
+      expect(cmd.singularize('statuses')).toBe('status');
+      expect(cmd.singularize('class')).toBe('class');
+    });
+
+    it('should convert to pascal case', () => {
+      const cmd = new ApiSpecCommand();
+
+      expect(cmd.pascalCase('user')).toBe('User');
+      expect(cmd.pascalCase('user-preferences')).toBe('UserPreferences');
+      expect(cmd.pascalCase('api_key')).toBe('ApiKey');
+    });
+
+    it('should convert to camel case', () => {
+      const cmd = new ApiSpecCommand();
+
+      expect(cmd.camelCase('User')).toBe('user');
+      expect(cmd.camelCase('UserPreferences')).toBe('userPreferences');
+      expect(cmd.camelCase('Api_Key')).toBe('apiKey');
+      expect(cmd.camelCase('API_KEY')).toBe('aPIKEY'); // Edge case: all caps with underscores
+    });
+  });
+
+  describe('Multi-Language Support', () => {
+    it('should detect TypeScript project from tsconfig.json', async () => {
+      const projectPath = createTempProject('lang-detect-ts-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'tsconfig.json'), JSON.stringify({ compilerOptions: {} }, null, 2));
+
+      const cmd = new ApiSpecCommand();
+      const detected = cmd.detectLanguage(projectPath);
+
+      expect(detected).toBe('typescript');
+    });
+
+    it('should detect Python project from requirements.txt', async () => {
+      const projectPath = createTempProject('lang-detect-py-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'requirements.txt'), 'pytest\npydantic\n');
+
+      const cmd = new ApiSpecCommand();
+      const detected = cmd.detectLanguage(projectPath);
+
+      expect(detected).toBe('python');
+    });
+
+    it('should detect Go project from go.mod', async () => {
+      const projectPath = createTempProject('lang-detect-go-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'go.mod'), 'module test\n\ngo 1.21\n');
+
+      const cmd = new ApiSpecCommand();
+      const detected = cmd.detectLanguage(projectPath);
+
+      expect(detected).toBe('go');
+    });
+
+    it('should detect Java project from pom.xml', async () => {
+      const projectPath = createTempProject('lang-detect-java-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'pom.xml'), '<?xml version="1.0"?><project></project>');
+
+      const cmd = new ApiSpecCommand();
+      const detected = cmd.detectLanguage(projectPath);
+
+      expect(detected).toBe('java');
+    });
+
+    it('should detect Rust project from Cargo.toml', async () => {
+      const projectPath = createTempProject('lang-detect-rust-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'Cargo.toml'), '[package]\nname = "test"\n');
+
+      const cmd = new ApiSpecCommand();
+      const detected = cmd.detectLanguage(projectPath);
+
+      expect(detected).toBe('rust');
+    });
+
+    it('should detect C# project from .csproj file', async () => {
+      const projectPath = createTempProject('lang-detect-cs-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'Test.csproj'), '<Project></Project>');
+
+      const cmd = new ApiSpecCommand();
+      const detected = cmd.detectLanguage(projectPath);
+
+      expect(detected).toBe('csharp');
+    });
+
+    it('should detect PHP project from composer.json', async () => {
+      const projectPath = createTempProject('lang-detect-php-project');
+      process.chdir(projectPath);
+      fs.writeFileSync(path.join(projectPath, 'composer.json'), JSON.stringify({ name: 'test' }, null, 2));
+
+      const cmd = new ApiSpecCommand();
+      const detected = cmd.detectLanguage(projectPath);
+
+      expect(detected).toBe('php');
+    });
+
+    it('should return agnostic when no language files detected', async () => {
+      const projectPath = createTempProject('lang-detect-none-project');
+      process.chdir(projectPath);
+
+      const cmd = new ApiSpecCommand();
+      const detected = cmd.detectLanguage(projectPath);
+
+      expect(detected).toBe('agnostic');
+    });
+
+    it('should resolve language aliases correctly', () => {
+      const projectPath = createTempProject('lang-alias-project');
+      process.chdir(projectPath);
+
+      const cmd = new ApiSpecCommand();
+
+      expect(cmd.resolveLanguage('ts', projectPath)).toBe('typescript');
+      expect(cmd.resolveLanguage('js', projectPath)).toBe('javascript');
+      expect(cmd.resolveLanguage('py', projectPath)).toBe('python');
+      expect(cmd.resolveLanguage('golang', projectPath)).toBe('go');
+      expect(cmd.resolveLanguage('cs', projectPath)).toBe('csharp');
+      expect(cmd.resolveLanguage('csharp', projectPath)).toBe('csharp');
+    });
+  });
+
+  describe('Python Artifact Generation', () => {
+    it('should generate Python Pydantic models', async () => {
+      const projectPath = createTempProject('py-models-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'users-api', 'users.feature', `Feature: Users API
+
+  Scenario: Create user
+    When POST /api/users is called
+    Then the response should be 201 Created
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('users-api', { language: 'python', typesOnly: true });
+
+      expect(result.language).toBe('python');
+      expect(result.results.types).toBeDefined();
+      expect(result.results.types.language).toBe('python');
+
+      const typesPath = path.join(projectPath, result.results.types.path);
+      expect(fs.existsSync(typesPath)).toBe(true);
+
+      const content = fs.readFileSync(typesPath, 'utf8');
+      expect(content).toContain('from pydantic import BaseModel');
+      expect(content).toContain('class User(BaseModel):');
+      expect(content).toContain('id: int');
+    });
+
+    it('should generate Python pytest fixtures', async () => {
+      const projectPath = createTempProject('py-fixtures-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'items-api', 'items.feature', `Feature: Items API
+
+  Scenario: List items
+    When GET /api/items is called
+    Then the response should be 200 OK
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('items-api', { language: 'py', mocksOnly: true });
+
+      expect(result.results.mocks).toBeDefined();
+
+      const mocksPath = path.join(projectPath, result.results.mocks.path);
+      const content = fs.readFileSync(mocksPath, 'utf8');
+
+      expect(content).toContain('import pytest');
+      expect(content).toContain('@pytest.fixture');
+      expect(content).toContain('def mock_');
+    });
+  });
+
+  describe('Java Artifact Generation', () => {
+    it('should generate Java record classes', async () => {
+      const projectPath = createTempProject('java-records-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'products-api', 'products.feature', `Feature: Products API
+
+  Scenario: Create product
+    When POST /api/products is called
+    Then the response should be 201 Created
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('products-api', { language: 'java', typesOnly: true });
+
+      expect(result.language).toBe('java');
+      expect(result.results.types).toBeDefined();
+
+      const typesPath = path.join(projectPath, result.results.types.path);
+      expect(fs.existsSync(typesPath)).toBe(true);
+
+      const content = fs.readFileSync(typesPath, 'utf8');
+      expect(content).toContain('public record Product(');
+      expect(content).toContain('Long id');
+    });
+
+    it('should generate Java WireMock stubs', async () => {
+      const projectPath = createTempProject('java-wiremock-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'orders-api', 'orders.feature', `Feature: Orders API
+
+  Scenario: List orders
+    When GET /api/orders is called
+    Then the response should be 200 OK
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('orders-api', { language: 'java', mocksOnly: true });
+
+      expect(result.results.mocks).toBeDefined();
+
+      const mocksPath = path.join(projectPath, result.results.mocks.path);
+      const content = fs.readFileSync(mocksPath, 'utf8');
+
+      expect(content).toContain('WireMock');
+      expect(content).toContain('MockServer');
+    });
+  });
+
+  describe('Go Artifact Generation', () => {
+    it('should generate Go structs', async () => {
+      const projectPath = createTempProject('go-structs-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'tasks-api', 'tasks.feature', `Feature: Tasks API
+
+  Scenario: Create task
+    When POST /api/tasks is called
+    Then the response should be 201 Created
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('tasks-api', { language: 'go', typesOnly: true });
+
+      expect(result.language).toBe('go');
+      expect(result.results.types).toBeDefined();
+
+      const typesPath = path.join(projectPath, result.results.types.path);
+      expect(fs.existsSync(typesPath)).toBe(true);
+
+      const content = fs.readFileSync(typesPath, 'utf8');
+      expect(content).toContain('package types');
+      expect(content).toContain('type Task struct');
+      expect(content).toContain('ID    int');
+    });
+
+    it('should generate Go httptest mocks', async () => {
+      const projectPath = createTempProject('go-httptest-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'events-api', 'events.feature', `Feature: Events API
+
+  Scenario: List events
+    When GET /api/events is called
+    Then the response should be 200 OK
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('events-api', { language: 'go', mocksOnly: true });
+
+      expect(result.results.mocks).toBeDefined();
+
+      const mocksPath = path.join(projectPath, result.results.mocks.path);
+      const content = fs.readFileSync(mocksPath, 'utf8');
+
+      expect(content).toContain('httptest');
+      expect(content).toContain('MockUsersHandler');
+    });
+  });
+
+  describe('Rust Artifact Generation', () => {
+    it('should generate Rust structs with serde derives', async () => {
+      const projectPath = createTempProject('rust-structs-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'posts-api', 'posts.feature', `Feature: Posts API
+
+  Scenario: Create post
+    When POST /api/posts is called
+    Then the response should be 201 Created
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('posts-api', { language: 'rust', typesOnly: true });
+
+      expect(result.language).toBe('rust');
+      expect(result.results.types).toBeDefined();
+
+      const typesPath = path.join(projectPath, result.results.types.path);
+      expect(fs.existsSync(typesPath)).toBe(true);
+
+      const content = fs.readFileSync(typesPath, 'utf8');
+      expect(content).toContain('use serde::{Serialize, Deserialize}');
+      expect(content).toContain('#[derive(Debug, Clone, Serialize, Deserialize)]');
+      expect(content).toContain('pub struct Post');
+    });
+  });
+
+  describe('C# Artifact Generation', () => {
+    it('should generate C# record classes', async () => {
+      const projectPath = createTempProject('csharp-records-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'customers-api', 'customers.feature', `Feature: Customers API
+
+  Scenario: Create customer
+    When POST /api/customers is called
+    Then the response should be 201 Created
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('customers-api', { language: 'csharp', typesOnly: true });
+
+      expect(result.language).toBe('csharp');
+      expect(result.results.types).toBeDefined();
+
+      const typesPath = path.join(projectPath, result.results.types.path);
+      expect(fs.existsSync(typesPath)).toBe(true);
+
+      const content = fs.readFileSync(typesPath, 'utf8');
+      expect(content).toContain('namespace Stdd.Api.Types');
+      expect(content).toContain('public record Customer(');
+    });
+  });
+
+  describe('PHP Artifact Generation', () => {
+    it('should generate PHP DTO classes', async () => {
+      const projectPath = createTempProject('php-dto-project');
+      process.chdir(projectPath);
+
+      createFeatureFile(projectPath, 'invoices-api', 'invoices.feature', `Feature: Invoices API
+
+  Scenario: Create invoice
+    When POST /api/invoices is called
+    Then the response should be 201 Created
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('invoices-api', { language: 'php', typesOnly: true });
+
+      expect(result.language).toBe('php');
+      expect(result.results.types).toBeDefined();
+
+      const typesPath = path.join(projectPath, result.results.types.path);
+      expect(fs.existsSync(typesPath)).toBe(true);
+
+      const content = fs.readFileSync(typesPath, 'utf8');
+      expect(content).toContain('namespace App\\DTO');
+      expect(content).toContain('class InvoiceDTO');
+    });
+  });
+
+  describe('Custom Output Directory', () => {
+    it('should generate files in custom output directory', async () => {
+      const projectPath = createTempProject('custom-output-project');
+      process.chdir(projectPath);
+      // Add package.json for language detection
+      fs.writeFileSync(path.join(projectPath, 'package.json'), JSON.stringify({ name: 'test' }, null, 2));
+
+      createFeatureFile(projectPath, 'custom-api', 'custom.feature', `Feature: Custom API
+
+  Scenario: Custom endpoint
+    When GET /api/custom is called
+    Then the response should be 200 OK
+`);
+
+      const cmd = new ApiSpecCommand();
+      const result = await cmd.execute('custom-api', {
+        full: true,
+        outputDir: 'src/api/generated'
+      });
+
+      // Check that files are in the custom directory
+      expect(result.outputPath).toContain('src/api/generated');
+      expect(result.results.types.path).toContain('src/api/generated');
+      expect(result.results.mocks.path).toContain('src/api/generated');
+      expect(result.results.validators.path).toContain('src/api/generated');
+
+      // Verify the directory structure (now includes language subdirectory)
+      const typesPath = path.join(projectPath, 'src/api/generated/typescript/types/api-types.ts');
+      const mswPath = path.join(projectPath, 'src/api/generated/typescript/mocks/msw-handlers.ts');
+      const zodPath = path.join(projectPath, 'src/api/generated/typescript/validators/zod-schemas.ts');
+
+      expect(fs.existsSync(typesPath)).toBe(true);
+      expect(fs.existsSync(mswPath)).toBe(true);
+      expect(fs.existsSync(zodPath)).toBe(true);
+    });
   });
 });

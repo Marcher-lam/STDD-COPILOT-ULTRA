@@ -1,8 +1,8 @@
 ---
 id: stdd.turbo
 command: /stdd:turbo
-description: 一键编排从需求到 TDD scaffold 与验证准备
-version: "2.0"
+description: 一键编排从需求到 TDD scaffold 与验证准备（语言无关）
+version: "3.0"
 category: lifecycle
 phase: orchestration
 read_only: false
@@ -40,65 +40,180 @@ graph:
 # STDD Skill: /stdd:turbo
 
 ## Purpose
-一键编排从需求到 TDD scaffold 与验证准备。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**一键编排从需求到 TDD scaffold 与验证准备**。这是 STDD Copilot 的 Turbo skill，提供端到端的自动化工作流。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **端到端**：从需求到验证准备
+- **可暂停**：在关键门禁暂停
+- **可恢复**：支持中断恢复
 
 ## When to Use
-- 需要执行 /stdd:turbo 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
-
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
-
-## Inputs
-- 需求描述
-- 自动化策略
-- workspace
-- HITL 策略
-
-## Workflow
-- 运行 ff、spec 校验、TDD scaffold、可选 apply、mutation、verify。
-- 仅在需求确认和归档确认门暂停。
-- 失败三次自动生成 fix-packet 并熔断。
-- 保存 graph/progress/evidence，便于 resume。
+- 需要快速开始新功能时
+- 需要自动化工作流时
+- 需要完整 TDD 流程时
+- 需要验证准备时
 
 ## CLI Runtime
+
 ```bash
-stdd turbo "需求" --workspace packages/api
-stdd turbo "需求" --no-spec
+# 完整 turbo 流程
+stdd turbo "添加用户登录功能"
+
+# 指定 workspace
+stdd turbo "添加用户登录功能" --workspace packages/api
+
+# 跳过 spec 阶段
+stdd turbo "修复登录bug" --no-spec
+
+# 指定自动化策略
+stdd turbo "添加用户登录功能" --strategy full-auto
+stdd turbo "添加用户登录功能" --strategy hitl-confirm
+stdd turbo "添加用户登录功能" --strategy hitl-apply
+
+# 继续中断的 turbo
+stdd turbo resume <change-id>
 ```
-支持 CLI 与 `/stdd:turbo` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## Turbo 流程
+
+### 完整流程
+```
+需求
+  │
+  ▼
+┌─────────────┐
+│  Fast-Forward│
+│  (ff)       │
+└─────────────┘
+  │
+  ▼
+┌─────────────┐
+│  Spec 校验  │
+│  (spec)     │
+└─────────────┘
+  │
+  ▼
+┌─────────────┐
+│  TDD Scaffold│
+│  (plan)     │
+└─────────────┘
+  │
+  ▼
+┌─────────────┐
+│  可选 Apply │
+│  (execute)  │
+└─────────────┘
+  │
+  ▼
+┌─────────────┐
+│  Mutation   │
+│  (mutation) │
+└─────────────┘
+  │
+  ▼
+┌─────────────┐
+│  Verify     │
+│  (verify)   │
+└─────────────┘
+```
+
+### HITL 策略
+
+#### full-auto
+- 全自动执行
+- 仅在门禁暂停
+- 适合小变更
+
+#### hitl-confirm
+- 需求确认时暂停
+- 等待人工确认
+- 适合中等变更
+
+#### hitl-apply
+- 需求和实现确认时暂停
+- 等待人工确认
+- 适合大变更
+
+## 多语言支持
+
+### JavaScript/TypeScript
+```bash
+stdd turbo "添加用户登录" --lang typescript
+```
+- 生成 Jest/Vitest 测试
+- 生成 TypeScript 类型
+- ESLint 配置
+
+### Python
+```bash
+stdd turbo "添加用户登录" --lang python
+```
+- 生成 pytest 测试
+- 生成类型注解
+- Black/flake8 配置
+
+### Java
+```bash
+stdd turbo "添加用户登录" --lang java
+```
+- 生成 JUnit 测试
+- 生成 Java 类型
+- Checkstyle 配置
+
+### Go
+```bash
+stdd turbo "添加用户登录" --lang go
+```
+- 生成 testing 测试
+- 生成 Go 类型
+- gofmt 配置
+
+### Rust
+```bash
+stdd turbo "添加用户登录" --lang rust
+```
+- 生成内置测试
+- 生成 Rust 类型
+- rustfmt 配置
 
 ## Graph Semantics
 - 节点 ID 为 stdd.turbo，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-phase；resumable=true；parallelizable=false。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 依赖 init，下一步是 verify。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Blocking 条例 2 (Test First)**: 必须先写测试
+- **Blocking 条例 7 (Security)**: 必须检查安全
+- **Blocking 条例 9 (Evidence)**: 必须保留证据
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- 核心产物
-- TDD scaffold
-- graph/progress/evidence
+- 所有证据写入 `stdd/changes/<change-id>/evidence/`
+- 包含每个阶段的输出和状态
 
 ## Related Skills
-- stdd.fix-packet
-- stdd.init
-- stdd.verify
+- **stdd.ff** - Fast Forward
+- **stdd.spec** - 规格
+- **stdd.plan** - 计划
+- **stdd.execute** - 执行
+- **stdd.mutation** - 变异测试
+- **stdd.verify** - 验证
+- **stdd.fix-packet** - 失败修复
+
+## 参考资源
+
+### CI/CD
+- [CI/CD Patterns](https://www.patterns.dev/)
+- [GitHub Actions](https://docs.github.com/en/actions)
+
+## 设计决策
+
+### Why Turbo？
+- **快速**: 一键启动
+- **完整**: 覆盖全流程
+- **灵活**: 可配置策略
+
+### Why HITL？
+- **控制**: 人工控制关键点
+- **质量**: 确保质量
+- **学习**: 团队学习

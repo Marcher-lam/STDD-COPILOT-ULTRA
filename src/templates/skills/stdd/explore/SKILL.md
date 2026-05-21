@@ -1,8 +1,8 @@
 ---
 id: stdd.explore
 command: /stdd:explore
-description: 只读探索现有系统、约束和可行路径
-version: "2.0"
+description: 只读探索现有系统、约束和可行路径（语言无关）
+version: "3.0"
 category: documentation
 phase: discovery
 read_only: true
@@ -38,60 +38,249 @@ graph:
 # STDD Skill: /stdd:explore
 
 ## Purpose
-只读探索现有系统、约束和可行路径。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**只读探索现有系统、约束和可行路径**。这是 STDD Copilot 的探索 skill，对现有项目进行只读分析，生成架构摘要、质量热点和可操作建议。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言和项目类型
+- **只读操作**：不修改任何代码或配置
+- **深度分析**：识别架构、依赖、测试覆盖和质量问题
+- **可操作建议**：提供具体的改进方向
 
 ## When to Use
-- 需要执行 /stdd:explore 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 接手 brownfield 项目需要了解现状时
+- 需要评估代码质量和风险时
+- 需要识别重构机会时
+- 需要理解项目架构时
+- 需要为提案收集背景信息时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## 探索维度
 
-## Inputs
-- scope
-- 项目文件
-- 测试与入口
+### 1. 架构分析
+**目标**：理解项目结构和组织方式
 
-## Workflow
-- 只读扫描结构、依赖、入口、测试和相关模块。
-- 输出技术栈、模块关系、风险、可行方案和建议。
-- brownfield 默认先 explore；greenfield 可探索技术选择。
+**分析内容**：
+- 目录结构
+- 模块划分
+- 入口文件
+- 依赖关系
+
+**多语言入口文件识别**：
+| 语言 | 常见入口文件 |
+|------|--------------|
+| JavaScript/TypeScript | index.js, main.js, app.js, server.js, cli.js |
+| Python | __main__.py, main.py, app.py, manage.py |
+| Java | Main.java, Application.java, *Servlet.java |
+| Go | main.go, cmd/*/main.go |
+| Rust | main.rs, lib.rs |
+| C# | Program.cs, Startup.cs |
+| PHP | index.php, artisan |
+| Ruby | main.rb, application.rb |
+
+### 2. 技术栈检测
+**目标**：识别使用的技术和框架
+
+**检测项**：
+- 编程语言
+- 框架和库
+- 构建工具
+- 测试框架
+- 包管理器
+
+**多语言配置文件识别**：
+| 语言 | 配置文件 | 包管理器 |
+|------|----------|----------|
+| JavaScript/TypeScript | package.json | npm, yarn, pnpm |
+| Python | pyproject.toml, requirements.txt, setup.py | pip, poetry |
+| Java | pom.xml, build.gradle | Maven, Gradle |
+| Go | go.mod | go modules |
+| Rust | Cargo.toml | cargo |
+| C# | .csproj, package.json | dotnet, NuGet |
+| PHP | composer.json | composer |
+| Ruby | Gemfile | bundler |
+
+### 3. 测试覆盖分析
+**目标**：评估测试覆盖情况
+
+**分析内容**：
+- 未测试的源文件
+- 测试文件分布
+- 测试模式识别
+
+**多语言测试文件识别**：
+| 语言 | 测试文件模式 |
+|------|--------------|
+| JavaScript/TypeScript | *.test.js, *.spec.js, *.test.ts, *.spec.ts, __tests__/*.js |
+| Python | test_*.py, *_test.py, tests/*.py |
+| Java | *Test.java, *Tests.java, **/test/*.java |
+| Go | *_test.go |
+| Rust | *_test.rs, tests/*.rs |
+| C# | *.Tests.cs, *Test.cs, **/Test/*.cs |
+| PHP | *Test.php, tests/*.php |
+| Ruby | *_test.rb, spec/*_spec.rb |
+
+### 4. 质量热点分析
+**目标**：识别潜在的代码质量问题
+
+**分析内容**：
+- 过长文件（>500 行）
+- 高复杂度文件
+- 过多导出/公共成员
+- 重复代码
+
+**多语言代码复杂度分析**：
+| 语言 | 复杂度工具 |
+|------|------------|
+| JavaScript/TypeScript | ESLint (complexity rule), eslint-plugin-complexity |
+| Python | pylint, radon, mccabe |
+| Java | PMD, SonarQube |
+| Go | gocyclo, golangci-lint |
+| Rust | clippy |
+| C# | SonarQube, StyleCop |
+| PHP | PHPMD, phpcodesniffer |
+
+### 5. 依赖分析
+**目标**：理解项目依赖关系
+
+**分析内容**：
+- 核心依赖
+- 传递依赖
+- 依赖版本
+- 潜在冲突
 
 ## CLI Runtime
+
 ```bash
-stdd explore auth --json
-stdd explore src --output stdd/explorations/auth.md
+# 探索整个项目
+stdd explore
+
+# 探索特定范围
+stdd explore src
+stdd explore auth
+stdd explore "src/**/*.ts"
+
+# 输出到文件
+stdd explore --output stdd/explorations/architecture.md
+
+# JSON 格式输出
+stdd explore --json
+
+# 深度分析
+stdd explore --deep
+
+# Workspace 支持
+stdd explore --workspace packages/api
 ```
-支持 CLI 与 `/stdd:explore` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 探索报告格式
+
+### Markdown 格式
+```markdown
+# STDD Project Exploration Report
+
+## Architecture Summary
+- **Language:** TypeScript
+- **Framework:** Express.js
+- **Test Runner:** Jest
+- **Test Command:** npm test
+
+### Entry Files
+- `src/index.js`
+- `src/cli.js`
+
+### Core Dependencies
+- express
+- lodash
+- axios
+
+## Quality Hotspots
+
+### Untested Files
+- `src/utils/logger.js`
+- `src/middleware/auth.js`
+
+### Long Files (>500 lines)
+- `src/controllers/user.js` (650 lines)
+
+### Files with Many Exports (>10)
+- `src/services/api.js` (15 exports)
+
+## Suggestions
+- 建议优先为 src/utils/logger.js 编写测试
+- 建议重构 src/controllers/user.js (650 行)
+- 建议拆分 src/services/api.js (导出了 15 个模块)
+```
+
+### JSON 格式
+```json
+{
+  "techStack": {
+    "language": "TypeScript",
+    "framework": "Express.js",
+    "testRunner": "Jest",
+    "testCommand": "npm test"
+  },
+  "entryFiles": ["src/index.js"],
+  "coreDependencies": ["express", "lodash"],
+  "untestedFiles": ["src/utils/logger.js"],
+  "longFiles": [{"file": "src/controllers/user.js", "lineCount": 650}],
+  "highExportFiles": [{"file": "src/services/api.js", "exportCount": 15}],
+  "suggestions": [
+    {
+      "type": "untested",
+      "message": "建议优先为 src/utils/logger.js 编写测试",
+      "priority": "high"
+    }
+  ]
+}
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.explore，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-change；resumable=true；parallelizable=true。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 无依赖，为其他 skill 提供项目上下文。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Suggestion 条例 8 (Performance)**: 探索报告包含性能相关建议
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- exploration report
-- constraints/options
+- 探索报告可选写入 `stdd/changes/<change-id>/evidence/explore-*.json`
+- 支持输出到自定义路径
 
 ## Related Skills
-- 无
+- **stdd.init** - 初始化项目
+- **stdd.context** - 上下文管理
+- **stdd.memory** - 项目记忆
+- **stdd.learn** - 从代码学习
+
+## 参考资源
+
+### 代码分析工具
+- [SonarQube](https://www.sonarqube.org/) - 多语言代码质量平台
+- [CodeQL](https://codeql.github.com/) - 代码查询和安全分析
+- [Understand](https://scitools.com/) - 商业代码分析工具
+
+### 架构分析
+- [C4 Model](https://c4model.com/) - 架构图模型
+- [Structure101](https://structure101.com/) - 架构分析工具
+
+### 测试覆盖
+- [Coverage.py](https://coverage.readthedocs.io/) - Python 覆盖率
+- [Istanbul/NYC](https://istanbul.js.org/) - JavaScript 覆盖率
+- [JaCoCo](https://www.jacoco.org/) - Java 覆盖率
+
+## 设计决策
+
+### 为什么是只读操作？
+- **安全**: 不修改任何代码
+- **快速**: 可以随时运行
+- **信任**: 用户可以放心使用
+
+### 为什么需要多语言支持？
+- **通用性**: STDD 应该支持任何编程语言
+- **灵活性**: 适应不同项目的技术栈
+- **可扩展**: 容易添加对新语言的支持
+
+### 为什么分析质量热点？
+- **快速识别问题**: 找出需要改进的地方
+- **优先级排序**: 帮助团队决定下一步工作
+- **持续改进**: 为重构提供数据支持

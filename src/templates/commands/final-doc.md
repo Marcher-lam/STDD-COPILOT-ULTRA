@@ -1,34 +1,60 @@
 ---
-description: Generate final aggregated requirement document
+description: Aggregate change artifacts into final delivery document (language-agnostic)
 ---
 
 # Command: /stdd:final-doc
 
 ## Usage
-```
-/stdd:final-doc                  # Generate document for current active change
-/stdd:final-doc --change=<name>  # Generate document for specified change
+```bash
+stdd final-doc <change-id>                      # Generate final doc
+stdd final-doc <change-id> --output docs/       # Custom output
+stdd final-doc <change-id> --include-diff       # Include code diff
+stdd final-doc <change-id> --include-test-report  # Include test report
+stdd final-doc <change-id> --json               # JSON format
+stdd final-doc <change-id> --workspace packages/api  # Workspace scope
 ```
 
 ## Description
-Aggregates all artifacts from every phase (proposal, specs, design, tasks, implementation) and generates a comprehensive final requirement document.
+Aggregates all artifacts from the entire development cycle (proposal, specs, design, tasks, evidence, metrics) into a comprehensive final requirement document.
 
-## Execution Flow
-1. Read all artifacts from the change directory:
-   - proposal.md
-   - specs/
-   - design.md
-   - tasks.md
-   - apply.log
-2. Aggregate and synthesize information
-3. Generate final requirement document with:
-   - Background and intent
-   - Requirements summary
-   - Design decisions
-   - Implementation details
-   - Test coverage
-   - Quality metrics
-4. Output as `FINAL_REQUIREMENT.md`
+## Document Structure
+
+### FINAL_REQUIREMENT.md
+1. **Overview** - Summary, background, objectives (from proposal.md)
+2. **Requirements** - Functional/non-functional requirements (from specs/)
+3. **Design** - Architecture, data models, API design (from design.md)
+4. **Implementation** - Completed tasks, code changes (from tasks.md, git diff)
+5. **Testing** - Coverage, results, mutation testing (from evidence/)
+6. **Quality** - Code review, Constitution compliance (from evidence/)
+7. **Evidence** - Artifact list, coverage summary
+8. **Deployment** - Notes, migration, rollback plan
+
+## Artifact Coverage
+```markdown
+## Artifact Coverage
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| proposal.md | ✅ | Generated |
+| specs/ | ✅ | 3 spec files |
+| design.md | ✅ | Includes architecture |
+| tasks.md | ✅ | 5 tasks completed |
+| evidence/ | ⚠️ | Partial - missing mutation |
+| mutation report | ❌ | Not run |
+
+### Missing Evidence
+- Mutation testing report not generated
+- Suggested: `stdd mutation <change-id>`
+```
+
+## Referenced Skill
+- `/stdd:final-doc`
 
 ## Output
-- `FINAL_REQUIREMENT.md` - Comprehensive requirement document containing all phase outputs
+- `FINAL_REQUIREMENT.md` - Comprehensive delivery document
+- `artifact-coverage.json` - Coverage summary
+
+## Related Commands
+- `/stdd:verify` - Verification phase
+- `/stdd:archive` - Archive phase
+- `/stdd:product-proposal` - Product proposal generation

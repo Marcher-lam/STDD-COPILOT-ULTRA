@@ -1,8 +1,8 @@
 ---
 id: stdd.new
 command: /stdd:new
-description: 创建变更工作区并启动 Spec-First 需求流
-version: "2.0"
+description: 创建变更工作区并启动 Spec-First 需求流（语言无关）
+version: "3.0"
 category: lifecycle
 phase: discovery
 read_only: false
@@ -39,63 +39,146 @@ graph:
 # STDD Skill: /stdd:new
 
 ## Purpose
-创建变更工作区并启动 Spec-First 需求流。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**创建变更工作区并启动 Spec-First 需求流**。这是 STDD Copilot 的变更创建 skill，初始化新的开发任务。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **Spec-First**：从规格开始
+- **目录隔离**：每个变更独立目录
+- **状态追踪**：.status.yaml 追踪进度
 
 ## When to Use
-- 需要执行 /stdd:new 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 开始新功能开发时
+- 修复 bug 时
+- 重构代码时
+- 任何需要追踪的变更
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## 变更目录结构
 
-## Inputs
-- change-id 或需求描述
-- 项目状态
-- 可选 --title/--description
-
-## Workflow
-- 确认已初始化并解析 change-id；未给出时生成稳定 slug。
-- 创建 stdd/changes/<change-id>/、specs/、evidence/ 与 .status.yaml。
-- 写入 proposal.md 草稿，标注 greenfield 目标或 brownfield 影响范围。
-- 检查重叠变更并推荐 propose 或 clarify。
+```
+stdd/changes/<change-id>/
+├── proposal.md          # 需求提案
+├── .status.yaml         # 状态文件
+├── specs/               # 规格
+│   └── .gitkeep
+├── design.md            # 设计文档（可选）
+├── tasks.md             # 任务列表
+├── evidence/            # 证据目录
+│   └── .gitkeep
+└── apply.log            # 执行日志
+```
 
 ## CLI Runtime
+
 ```bash
-stdd new change <change-id> --title "..."
-stdd ff "需求" --change-name <change-id>
+# 创建新变更
+stdd new <change-id>
+
+# 带标题
+stdd new <change-id> --title "Add user login"
+
+# 带描述
+stdd new <change-id> --description "Implement OAuth2 login"
+
+# 从需求描述生成 ID
+stdd new "Add user authentication"
+
+# 指定 workspace
+stdd new <change-id> --workspace packages/api
+
+# 列出变更
+stdd new --list
+
+# 查看状态
+stdd status <change-id>
 ```
-支持 CLI 与 `/stdd:new` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 状态文件
+
+### .status.yaml
+```yaml
+change_id: add-user-login
+created_at: "2025-05-19T10:30:00Z"
+status: in_progress
+phase: apply
+
+artifacts:
+  proposal: true
+  specs: true
+  design: true
+  tasks: true
+
+tasks:
+  total: 10
+  completed: 6
+  pending: 4
+```
+
+## Proposal 模板
+
+### proposal.md
+```markdown
+# Proposal: <change-id>
+
+## Summary
+<功能摘要>
+
+## Background
+<背景信息>
+
+## Goals
+- <目标 1>
+- <目标 2>
+
+## Non-Goals
+- <不包含的内容>
+
+## Approach
+<实现方法概述>
+
+## Alternatives Considered
+- <替代方案 1>
+- <替代方案 2>
+
+## Risks
+- <风险 1>
+- <风险 2>
+
+## Success Criteria
+- <成功标准 1>
+- <成功标准 2>
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.new，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-change；resumable=true；parallelizable=false。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 依赖 init，下一步是 propose。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- 无直接条例检查
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- stdd/changes/<change-id>/proposal.md
-- stdd/changes/<change-id>/.status.yaml
-- stdd/changes/<change-id>/evidence/
+- 创建记录写入 `stdd/changes/<change-id>/evidence/new-*.json`
 
 ## Related Skills
-- stdd.init
-- stdd.propose
+- **stdd.init** - 初始化项目
+- **stdd.propose** - 生成提案
+- **stdd.ff** - 快速通道
+
+## 参考资源
+
+### 变更管理
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Keep a Changelog](https://keepachangelog.com/)
+
+## 设计决策
+
+### 为什么每个变更独立目录？
+- **隔离**: 变更互不影响
+- **清晰**: 明确的边界
+- **可删除**: 完成后可归档
+
+### 为什么需要状态文件？
+- **追踪**: 了解当前进度
+- **恢复**: 断点续传
+- **报告**: 生成状态报告

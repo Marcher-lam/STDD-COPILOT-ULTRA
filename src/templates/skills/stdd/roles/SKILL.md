@@ -1,8 +1,8 @@
 ---
 id: stdd.roles
 command: /stdd:roles
-description: 启用 12 Agent 角色、Party Mode 和对抗式审查
-version: "2.0"
+description: 启用 12 Agent 角色、Party Mode 和对抗式审查（语言无关）
+version: "3.0"
 category: collaboration
 phase: collaboration
 read_only: true
@@ -39,62 +39,179 @@ graph:
 # STDD Skill: /stdd:roles
 
 ## Purpose
-启用 12 Agent 角色、Party Mode 和对抗式审查。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**启用 12 Agent 角色、Party Mode 和对抗式审查**。这是 STDD Copilot 的协作 skill，提供多角色视角进行代码审查和讨论。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **多角色**：12 种专业角色
+- **Party Mode**：多角色辩论
+- **对抗式**：风险优先审查
 
 ## When to Use
-- 需要执行 /stdd:roles 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要多视角审查时
+- 需要团队讨论时
+- 需要安全审查时
+- 需要质量审查时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## 12 角色
 
-## Inputs
-- role/topic/path
-- 参与角色
-- 输出格式
+### 产品角色
+- **PO (Product Owner)**: 产品负责人视角
+- **BA (Business Analyst)**: 业务分析师视角
 
-## Workflow
-- 列出并切换 po/developer/tester/reviewer/architect/security/devops/ux/ba/techwriter/qalead/dataanalyst。
-- party 生成多角色辩论 brief。
-- adversarial 以风险优先扫描指定路径并输出 findings。
+### 开发角色
+- **Developer**: 开发者视角
+- **Architect**: 架构师视角
+
+### 质量角色
+- **Tester**: 测试工程师视角
+- **QA Lead**: QA 负责人视角
+
+### 专项角色
+- **Security**: 安全专家视角
+- **DevOps**: 运维专家视角
+- **UX**: 用户体验设计师视角
+- **Tech Writer**: 技术文档作者视角
+- **Data Analyst**: 数据分析师视角
 
 ## CLI Runtime
+
 ```bash
+# 列出角色
 stdd roles list
-stdd roles party "topic" --roles po,architect,security,tester
-stdd roles adversarial src --json
+
+# Party Mode（多角色辩论）
+stdd roles party "添加用户登录功能" --roles po,architect,security,tester
+
+# 单角色视角
+stdd roles architect <topic>
+stdd roles security <path>
+
+# 对抗式审查
+stdd roles adversarial src/auth
+stdd roles adversarial <change-id>
+
+# JSON 输出
+stdd roles party <topic> --json
 ```
-支持 CLI 与 `/stdd:roles` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## Party Mode
+
+### 多角色辩论
+```
+主题: 添加用户登录功能
+
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│     PO      │  │  Architect  │  │   Security  │
+│ 产品负责人   │  │   架构师    │  │   安全专家   │
+└─────────────┘  └─────────────┘  └─────────────┘
+       │                │                │
+       └────────────────┼────────────────┘
+                        │
+                   ┌────▼────┐
+                   │  Brief  │
+                   │  总结   │
+                   └─────────┘
+```
+
+### 输出格式
+```markdown
+# Party Brief: <topic>
+
+## Participants
+- PO: 产品负责人观点
+- Architect: 架构师观点
+- Security: 安全专家观点
+
+## Discussion
+### PO 观点
+- 用户价值: ...
+- 优先级: ...
+
+### Architect 观点
+- 技术方案: ...
+- 架构影响: ...
+
+### Security 观点
+- 安全风险: ...
+- 建议措施: ...
+
+## Consensus
+- 达成共识点
+- 待讨论问题
+- 后续行动
+```
+
+## 对抗式审查
+
+### 风险优先扫描
+```bash
+stdd roles adversarial <path>
+```
+
+### 扫描维度
+| 维度 | 检查项 |
+|------|--------|
+| 安全 | SQL 注入、XSS、认证 |
+| 性能 | N+1 查询、内存泄漏 |
+| 可靠性 | 错误处理、边界条件 |
+| 可维护性 | 代码重复、复杂度 |
+| 合规 | 数据保护、隐私 |
+
+### 输出格式
+```json
+{
+  "path": "src/auth",
+  "timestamp": "2025-05-19T10:30:00Z",
+  "findings": [
+    {
+      "severity": "high",
+      "category": "security",
+      "issue": "SQL injection vulnerability",
+      "location": "src/auth/service.ts:45",
+      "recommendation": "Use parameterized queries"
+    }
+  ]
+}
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.roles，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-run；resumable=true；parallelizable=true。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Warning 条例 7 (Security)**: 安全角色应检查安全问题
 
 ## Evidence Contract
-- 默认证据路径：stdd/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- role output
-- party brief
-- adversarial findings
+- Party brief 写入 `stdd/evidence/party-*.md`
+- 审查发现写入 `stdd/evidence/adversarial-*.json`
 
 ## Related Skills
-- 无
+- **stdd.guard** - 质量门禁
+- **stdd.verify** - 综合验证
+
+## 参考资源
+
+### 角色定义
+- [Scrum Roles](https://www.scrum.org/resources/scrum-guide)
+- [Role-Based Access Control](https://en.wikipedia.org/wiki/Role-based_access_control)
+
+### 代码审查
+- [Google Code Review](https://google.github.io/eng-practices/review/)
+
+## 设计决策
+
+### Why 12 角色？
+- **全面**: 覆盖项目各维度
+- **专业**: 每个角色专业视角
+- **灵活**: 选择需要的角色
+
+### Why Party Mode？
+- **辩论**: 多视角碰撞
+- **共识**: 寻找共同点
+- **高效**: 一次性收集多方意见
+
+### Why 对抗式？
+- **风险**: 优先发现风险
+- **质量**: 提高代码质量
+- **学习**: 团队学习机会

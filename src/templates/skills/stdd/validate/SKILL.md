@@ -1,8 +1,8 @@
 ---
 id: stdd.validate
 command: /stdd:validate
-description: 验证规格一致性并运行 Spec Guardian 泄漏检测
-version: "2.0"
+description: 验证规格一致性并运行 Spec Guardian 泄漏检测（语言无关）
+version: "3.0"
 category: spec-first
 phase: verification
 read_only: true
@@ -39,64 +39,206 @@ graph:
 # STDD Skill: /stdd:validate
 
 ## Purpose
-验证规格一致性并运行 Spec Guardian 泄漏检测。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**验证规格一致性并运行 Spec Guardian 泄漏检测**。这是 STDD Copilot 的验证 skill，确保规格质量和一致性。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **规格优先**：验证规格质量
+- **泄漏检测**：阻止实现细节泄漏
+- **可修复**：自动修复简单问题
 
 ## When to Use
-- 需要执行 /stdd:validate 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
-
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
-
-## Inputs
-- specs/
-- proposal.md
-- 可选 --fix
-
-## Workflow
-- 检查 BDD 格式、RFC 2119、覆盖率、冲突和缺失场景。
-- 运行 Spec Guardian，阻止实现细节泄漏到需求规格。
-- --fix 只改安全的格式和建议文件，不替代需求判断。
-- 写入 line-level diagnostics 与 evidence。
+- 规格编写完成后
+- 需要验证规格质量时
+- 需要检测泄漏时
+- 需要确保一致性时
 
 ## CLI Runtime
+
 ```bash
+# 验证规格
+stdd validate <change-id>
+
+# 运行 Spec Guardian
 stdd validate <change-id> --spec-guardian
-stdd validate <change-id> --spec-guardian --fix
+
+# 自动修复
+stdd validate <change-id> --fix
+
+# JSON 输出
 stdd validate <change-id> --json
+
+# Workspace 支持
+stdd validate <change-id> --workspace packages/api
 ```
-支持 CLI 与 `/stdd:validate` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 验证维度
+
+### BDD 格式验证
+| 检查项 | 描述 | 严重性 |
+|--------|------|--------|
+| Feature 语法 | Feature 关键字存在 | error |
+| Scenario 语法 | Scenario 关键字存在 | error |
+| Given/When/Then | 步骤格式正确 | error |
+| 缩进 | Gherkin 缩进正确 | warning |
+
+### RFC 2119 验证
+| 检查项 | 描述 | 严重性 |
+|--------|------|--------|
+| MUST | "MUST" 使用正确 | error |
+| MUST NOT | "MUST NOT" 使用正确 | error |
+| SHOULD | "SHOULD" 使用正确 | warning |
+| MAY | "MAY" 使用正确 | info |
+
+### 覆盖率验证
+| 检查项 | 描述 | 阈值 |
+|--------|------|------|
+| 场景覆盖 | 所有功能有场景 | 100% |
+| 步骤覆盖 | 所有步骤有定义 | 100% |
+| 边界覆盖 | 边界情况覆盖 | ≥80% |
+
+### 冲突检测
+| 检查项 | 描述 |
+|--------|------|
+| 场景冲突 | 场景名称冲突 |
+| 步骤冲突 | 步骤定义冲突 |
+| 期望冲突 | 冲突的期望结果 |
+
+## Spec Guardian
+
+### 泄漏检测
+Spec Guardian 检测实现细节泄漏到需求规格：
+
+#### 检测模式
+```yaml
+# 实现细节关键词
+implementation_keywords:
+  - function
+  - class
+  - method
+  - variable
+  - const
+  - let
+  - var
+  - import
+  - require
+  - export
+  - database
+  - table
+  - column
+  - api
+  - endpoint
+  - route
+
+# 数据结构关键词
+structure_keywords:
+  - array
+  - object
+  - map
+  - list
+  - dict
+  - struct
+  - interface
+```
+
+#### 检测示例
+```gherkin
+# ❌ 错误：包含实现细节
+Scenario: 用户登录
+  Given 用户在 login.html 页面
+  When 调用 POST /api/login 接口
+  Then 查询 users 表返回 user_id
+
+# ✅ 正确：用户视角
+Scenario: 用户登录
+  Given 用户在登录页面
+  When 用户输入有效的用户名和密码
+  Then 用户成功登录并跳转到首页
+```
+
+### 修复建议
+```json
+{
+  "file": "login.feature",
+  "line": 10,
+  "severity": "error",
+  "message": "检测到实现细节泄漏",
+  "found": "调用 POST /api/login 接口",
+  "suggestion": "用户输入有效的用户名和密码"
+}
+```
+
+## 多语言 BDD 验证
+
+### JavaScript/TypeScript (Cucumber)
+```bash
+# 验证 Cucumber 格式
+stdd validate <change-id> --framework cucumber
+```
+
+### Python (behave)
+```bash
+# 验证 behave 格式
+stdd validate <change-id> --framework behave
+```
+
+### Java (Cucumber-JVM)
+```bash
+# 验证 Cucumber-JVM 格式
+stdd validate <change-id> --framework cucumber-jvm
+```
+
+### Go (godog)
+```bash
+# 验证 godog 格式
+stdd validate <change-id> --framework godog
+```
+
+### Rust (cucumber-rust)
+```bash
+# 验证 cucumber-rust 格式
+stdd validate <change-id> --framework cucumber-rust
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.validate，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-change；resumable=true；parallelizable=true。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 依赖 spec，下一步是 plan。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Blocking 条例 2 (Test First)**: 规格必须先于实现
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- validation report
-- Spec Guardian diagnostics
-- fix suggestions
+- 验证报告写入 `stdd/changes/<change-id>/evidence/validate-*.json`
+- Spec Guardian 诊断写入 `stdd/changes/<change-id>/evidence/spec-guardian-*.json`
 
 ## Related Skills
-- stdd.plan
-- stdd.spec
+- **stdd.spec** - 输入规格
+- **stdd.plan** - 生成计划
+- **stdd.guard** - 质量门禁
+
+## 参考资源
+
+### BDD 规范
+- [Gherkin Syntax](https://cucumber.io/docs/gherkin/)
+- [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)
+
+### 验证工具
+| 语言 | 验证工具 |
+|------|----------|
+| 通用 | Cucumber lint, Gherkin lint |
+| JavaScript/TypeScript | @cucumber/lint |
+| Python | behave --dry-run |
+| Java | Cucumber-JVM --dry-run |
+
+## 设计决策
+
+### Why Spec Guardian？
+- **质量**: 确保规格质量
+- **纯度**: 阻止实现泄漏
+- **可读**: 保持用户可读
+
+### Why 多维度验证？
+- **全面**: 覆盖各方面
+- **严格**: 发现所有问题
+- **可信**: 确保规格可信

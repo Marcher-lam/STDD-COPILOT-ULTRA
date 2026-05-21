@@ -1,8 +1,8 @@
 ---
 id: stdd.issue
 command: /stdd:issue
-description: 用失败测试先行的 TDD 流程处理 bug 或回归
-version: "2.0"
+description: 用失败测试先行的 TDD 流程处理 bug 或回归（语言无关）
+version: "3.0"
 category: lifecycle
 phase: discovery
 read_only: false
@@ -40,65 +40,240 @@ graph:
 # STDD Skill: /stdd:issue
 
 ## Purpose
-用失败测试先行的 TDD 流程处理 bug 或回归。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**用失败测试先行的 TDD 流程处理 bug 或回归**。这是 STDD Copilot 的 bug 修复 skill，确保 bug 修复符合 TDD 原则。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **测试先行**：先写失败测试复现 bug
+- **最小修复**：只修复必要代码
+- **防回归**：保留测试防止再次发生
 
 ## When to Use
-- 需要执行 /stdd:issue 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要修复 bug 时
+- 需要处理回归时
+- 需要复现问题时
+- 需要验证修复时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## Bug 修复 TDD 流程
 
-## Inputs
-- bug 描述
-- 复现步骤
-- severity
-- workspace
+### 1. 复现阶段（RED）
+```
+┌─────────────┐
+│  报告 Bug   │ 用户报告问题
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  编写测试   │ 编写能复现问题的测试
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  确认失败   │ 测试确实失败
+└─────────────┘
+```
 
-## Workflow
-- 收集复现步骤、期望/实际行为、严重级别和影响范围。
-- 创建 bugfix change，并先写能复现问题的失败测试任务。
-- 通过 apply 执行最小修复，再跑回归与 mutation。
-- 将根因、修复与防回归证据写入 evidence。
+### 2. 修复阶段（GREEN）
+```
+┌─────────────┐
+│  最小修复   │ 编写最少代码
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  测试通过   │ 测试变绿
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  回归测试   │ 运行所有测试
+└─────────────┘
+```
+
+### 3. 验证阶段（REFACTOR）
+```
+┌─────────────┐
+│  优化代码   │ 如果需要
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  提交修复   │ 包含测试
+└─────────────┘
+```
 
 ## CLI Runtime
+
 ```bash
-stdd issue "bug 描述" --severity high --title "..."
-stdd issue "bug 描述" --workspace packages/api
+# 创建 bug 修复
+stdd issue "用户登录失败" --severity high
+
+# 指定标题
+stdd issue "Bug description" --title "fix-login-failure"
+
+# 指定严重级别
+stdd issue "..." --severity critical
+stdd issue "..." --severity high
+stdd issue "..." --severity medium
+stdd issue "..." --severity low
+
+# 提供复现步骤
+stdd issue "..." --steps "1. Go to /login\n2. Enter invalid creds\n3. Click submit"
+
+# 指定 workspace
+stdd issue "..." --workspace packages/api
+
+# 包含日志/截图
+stdd issue "..." --attach error.log
+stdd issue "..." --attach screenshot.png
 ```
-支持 CLI 与 `/stdd:issue` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## Bug 报告模板
+
+### 生成的 issue.md
+```markdown
+# Bug: <title>
+
+## Description
+<bug description>
+
+## Severity
+<severity level>
+
+## Reproduction Steps
+1. <step 1>
+2. <step 2>
+3. <step 3>
+
+## Expected Behavior
+<what should happen>
+
+## Actual Behavior
+<what actually happens>
+
+## Environment
+- Language: <detected language>
+- Framework: <detected framework>
+- Version: <version info>
+
+## Attachments
+- <error log>
+- <screenshots>
+```
+
+## 测试先行修复
+
+### 多语言测试示例
+
+#### JavaScript/TypeScript
+```javascript
+// 先写失败的测试
+describe('Bug: Login with special characters', () => {
+  it('should handle email with + sign', async () => {
+    const response = await request(app)
+      .post('/auth/login')
+      .send({ email: 'user+tag@example.com', password: 'password123' });
+
+    // 这个测试会失败，因为当前代码不支持 + 号
+    expect(response.status).toBe(200);
+    expect(response.body.token).toBeDefined();
+  });
+});
+```
+
+#### Python
+```python
+# 先写失败的测试
+def test_login_with_special_characters():
+    """Bug: Login fails with email containing + sign"""
+    response = client.post('/auth/login', json={
+        'email': 'user+tag@example.com',
+        'password': 'password123'
+    })
+
+    # 这个测试会失败
+    assert response.status_code == 200
+    assert 'token' in response.json()
+```
+
+#### Java
+```java
+// 先写失败的测试
+@Test
+@DisplayName("Bug: Login should handle email with + sign")
+void loginWithEmailWithPlusSign() {
+    LoginRequest request = new LoginRequest();
+    request.setEmail("user+tag@example.com");
+    request.setPassword("password123");
+
+    ResponseEntity<LoginResponse> response = authService.login(request);
+
+    // 这个测试会失败
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody().getToken()).isNotEmpty();
+}
+```
+
+## 回归证据
+
+### 证据收集
+1. **失败截图**: 测试失败时的截图
+2. **错误日志**: 完整的错误堆栈
+3. **复现步骤**: 明确的步骤说明
+4. **修复记录**: 修复前后对比
+5. **回归测试**: 确保不再发生
+
+### 证据文件结构
+```
+stdd/changes/bugfix-<issue-id>/evidence/
+├── bug-report.md           # 原始 bug 报告
+├── reproduction-test.md    # 复现测试
+├── failure-evidence.json   # 失败证据
+├── fix-record.md           # 修复记录
+└── regression-test.md      # 回归测试
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.issue，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-change；resumable=true；parallelizable=false。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 依赖 init，直接进入 apply。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Blocking 条例 2 (TDD)**: 必须先写测试
+- **Blocking 条例 7 (Security)**: 安全相关的 bug 优先
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- bugfix change
-- 失败测试任务
-- 回归证据
+- Bug 报告写入 `stdd/changes/bugfix-<issue-id>/issue.md`
+- 证据写入 `stdd/changes/bugfix-<issue-id>/evidence/`
 
 ## Related Skills
-- stdd.apply
-- stdd.fix-packet
-- stdd.init
+- **stdd.apply** - 执行修复
+- **stdd.fix-packet** - 失败修复包
+- **stdd.init** - 初始化项目
+
+## 参考资源
+
+### Bug 追踪
+- [Bug Tracking Best Practices](https://www.atlassian.com/agile/project-management/bug-tracking)
+- [Writing Good Bug Reports](https://bugzilla.mozilla.org/page.cgi?id=bug-writing.html)
+
+### TDD Bug 修复
+- [TDD for Bug Fixing](https://martinfowler.com/bliki/TestDrivenDevelopment.html)
+- [Regression Testing](https://en.wikipedia.org/wiki/Regression_testing)
+
+## 设计决策
+
+### 为什么测试先行修复 bug？
+- **确认复现**: 测试证明 bug 存在
+- **明确边界**: 测试定义修复目标
+- **防回归**: 测试防止再次发生
+
+### 为什么需要复现步骤？
+- **可验证**: 清晰的复现路径
+- **高效**: 快速定位问题
+- **文档**: 帮助团队理解
+
+### 为什么收集证据？
+- **追溯**: 了解问题原因
+- **学习**: 防止类似问题
+- **审计**: 修复记录完整

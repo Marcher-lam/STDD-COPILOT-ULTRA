@@ -1,8 +1,8 @@
 ---
 id: stdd.metrics
 command: /stdd:metrics
-description: 汇总项目、变更和 workspace 质量指标
-version: "2.0"
+description: 汇总项目、变更和 workspace 质量指标（语言无关）
+version: "3.0"
 category: evidence
 phase: verification
 read_only: true
@@ -39,61 +39,174 @@ graph:
 # STDD Skill: /stdd:metrics
 
 ## Purpose
-汇总项目、变更和 workspace 质量指标。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**汇总项目、变更和 workspace 质量指标**。这是 STDD Copilot 的指标 skill，聚合和展示项目质量数据。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **多维指标**：覆盖代码、测试、质量
+- **趋势分析**：追踪变化趋势
+- **可导出**：支持 JSON 集成
 
 ## When to Use
-- 需要执行 /stdd:metrics 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要查看项目质量时
+- 需要生成报告时
+- 需要追踪进度时
+- 需要识别热点时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## 指标类别
 
-## Inputs
-- change-id
-- workspace
-- evidence
-- 源码/测试
+### 1. 测试指标
+| 指标 | 说明 | 目标 |
+|------|------|------|
+| 测试文件比例 | test/src 文件比 | ≥ 0.8 |
+| 语句覆盖率 | 代码覆盖百分比 | ≥ 80% |
+| 分支覆盖率 | 条件分支覆盖 | ≥ 75% |
+| 函数覆盖率 | 函数覆盖百分比 | ≥ 80% |
+| Mutation 分数 | 突变测试分数 | ≥ 70% |
 
-## Workflow
-- 扫描源码、测试、变更、evidence 和 workspace registry。
-- 汇总测试比例、lint/type 状态、mutation、复杂度、Constitution 健康度。
-- 支持 --json 给 CI 或 dashboard。
+### 2. 代码指标
+| 指标 | 说明 | 阈值 |
+|------|------|------|
+| 文件数 | 源文件总数 | - |
+| 总行数 | 代码总行数 | - |
+| 平均文件长度 | 每文件平均行数 | < 500 |
+| 最大文件长度 | 最长文件行数 | < 1000 |
+| 圈复杂度 | 平均复杂度 | < 10 |
+
+### 3. 质量指标
+| 指标 | 说明 | 状态 |
+|------|------|------|
+| Linter 状态 | 代码检查 | ✅/❌ |
+| 类型检查 | 类型验证 | ✅/❌ |
+| Constitution | 合规状态 | Pass/Fail |
+| 技术债务 | 待处理项 | 数量 |
+
+### 4. 变更指标
+| 指标 | 说明 |
+|------|------|
+| 活跃变更 | 进行中的变更 |
+| 完成任务 | 已完成任务数 |
+| 待处理任务 | 待处理任务数 |
+| 平均周期 | 平均完成时间 |
 
 ## CLI Runtime
+
 ```bash
+# 查看变更指标
+stdd metrics <change-id>
+
+# 查看项目指标
+stdd metrics --project
+
+# JSON 输出
 stdd metrics <change-id> --json
+
+# 指定 workspace
 stdd metrics --workspace packages/api
+
+# 趋势报告
+stdd metrics <change-id> --trend
+
+# 导出报告
+stdd metrics <change-id> --output report.json
 ```
-支持 CLI 与 `/stdd:metrics` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 报告格式
+
+### 终端输出
+```
+📊 STDD Metrics Report
+
+Change: add-user-login
+Date: 2025-05-19
+
+Test Metrics:
+  ✅ Test/Source Ratio: 1.2 (target: 0.8)
+  ✅ Statement Coverage: 87.5% (target: 80%)
+  ✅ Branch Coverage: 78.3% (target: 75%)
+  ⚠️  Mutation Score: 68.2% (target: 70%)
+
+Code Metrics:
+  Files: 42
+  Total Lines: 8,432
+  Avg File Length: 201
+  Max File Length: 450 (auth/service.ts)
+  Cyclomatic Complexity: 6.2 (avg)
+
+Quality Metrics:
+  ✅ Linter: Pass
+  ✅ Type Check: Pass
+  ⚠️  Constitution: 1 warning
+  Technical Debt: 3 items
+
+Change Progress:
+  Tasks: 8/10 completed
+  Progress: 80%
+```
+
+### JSON 输出
+```json
+{
+  "changeId": "add-user-login",
+  "timestamp": "2025-05-19T10:30:00Z",
+  "metrics": {
+    "test": {
+      "testSourceRatio": 1.2,
+      "statementCoverage": 87.5,
+      "branchCoverage": 78.3,
+      "mutationScore": 68.2
+    },
+    "code": {
+      "files": 42,
+      "totalLines": 8432,
+      "avgFileLength": 201,
+      "maxFileLength": 450,
+      "cyclomaticComplexity": 6.2
+    },
+    "quality": {
+      "linter": "pass",
+      "typeCheck": "pass",
+      "constitution": "warning",
+      "technicalDebt": 3
+    }
+  }
+}
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.metrics，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-run；resumable=true；parallelizable=true。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Warning 条例 1 (Library-First)**: 检查是否有重复造轮子
+- **Warning 条例 4 (Code Style)**: 检查代码风格
+- **Warning 条例 6 (Error Handling)**: 检查错误处理
 
 ## Evidence Contract
-- 默认证据路径：stdd/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- metrics dashboard
-- JSON report
+- 指标报告写入 `stdd/evidence/metrics-*.json`
 
 ## Related Skills
-- stdd.init
+- **stdd.init** - 初始化
+- **stdd.verify** - 验证阶段
+
+## 参考资源
+
+### 代码指标
+- [Cyclomatic Complexity](https://en.wikipedia.org/wiki/Cyclomatic_complexity)
+- [Code Coverage](https://en.wikipedia.org/wiki/Code_coverage)
+
+### 质量门禁
+- [SonarQube Metrics](https://www.sonarqube.org/)
+- [Code Climate](https://codeclimate.com/)
+
+## 设计决策
+
+### 为什么多维度指标？
+- **全面**: 不只看单一指标
+- **平衡**: 平衡不同质量维度
+- **实用**: 可操作的指标
+
+### 为什么趋势分析？
+- **追踪**: 看到质量变化
+- **预警**: 及时发现问题
+- **验证**: 验证改进效果

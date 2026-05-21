@@ -1,53 +1,104 @@
 ---
-description: Generate a Golden Packet fix context for test failures
+description: Generate Golden Packet fix context for failed tasks (language-agnostic)
 ---
 
-# Fix Packet
+# Command: /stdd:fix-packet
 
-You are running the STDD Copilot Fix Packet command to generate a focused fix context for test failures.
-
-## Context
-
-- **Current Working Directory**: {{cwd}}
-- **Change Name**: {{changeName}}
-- **Options**: {{options}}
-
-## Task
-
-Generate a "Golden Packet" fix context that includes:
-
-1. **Specs and Requirements**: Read the change specs, proposals, design docs, and tasks
-2. **Test Output**: Include the failing test output if provided
-3. **Evidence Files**: Include recent evidence from mutation testing, coverage reports, and test results
-4. **Runtime Artifacts**: List screenshots, traces, and other artifacts for debugging
-
-## Instructions
-
-After generating the fix packet:
-
-1. Read the specs and task first; they are the contract.
-2. Fix application code, not test expectations, unless the spec is explicitly wrong.
-3. Use evidence and runtime artifacts to locate the failure before editing.
-4. Prefer the smallest code change that makes the failing test pass.
-5. Run the listed test command again and record the result.
-
-## CLI Command
-
+## Usage
 ```bash
-stdd fix-packet <change-name> [options]
+stdd fix-packet <change-id>                      # Generate fix packet
+stdd fix-packet <change-id> --task TASK-001      # Specific task
+stdd fix-packet <change-id> --json-only          # JSON only
+stdd fix-packet <change-id> --full-source        # Include full source
+stdd fix-packet <change-id> --output path/       # Custom output
+stdd fix-packet <change-id> --workspace packages/api  # Workspace scope
 ```
 
-Options:
-- `--task <name>`: Specific task to fix
-- `--test-command <cmd>`: Test command that failed
-- `--test-output <path>`: Path to test output file
-- `--evidence-limit <n>`: Max evidence files (default: 8)
-- `--artifact-limit <n>`: Max runtime artifacts (default: 12)
-- `--json`: Output JSON instead of markdown
-- `--silent`: Suppress output
+## Description
+Generate a "Golden Packet" containing all diagnostic information needed to fix a failed task. Includes spec, design, source code, test output, and suggestions.
+
+## Golden Packet Format
+
+### Markdown Format (fix-packet-*.md)
+```markdown
+# Fix Packet: <change-id> - <timestamp>
+
+## Failure Summary
+- Task: TASK-001
+- Stage: GREEN
+- Failures: 3
+
+## Context
+- Spec excerpt
+- Design excerpt
+- Task description
+
+## Failure Details
+- Test output
+- Error message
+- Stack trace
+
+## Related Code
+- Source snippet
+- Test snippet
+
+## Diagnostics
+- Possible causes
+- Fix suggestions
+
+## History
+- Attempt log
+- Next actions
+```
+
+### JSON Format (fix-packet-*.json)
+```json
+{
+  "packetId": "fix-packet-20250519-103000",
+  "changeId": "add-user-login",
+  "task": { "id": "TASK-001", "phase": "GREEN" },
+  "failure": {
+    "summary": "...",
+    "testOutput": "...",
+    "errorMessage": "...",
+    "stackTrace": "..."
+  },
+  "context": { "spec": "...", "design": "..." },
+  "code": { "sourceSnippet": "...", "testSnippet": "..." },
+  "diagnostics": {
+    "possibleCauses": ["..."],
+    "suggestions": ["..."]
+  }
+}
+```
+
+## Auto-Collected Information
+1. Failed task info (from tasks.md)
+2. Test output (from apply.log or fresh run)
+3. Spec excerpts (from specs/)
+4. Design excerpts (from design.md)
+5. Source code snippets
+6. Error messages and stack traces
+7. Failure history
+
+## Error Formats by Language
+| Language | Error Format | Stack Trace |
+|----------|--------------|-------------|
+| JavaScript/TypeScript | Error: message | at Function (file:line) |
+| Python | Exception: message | Traceback (most recent call last) |
+| Java | Exception: message | at Class.method(file:line) |
+| Go | error message | goroutine, file:line |
+| Rust | error message | backtrace |
+| C# | Exception: message | at Class.Method() |
+
+## Referenced Skill
+- `/stdd:fix-packet`
 
 ## Output
+- `stdd/changes/<change-id>/evidence/fix-packet-*.md`
+- `stdd/changes/<change-id>/evidence/fix-packet-*.json`
 
-The fix packet will be written to:
-- `stdd/changes/<change-name>/evidence/fix-packet-<timestamp>.md`
-- `stdd/changes/<change-name>/evidence/fix-packet-<timestamp>.json`
+## Related Commands
+- `/stdd:apply` - Failure source
+- `/stdd:verify` - Verify fix
+- `/stdd:guard` - Real-time quality gates

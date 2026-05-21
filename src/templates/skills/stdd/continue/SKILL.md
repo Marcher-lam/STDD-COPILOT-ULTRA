@@ -1,8 +1,8 @@
 ---
 id: stdd.continue
 command: /stdd:continue
-description: 根据状态机恢复并推进下一个 STDD 产物
-version: "2.0"
+description: 根据状态机恢复并推进下一个 STDD 产物（语言无关）
+version: "3.0"
 category: lifecycle
 phase: all
 read_only: false
@@ -12,8 +12,8 @@ supports:
   brownfield: true
   monorepo: true
 depends_on: [stdd.init]
-next: [stdd.apply, stdd.verify]
-on_failure: []
+next: [stdd.apply, stdd.verify, stdd.archive]
+on_failure: [stdd.fix-packet]
 inputs:
   - change-id
   - status/progress
@@ -39,65 +39,179 @@ graph:
 # STDD Skill: /stdd:continue
 
 ## Purpose
-根据状态机恢复并推进下一个 STDD 产物。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**根据状态机恢复并推进下一个 STDD 产物**。这是 STDD Copilot 的会话恢复 skill，智能检测项目状态并继续工作。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言和项目
+- **状态感知**：自动检测当前进度
+- **智能恢复**：从上次中断处继续
+- **灵活控制**：支持 override 和 force 标志
 
 ## When to Use
-- 需要执行 /stdd:continue 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要恢复中断的工作时
+- 需要推进到下一个阶段时
+- 需要查看当前进度时
+- 需要跳过某个阶段时（使用 --force）
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## STDD 状态机
 
-## Inputs
-- change-id
-- status/progress
-- 可选 override flags
-
-## Workflow
-- 读取 .status.yaml、progress.jsonl 与缺失产物。
-- 按 proposal→specs→design→tasks→apply→verify 的状态机推进。
-- 遇到 confirm/archive HITL 或三次失败熔断时暂停。
-- 输出下一步推荐并支持 --force 覆盖。
+```
+┌─────────────┐
+│   propose   │ ← 提案阶段
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   clarify   │ ← 澄清阶段
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   confirm   │ ← 确认门（HITL）
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│    spec     │ ← 规格阶段
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│    plan     │ ← 计划阶段
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   apply     │ ← 实现阶段（TDD 循环）
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   verify    │ ← 验证阶段
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   archive   │ ← 归档阶段
+└─────────────┘
+```
 
 ## CLI Runtime
+
 ```bash
+# 自动检测并继续
+stdd continue
+
+# 继续指定变更
 stdd continue <change-id>
-stdd continue <change-id> --force --test-command "npm test"
-stdd progress --resume
+
+# 强制跳过当前阶段
+stdd continue --force
+
+# 覆盖测试命令
+stdd continue --test-command "pytest"
+
+# 查看进度（不执行）
+stdd continue --dry-run
+
+# 指定工作空间
+stdd continue --workspace packages/api
 ```
-支持 CLI 与 `/stdd:continue` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 状态检测
+
+### 自动检测逻辑
+1. **查找活跃变更**: 搜索有未完成任务或最近活动的变更
+2. **读取状态文件**: 解析 .status.yaml、progress.jsonl、apply.log
+3. **确定当前阶段**: 根据产物存在情况判断
+4. **推荐下一步**: 输出下一个命令或产物
+
+### 优先级规则
+| 优先级 | 检测条件 | 说明 |
+|--------|----------|------|
+| 1 | apply.log 存在且有失败记录 | 继续失败的 apply |
+| 2 | tasks.md 有未完成任务 | 继续 apply |
+| 3 | proposal.md 存在但未 confirm | 进入 confirm |
+| 4 | specs/ 存在但无 tasks.md | 进入 plan |
+| 5 | 无任何产物 | 建议运行 new/propose |
+
+## TDD 循环恢复
+
+### Apply 阶段恢复
+```bash
+# 检测 TDD 阶段
+stdd continue
+
+# 输出示例：
+# 📌 Continuing change: add-user-login
+# 🔵 Current phase: GREEN
+# 📝 Task: TASK-001 Implement login endpoint
+# 💡 Next: stdd apply add-user-login --phase green
+```
+
+### 任务状态恢复
+- **[ ]** 未开始 → 继续执行
+- **[~]** 进行中 → 从中断处恢复
+- **[x]** 已完成 → 跳到下一个任务
+
+## 熔断机制
+
+### 三次失败规则
+- 连续 3 次 apply 失败触发熔断
+- 生成 fix-packet
+- 暂停自动继续
+
+### 熔断后恢复
+```bash
+# 查看修复包
+stdd fix-packet <change-id>
+
+# 修复后继续
+stdd continue <change-id>
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.continue，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-phase；resumable=true；parallelizable=false。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 依赖 init，可进入 apply/verify/archive。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- 无直接条例检查
+- 依赖下游阶段（verify、archive）的 gate
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- 下一个产物
-- 状态更新
-- 下一步建议
+- 状态记录写入 `stdd/changes/<change-id>/evidence/continue-*.json`
+- 包含恢复时间、检测到的状态、下一步建议
 
 ## Related Skills
-- stdd.apply
-- stdd.init
-- stdd.verify
+- **stdd.apply** - TDD 实现
+- **stdd.verify** - 综合验证
+- **stdd.progress** - 进度查询
+- **stdd.fix-packet** - 失败修复包
+
+## 参考资源
+
+### 状态机设计
+- [State Machine Pattern](https://refactoring.guru/design-patterns/state)
+- [Workflow Orchestration](https://www.temporal.io/blog/workflow-orchestration)
+
+### 恢复模式
+- [Checkpoint-Restore Pattern](https://en.wikipedia.org/wiki/Checkpoint_(science))
+- [Session Management](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Rebuilding/Updates/Session_restoration)
+
+## 设计决策
+
+### 为什么需要状态机？
+- **可预测性**: 清晰的阶段顺序
+- **可恢复性**: 随时可以中断和恢复
+- **可审计性**: 记录每个阶段的状态
+
+### 为什么自动检测？
+- **便利性**: 用户无需记住当前状态
+- **智能化**: AI 可以根据状态做出决策
+- **错误预防**: 防止跳过必要的阶段
+
+### 为什么需要熔断？
+- **质量控制**: 防止无限重试
+- **人工介入**: 复杂问题需要人工分析
+- **资源保护**: 避免浪费计算资源

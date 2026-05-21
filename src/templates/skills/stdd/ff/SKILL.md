@@ -1,8 +1,8 @@
 ---
 id: stdd.ff
 command: /stdd:ff
-description: Fast-Forward 为明确需求一次性生成核心产物
-version: "2.0"
+description: Fast-Forward 为明确需求一次性生成核心产物（语言无关）
+version: "3.0"
 category: lifecycle
 phase: orchestration
 read_only: false
@@ -40,64 +40,206 @@ graph:
 # STDD Skill: /stdd:ff
 
 ## Purpose
-Fast-Forward 为明确需求一次性生成核心产物。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**Fast-Forward 为明确需求一次性生成核心产物**。这是 STDD Copilot 的快速通道 skill，跳过人工交互步骤，直接生成核心产物。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **快速通道**：跳过 confirm/clarify 门禁
+- **明确需求**：仅适用于边界清晰的小需求
+- **产物完整**：一次生成 proposal、specs、design、tasks
 
 ## When to Use
-- 需要执行 /stdd:ff 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需求边界明确，无需澄清时
+- 小型功能开发，风险可控时
+- 快速原型验证时
+- 紧急 bug 修复时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## Fast-Forward 流程
 
-## Inputs
-- 需求描述
-- 可选 change-name
-- workspace
+```
+┌─────────────┐
+│    输入     │ 需求描述
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  创建变更   │ 创建 change 目录
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  生成提案   │ proposal.md
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  生成规格   │ specs/
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  生成设计   │ design.md
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  生成任务   │ tasks.md
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  停在 apply │ 准备开始实现
+└─────────────┘
+```
 
-## Workflow
-- 只接受边界明确的小需求；不清楚时转 new/clarify。
-- 创建 change 并连续生成 proposal、specs、design、tasks。
-- 在 brownfield 中必须先读取相关代码和测试约束。
-- 完成后停在 apply 前，除非外层 turbo 编排继续。
+## 适用场景
+
+### ✅ 适合 Fast-Forward
+- **明确的 bug 修复**：错误信息清晰，修复路径明确
+- **小型功能**：添加简单字段或端点
+- **配置更新**：修改配置文件或环境变量
+- **文档更新**：更新 README 或注释
+
+### ❌ 不适合 Fast-Forward
+- **需求模糊**：需要澄清的需求
+- **架构变更**：影响多个模块
+- **高风险变更**：需要设计评审
+- **跨团队协作**：需要多方确认
 
 ## CLI Runtime
+
 ```bash
-stdd ff "需求" --change-name <change-id>
-stdd ff "需求" --workspace packages/api
+# Fast-Forward 模式
+stdd ff "添加用户登录功能" --change-name add-user-login
+
+# 使用默认 change-name
+stdd ff "修复登录页面样式问题"
+
+# 指定 workspace
+stdd ff "添加 API 限流" --workspace packages/api
+
+# 包含设计文档
+stdd ff "添加用户注册" --include-design
+
+# 跳过设计文档
+stdd ff "修改错误提示" --skip-design
+
+# 输出到指定目录
+stdd ff "功能描述" --output custom/path
 ```
-支持 CLI 与 `/stdd:ff` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 生成的产物
+
+### 1. proposal.md
+```markdown
+# Proposal: <change-name>
+
+## Summary
+<需求摘要>
+
+## Background
+<背景信息>
+
+## Solution
+<解决方案概述>
+
+## Alternatives Considered
+<替代方案>
+
+## Risks
+<风险分析>
+```
+
+### 2. specs/
+```markdown
+# Spec: <feature-name>
+
+## Requirements
+<需求列表>
+
+## Acceptance Criteria
+<验收标准>
+
+## Edge Cases
+<边界情况>
+```
+
+### 3. design.md（可选）
+```markdown
+# Design: <feature-name>
+
+## Architecture Overview
+<架构概述>
+
+## Data Models
+<数据模型>
+
+## API Design
+<API 设计>
+
+## Test Strategy
+<测试策略>
+```
+
+### 4. tasks.md
+```markdown
+# Tasks: <change-name>
+
+## Phase 1: Foundation
+- [ ] TASK-001: 设置项目结构
+- [ ] TASK-002: 配置测试环境
+
+## Phase 2: Core Features
+- [ ] TASK-003: 实现核心功能
+- [ ] TASK-004: 添加验证逻辑
+
+## Phase 3: Testing
+- [ ] TASK-005: 编写单元测试
+- [ ] TASK-006: 编写集成测试
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.ff，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-phase；resumable=true；parallelizable=false。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 跳过 confirm/clarify，直接生成核心产物。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Blocking 条例 2 (TDD)**: 生成的任务必须包含测试
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- proposal.md
-- specs/
-- design.md
-- tasks.md
+- 所有产物写入 `stdd/changes/<change-id>/`
+- 生成记录写入 `stdd/changes/<change-id>/evidence/ff-*.json`
 
 ## Related Skills
-- stdd.apply
-- stdd.init
+- **stdd.new** - 创建新变更（包含 confirm）
+- **stdd.propose** - 生成提案
+- **stdd.spec** - 生成规格
+- **stdd.plan** - 生成任务
+- **stdd.turbo** - 全流程自动化
+
+## 参考资源
+
+### 快速开发实践
+- [Rapid Application Development](https://en.wikipedia.org/wiki/Rapid_application_development)
+- [Agile Development Practices](https://www.agilealliance.org/agile101/)
+
+### 自动化代码生成
+- [Yeoman](https://yeoman.io/) - Scaffolding tool
+- [Plop](https://plopjs.com/) - Micro-generator framework
+
+## 设计决策
+
+### 为什么需要 Fast-Forward？
+- **效率**: 明确需求无需多轮交互
+- **速度**: 快速生成产物，立即开始实现
+- **灵活性**: 提供快速通道，但不强制使用
+
+### 什么时候不应该使用 Fast-Forward？
+- **需求不明确**: 需要澄清时用 new/clarify
+- **高风险**: 需要设计评审时走完整流程
+- **协作**: 需要团队确认时用 confirm
+
+### 为什么停在 apply 前？
+- **人工审查**: 生成产物需要确认
+- **灵活性**: 允许修改后再实现
+- **安全**: 避免直接修改代码

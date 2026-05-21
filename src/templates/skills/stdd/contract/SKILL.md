@@ -1,8 +1,8 @@
 ---
 id: stdd.contract
 command: /stdd:contract
-description: 生成并验证消费者驱动 API 契约
-version: "2.0"
+description: 消费者驱动契约（CDC）生成与验证（语言无关）
+version: "3.0"
 category: spec-first
 phase: verification
 read_only: false
@@ -15,12 +15,14 @@ depends_on: [stdd.api-spec]
 next: [stdd.verify]
 on_failure: [stdd.fix-packet]
 inputs:
-  - api-spec
+  - api-spec (OpenAPI)
   - 消费者期望
   - provider 响应
+  - consumer/provider 名称
 outputs:
   - pact/contract JSON
   - provider verification report
+  - contract evidence
 evidence:
   required: true
   path: stdd/changes/<change-id>/evidence/
@@ -32,68 +34,212 @@ graph:
   node_id: stdd.contract
   parallelizable: true
   resumable: true
-  checkpoint: per-change
+  checkpoint: per-contract
 ---
 
 # STDD Skill: /stdd:contract
 
 ## Purpose
-生成并验证消费者驱动 API 契约。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**消费者驱动契约（CDC）生成与验证**。这是 STDD Copilot 的契约测试 skill，确保服务间接口一致性。
+
+**核心设计原则：**
+- **语言无关**：Pact 支持多种编程语言
+- **消费者优先**：以消费者期望定义契约
+- **契约驱动**：先定义契约，再实现服务
+- **独立测试**：服务可独立开发和测试
 
 ## When to Use
-- 需要执行 /stdd:contract 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 微服务架构中服务间通信
+- 需要 API 契约测试时
+- 前后端分离开发
+- 需要确保 API 兼容性时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## 消费者驱动契约（CDC）概述
 
-## Inputs
-- api-spec
-- 消费者期望
-- provider 响应
+### 什么是 CDC？
+CDC 是一种测试模式，由**消费者**定义接口期望，**提供者**验证实现是否符合契约。
 
-## Workflow
-- 以消费者期望为中心生成 pact/contract 文件。
-- 验证 provider 响应、状态码、schema 与错误模型。
-- 失败时阻断 verify/archive，提示 api-spec 或 mock 修正。
+### CDC 工作流程
+```
+┌─────────────┐    1. 定义期望    ┌─────────────┐
+│  Consumer   │ ────────────────> │   Pact 文件  │
+│  (前端)      │                  │  (契约)       │
+└─────────────┘                   └─────────────┘
+                                           │
+                                           │ 2. 发布契约
+                                           ▼
+                                    ┌─────────────┐
+                                    │  Pact Broker│
+                                    │ (契约仓库)   │
+                                    └─────────────┘
+                                           │
+                                           │ 3. 验证契约
+                                           ▼
+┌─────────────┐    4. 验证实现    ┌─────────────┐
+│  Provider   │ <──────────────── │   Pact 文件  │
+│  (后端 API)  │                  │  (契约)       │
+└─────────────┘                   └─────────────┘
+```
 
 ## CLI Runtime
+
+### 生成契约
 ```bash
+# 从 api-spec 生成契约
 stdd contract generate <change-id>
-stdd contract verify <change-id>
+
+# 指定 consumer/provider
+stdd contract generate <change-id> --consumer frontend --provider api-service
+
+# 指定 workspace
+stdd contract generate <change-id> --workspace packages/api
+
+# 输出 JSON 格式
+stdd contract generate <change-id> --format json
 ```
-支持 CLI 与 `/stdd:contract` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+### 验证契约
+```bash
+# 验证 provider 实现
+stdd contract verify <change-id>
+
+# 指定 provider URL
+stdd contract verify <change-id> --provider-url http://localhost:3000
+
+# 指定状态
+stdd contract verify <change-id> --state "user exists"
+```
+
+## 契约格式
+
+### Pact JSON 示例
+```json
+{
+  "consumer": "frontend",
+  "provider": "api-service",
+  "interactions": [
+    {
+      "description": "A request for a user",
+      "providerState": "user with ID 1 exists",
+      "request": {
+        "method": "GET",
+        "path": "/api/users/1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": 1,
+          "name": "John Doe",
+          "email": "john@example.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+## 语言支持
+
+### JavaScript/TypeScript
+```bash
+npm install --save-dev @pact-foundation/pact
+```
+
+### Python
+```bash
+pip install pact-python
+```
+
+### Java
+```xml
+<dependency>
+    <groupId>au.com.dius</groupId>
+    <artifactId>pact-jvm-provider_2.12</artifactId>
+    <version>4.0.0</version>
+</dependency>
+```
+
+### Go
+```bash
+go get github.com/pact-foundation/pact-go/v2
+```
+
+### .NET
+```bash
+dotnet add package PactNet
+```
+
+## 验证报告
+
+### 成功示例
+```
+Contract Verification Report
+
+✓ GET /api/users/1 - 200 OK
+  ✓ Status code matches
+  ✓ Content-Type matches
+  ✓ Body schema matches
+
+Summary: 1 interactions, 1 passed, 0 failed
+```
+
+### 失败示例
+```
+Contract Verification Report
+
+✗ GET /api/users/1 - Response mismatch
+  ✗ Status code expected 200, got 404
+  ✗ Body missing field: email
+
+Summary: 1 interactions, 0 passed, 1 failed
+
+Run: stdd fix-packet <change-id>
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.contract，由 frontmatter 暴露给 Skill Graph。
-- checkpoint=per-change；resumable=true；parallelizable=true。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- checkpoint=per-contract；resumable=true；parallelizable=true。
+- 依赖 api-spec，为 verify 提供契约证据。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Blocking 条例 7**: Security - API 契约必须符合安全要求
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- pact/contract JSON
-- provider verification report
+- 契约文件保存到 `stdd/changes/<change-id>/specs/contracts/`
+- 验证报告写入 `stdd/changes/<change-id>/evidence/contract-*.json`
 
 ## Related Skills
-- stdd.api-spec
-- stdd.fix-packet
-- stdd.verify
+- **stdd.api-spec** - 生成 OpenAPI 规范
+- **stdd.mock** - 生成 Mock 服务
+- **stdd.verify** - 综合验证
+
+## 参考资源
+
+### Pact 官方文档
+- [Pact.io](https://pact.io/) - Official website
+- [Pact Documentation](https://docs.pact.io/) - Complete documentation
+- [Pact Broker](https://docs.pact.io/pact_broker/) - Contract repository
+
+### CDC 实践
+- [Consumer-Driven Contracts - Martin Fowler](https://martinfowler.com/articles/consumerDrivenContracts.html)
+- [Contract Testing vs Schema Validation](https://pact.io/blog/2022/06/20/contract-testing-vs-schema-validation.html)
+
+## 设计决策
+
+### 为什么使用 CDC？
+- **解耦开发**: 消费者和提供者可独立开发
+- **快速反馈**: 契约测试比集成测试更快
+- **版本管理**: 清晰追踪 API 变更
+
+### 为什么消费者优先？
+- **需求驱动**: 消费者最清楚需要什么
+- **实用主义**: 只定义实际使用的接口
+- **可测试性**: 消费者可以基于契约编写测试
+
+### 为什么需要 Pact Broker？
+- **契约共享**: 团队间共享契约文件
+- **版本管理**: 追踪契约历史和变更
+- **CI 集成**: 自动化验证流程

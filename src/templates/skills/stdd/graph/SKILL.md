@@ -1,8 +1,8 @@
 ---
 id: stdd.graph
 command: /stdd:graph
-description: Skill Graph 的 DAG 分析、推荐、运行、历史和 replay
-version: "2.0"
+description: Skill Graph 的 DAG 分析、推荐、运行、历史和 replay（语言无关）
+version: "3.0"
 category: orchestration
 phase: orchestration
 read_only: true
@@ -40,66 +40,222 @@ graph:
 # STDD Skill: /stdd:graph
 
 ## Purpose
-Skill Graph 的 DAG 分析、推荐、运行、历史和 replay。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**Skill Graph 的 DAG 分析、推荐、运行、历史和 replay**。这是 STDD Copilot 的编排 skill，管理技能依赖图并智能执行工作流。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **DAG 编排**：基于有向无环图的依赖管理
+- **智能推荐**：根据状态推荐下一步
+- **可追溯**：完整的执行历史记录
 
 ## When to Use
-- 需要执行 /stdd:graph 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要自动化执行多个技能时
+- 需要分析技能依赖关系时
+- 需要查看执行历史时
+- 需要回放执行流程时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## Skill Graph 架构
 
-## Inputs
-- skill metadata
-- status
-- progress
-- intent
+### DAG 结构
+```
+        ┌─────────────┐
+        │    init     │ 初始化
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │  new/propose│ 提案
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │   clarify   │ 澄清
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │   confirm   │ 确认门（HITL）
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │    spec     │ 规格
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │  api-spec   │ API规范
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │   design    │ 设计
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │    plan     │ 计划
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │   apply     │ 实现（TDD循环）
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │   verify    │ 验证
+        └──────┬──────┘
+               │
+        ┌──────▼──────┐
+        │   archive   │ 归档
+        └─────────────┘
+```
 
-## Workflow
-- 读取 skill frontmatter、状态和 progress 历史。
-- analyze/recommend 给出下一步；run 按 DAG 依赖执行。
-- feature intent 包含 outside-in；repair intent 从 fix-packet 开始。
-- history/replay 支持恢复和审计。
+### Intent 驱动执行
+
+#### Feature Intent
+完整功能开发流程，包含 outside-in 分析：
+```
+init → propose → clarify → confirm → spec → api-spec → design → plan → apply → verify → archive
+```
+
+#### Repair Intent
+修复模式，从 fix-packet 开始：
+```
+fix-packet → apply → verify
+```
+
+#### Hotfix Intent
+快速修复通道：
+```
+issue → apply → verify
+```
 
 ## CLI Runtime
+
 ```bash
+# 运行完整流程
 stdd graph run feature --change-name <change-id>
+
+# 修复模式
 stdd graph run --intent repair --change-name <change-id>
-stdd graph history
+
+# 热修复模式
+stdd graph run --intent hotfix --change-name <change-id>
+
+# 分析依赖
+stdd graph analyze
+
+# 推荐下一步
 stdd graph recommend
+
+# 查看历史
+stdd graph history
+
+# 回放执行
+stdd graph replay <session-id>
 ```
-支持 CLI 与 `/stdd:graph` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## Graph 语义
+
+### 节点属性
+每个技能节点包含：
+- `node_id`: 唯一标识符
+- `parallelizable`: 是否可并行执行
+- `resumable`: 是否可恢复
+- `checkpoint`: 检查点粒度
+- `depends_on`: 依赖的技能列表
+- `next`: 下一步技能列表
+
+### 执行规则
+1. **依赖优先**: 先执行 depends_on 中的技能
+2. **门禁检查**: 在 confirm、verify 等 gate 点检查
+3. **并行执行**: parallelizable=true 的技能可并行
+4. **失败处理**: 失败时触发 on_failure 技能
+5. **检查点**: 在 checkpoint 点保存状态
+
+## 推荐系统
+
+### 基于状态的推荐
+```javascript
+if (noChange) {
+  recommend("stdd new 或 stdd ff");
+} else if (noProposal) {
+  recommend("stdd propose");
+} else if (notConfirmed) {
+  recommend("stdd confirm");
+} else if (noSpecs) {
+  recommend("stdd spec");
+} else if (noTasks) {
+  recommend("stdd plan");
+} else if (hasPendingTasks) {
+  recommend("stdd apply");
+} else if (notVerified) {
+  recommend("stdd verify");
+} else {
+  recommend("stdd archive");
+}
+```
+
+## 历史与回放
+
+### 执行历史
+```json
+{
+  "sessionId": "20250519-103000",
+  "changeId": "add-user-login",
+  "intent": "feature",
+  "startTime": "2025-05-19T10:30:00Z",
+  "endTime": "2025-05-19T14:30:00Z",
+  "skills": [
+    { "name": "propose", "status": "completed", "duration": 300 },
+    { "name": "spec", "status": "completed", "duration": 600 },
+    { "name": "apply", "status": "in_progress", "duration": null }
+  ]
+}
+```
+
+### 回放功能
+- 查看完整执行流程
+- 分析时间分布
+- 识别瓶颈
+- 重现执行路径
 
 ## Graph Semantics
 - 节点 ID 为 stdd.graph，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-phase；resumable=true；parallelizable=true。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 尊重 depends_on/next，不越过 gate。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- 无直接条例检查
+- 依赖下游技能的 gate 检查
 
 ## Evidence Contract
-- 默认证据路径：stdd/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- DAG analysis
-- execution logs
-- recommendations
+- 执行历史写入 `stdd/graph/history.jsonl`
+- 分析报告写入 `stdd/evidence/graph-*.json`
 
 ## Related Skills
-- stdd.init
-- stdd.parallel
+- **stdd.init** - 初始化项目
+- **stdd.parallel** - 并行执行
+- **stdd.turbo** - 全流程自动化
+
+## 参考资源
+
+### DAG 编排
+- [Apache Airflow](https://airflow.apache.org/) - 工作流编排
+- [Temporal](https://temporal.io/) - 持久化执行
+- [DAG](https://en.wikipedia.org/wiki/Directed_acyclic_graph) - 有向无环图
+
+### 工作流引擎
+- [GitHub Actions](https://github.com/features/actions)
+- [GitLab CI](https://docs.gitlab.com/ee/ci/)
+- [CircleCI](https://circleci.com/)
+
+## 设计决策
+
+### 为什么使用 DAG？
+- **依赖管理**: 清晰表达技能依赖
+- **并行执行**: 识别可并行的工作
+- **可视化**: 易于理解和调试
+
+### 为什么需要 Intent？
+- **灵活性**: 不同场景不同流程
+- **优化**: 跳过不必要的步骤
+- **清晰**: 明确执行意图
+
+### 为什么需要历史记录？
+- **审计**: 完整的执行追踪
+- **调试**: 分析失败原因
+- **优化**: 识别性能瓶颈

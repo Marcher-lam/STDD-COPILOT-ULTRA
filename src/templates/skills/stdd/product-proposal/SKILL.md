@@ -1,8 +1,8 @@
 ---
 id: stdd.product-proposal
 command: /stdd:product-proposal
-description: 从全项目产物生成 15 章节产品方案报告
-version: "2.0"
+description: 从全项目产物生成 15 章节产品方案报告（语言无关）
+version: "3.0"
 category: documentation
 phase: documentation
 read_only: true
@@ -39,62 +39,163 @@ graph:
 # STDD Skill: /stdd:product-proposal
 
 ## Purpose
-从全项目产物生成 15 章节产品方案报告。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**从全项目产物生成 15 章节产品方案报告**。这是 STDD Copilot 的产品方案 skill，聚合项目信息生成完整的产品文档。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **完整覆盖**：15 个章节全面覆盖
+- **真实数据**：不编造数据，缺失用 TODO
+- **结构化**：清晰的文档结构
 
 ## When to Use
-- 需要执行 /stdd:product-proposal 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要生成产品方案时
+- 需要项目总结时
+- 需要向利益相关方汇报时
+- 需要归档项目时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## 15 章节结构
 
-## Inputs
-- stdd/ 产物
-- archive
-- metrics
-- vision
+### 1. 执行摘要
+- 项目概述
+- 核心价值
+- 关键成果
 
-## Workflow
-- 扫描 vision、changes、specs、design、tasks、evidence、metrics 和 archive。
-- 按 15 章节生成产品方案，默认中文，可 JSON 输出。
-- 缺失数据用明确 TODO，不编造市场或竞品事实。
+### 2. 背景与动机
+- 问题陈述
+- 市场机会
+- 用户痛点
+
+### 3. 目标用户
+- 用户画像
+- 用户场景
+- 用户需求
+
+### 4. 产品概述
+- 产品定位
+- 核心功能
+- 产品边界
+
+### 5. 技术架构
+- 系统架构
+- 技术栈
+- 设计决策
+
+### 6. 功能规格
+- 功能列表
+- 优先级
+- 依赖关系
+
+### 7. 用户体验
+- 用户流程
+- 界面设计
+- 交互设计
+
+### 8. 数据模型
+- 实体关系
+- 数据流
+- 存储策略
+
+### 9. API 设计
+- 端点列表
+- 请求/响应
+- 认证授权
+
+### 10. 测试策略
+- 测试类型
+- 覆盖目标
+- 质量门禁
+
+### 11. 部署方案
+- 部署架构
+- CI/CD
+- 监控告警
+
+### 12. 运营计划
+- 运营策略
+- 维护计划
+- 支持流程
+
+### 13. 风险分析
+- 技术风险
+- 业务风险
+- 缓解措施
+
+### 14. 项目计划
+- 里程碑
+- 资源需求
+- 时间表
+
+### 15. 成功指标
+- KPI 定义
+- 测量方法
+- 目标值
 
 ## CLI Runtime
+
 ```bash
+# 生成产品方案
 stdd product-proposal
+
+# JSON 格式
 stdd product-proposal --json
-stdd product-proposal --output PRODUCT-PROPOSAL.md
+
+# 指定输出
+stdd product-proposal --output docs/PRODUCT-PROPOSAL.md
+
+# 指定语言
+stdd product-proposal --lang en
+
+# Workspace 支持
+stdd product-proposal --workspace packages/api
 ```
-支持 CLI 与 `/stdd:product-proposal` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 数据来源
+
+### 自动收集
+- **vision**: 项目愿景
+- **changes/**: 所有变更
+- **specs/**: 功能规格
+- **design.md**: 技术设计
+- **tasks.md**: 任务完成情况
+- **metrics/**: 质量指标
+- **archive/**: 归档数据
+
+### TODO 处理
+- 缺失数据用 **TODO** 标记
+- 不编造市场或竞品信息
+- 明确说明需要补充的内容
 
 ## Graph Semantics
 - 节点 ID 为 stdd.product-proposal，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-run；resumable=true；parallelizable=false。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Suggestion 条例 5 (Documentation)**: 产品方案应包含必要文档
+- **Suggestion 条例 8 (Performance)**: 应包含性能指标
 
 ## Evidence Contract
-- 默认证据路径：stdd/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- PRODUCT-PROPOSAL.md
-- JSON structured proposal
+- 产品方案写入 `PRODUCT-PROPOSAL.md`
+- JSON 版本写入 `PRODUCT-PROPOSAL.json`
 
 ## Related Skills
-- stdd.init
+- **stdd.init** - 初始化
+- **stdd.vision** - 项目愿景
+- **stdd.final-doc** - 变更级文档
+
+## 参考资源
+
+### 产品文档
+- [PRD Template](https://www.productboard.com/guides/product-requirements-document/)
+- [Technical Design Document](https://www.atlassian.com/agile/project-management/technical-documentation)
+
+## 设计决策
+
+### 为什么 15 章节？
+- **全面**: 覆盖产品所有方面
+- **结构**: 清晰的文档结构
+- **标准**: 行业标准模板
+
+### 为什么不编造数据？
+- **诚信**: 真实反映项目状态
+- **责任**: 明确缺失信息
+- **补充**: 引导用户补充

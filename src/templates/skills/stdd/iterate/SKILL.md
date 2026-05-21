@@ -1,8 +1,8 @@
 ---
 id: stdd.iterate
 command: /stdd:iterate
-description: 执行 Plan-Execute-Reflect 自主迭代循环
-version: "2.0"
+description: 执行 Plan-Execute-Reflect 自主迭代循环（语言无关）
+version: "3.0"
 category: orchestration
 phase: orchestration
 read_only: false
@@ -39,63 +39,141 @@ graph:
 # STDD Skill: /stdd:iterate
 
 ## Purpose
-执行 Plan-Execute-Reflect 自主迭代循环。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**执行 Plan-Execute-Reflect 自主迭代循环**。这是 STDD Copilot 的迭代 skill，实现自主学习和改进循环。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **自主循环**：Plan → Execute → Reflect
+- **目标驱动**：明确的成功标准
+- **可追溯**：完整的迭代记录
 
 ## When to Use
-- 需要执行 /stdd:iterate 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要自主迭代优化时
+- 需要渐进式改进时
+- 需要系统化探索解决方案时
+- 需要记录迭代过程时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## PER 迭代循环
 
-## Inputs
-- 目标
-- 成功标准
-- max iterations
-- 当前状态
+### Plan（计划）
+```
+┌─────────────┐
+│  定义目标   │ 明确本轮目标
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  设定范围   │ 确定作用域
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  规划动作   │ 列出具体步骤
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  验收标准   │ 定义成功条件
+└─────────────┘
+```
 
-## Workflow
-- 每轮写明目标、范围、动作和验收标准。
-- 执行后反思质量趋势和失败原因。
-- 达到阈值、退化或 max iterations 时停止。
-- 所有迭代可追踪到 evidence 与 progress。
+### Execute（执行）
+```
+┌─────────────┐
+│  执行计划   │ 按步骤执行
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  收集数据   │ 记录执行结果
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  运行测试   │ 验证结果
+└─────────────┘
+```
+
+### Reflect（反思）
+```
+┌─────────────┐
+│  分析结果   │ 对比预期与实际
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  识别模式   │ 发现成功/失败模式
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  调整策略   │ 规划下一轮
+└─────────────┘
+```
 
 ## CLI Runtime
+
 ```bash
-stdd graph run feature --change-name <change-id>
-stdd progress --resume
+# 启动迭代
+stdd iterate <change-id>
+
+# 指定目标
+stdd iterate <change-id> --goal "提高覆盖率到 90%"
+
+# 指定成功标准
+stdd iterate <change-id> --success "coverage >= 90"
+
+# 最大迭代次数
+stdd iterate <change-id> --max-iterations 10
+
+# 指定 workspace
+stdd iterate <change-id> --workspace packages/api
 ```
-支持 CLI 与 `/stdd:iterate` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 停止条件
+
+### 成功停止
+- 达到成功标准
+- 质量指标满足要求
+
+### 失败停止
+- 达到最大迭代次数
+- 质量指标退化
+- 连续 N 次无进展
+
+### 手动停止
+- 用户中断
+- 达到时间限制
 
 ## Graph Semantics
 - 节点 ID 为 stdd.iterate，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-phase；resumable=true；parallelizable=false。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Suggestion 条例 8 (Performance)**: 迭代应考虑性能指标
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- iteration log
-- reflection report
+- 迭代日志写入 `stdd/changes/<change-id>/evidence/iterate-*.jsonl`
+- 反思报告写入 `stdd/changes/<change-id>/evidence/reflection-*.md`
 
 ## Related Skills
-- stdd.graph
-- stdd.verify
+- **stdd.graph** - 图编排
+- **stdd.verify** - 验证结果
+
+## 参考资源
+
+### 迭代方法
+- [Plan-Do-Check-Act](https://en.wikipedia.org/wiki/PDCA) - PDCA 循环
+- [Agile Iterative Development](https://www.agilealliance.org/
+
+## 设计决策
+
+### 为什么 PER 循环？
+- **简单**: 易于理解和实施
+- **有效**: 经过验证的方法
+- **灵活**: 适应各种场景
+
+### 为什么需要停止条件？
+- **资源保护**: 防止无限循环
+- **成本控制**: 限制计算资源
+- **时间管理**: 明确时间边界

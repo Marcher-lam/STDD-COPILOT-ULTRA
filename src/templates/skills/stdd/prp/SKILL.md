@@ -1,8 +1,8 @@
 ---
 id: stdd.prp
 command: /stdd:prp
-description: 生成 What/Why/How/Success 结构化规划
-version: "2.0"
+description: 生成 What/Why/How/Success 结构化规划（语言无关）
+version: "3.0"
 category: spec-first
 phase: proposal
 read_only: false
@@ -38,61 +38,159 @@ graph:
 # STDD Skill: /stdd:prp
 
 ## Purpose
-生成 What/Why/How/Success 结构化规划。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**生成 What/Why/How/Success 结构化规划**。这是 STDD Copilot 的 PRP（Problem-Resolution-Plan）skill，提供结构化的规划框架。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **四段结构**：What/Why/How/Success
+- **高层方案**：不涉及具体实现
+- **可检查**：Success 必须可验证
 
 ## When to Use
-- 需要执行 /stdd:prp 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要结构化规划时
+- 需要明确问题和解法时
+- 需要定义成功标准时
+- 需要团队对齐时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## PRP 结构
 
-## Inputs
-- 需求描述
-- 业务目标
-- 约束
+### What（问题）
+```
+- 当前问题是什么？
+- 影响范围多大？
+- 谁受影响？
+- 现状如何？
+```
 
-## Workflow
-- 写清 What、Why、How、Success。
-- 保持 How 为高层方案，不提前编码。
-- Success 必须可检查并可映射到 BDD 场景。
+### Why（原因）
+```
+- 为什么需要解决这个问题？
+- 业务价值是什么？
+- 优先级如何？
+- 不解决的后果？
+```
+
+### How（方案）
+```
+- 高层解决方案
+- 技术方向
+- 实现策略
+- 不涉及具体代码
+```
+
+### Success（成功）
+```
+- 可量化的指标
+- 可验证的标准
+- 可映射到 BDD 场景
+- 明确的时间表
+```
 
 ## CLI Runtime
+
 ```bash
+# 生成 PRP
 stdd prp <change-id>
-stdd continue <change-id>
+
+# 从描述生成
+stdd prp <change-id> --description "用户登录失败"
+
+# 指定业务目标
+stdd prp <change-id> --goal "提高用户转化率 20%"
+
+# 指定约束
+stdd prp <change-id> --constraint "预算有限"
+stdd prp <change-id> --constraint "时间紧迫"
+
+# Workspace 支持
+stdd prp <change-id> --workspace packages/api
 ```
-支持 CLI 与 `/stdd:prp` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## PRP 模板
+
+### PRP 文档
+```markdown
+# PRP: <change-id>
+
+## What（问题）
+<描述当前问题>
+
+### 痛状
+- <症状 1>
+- <症状 2>
+
+### 影响
+- <影响范围>
+- <受影响用户>
+
+## Why（原因）
+<解释为什么重要>
+
+### 业务价值
+- <价值 1>
+- <价值 2>
+
+### 优先级
+- <优先级说明>
+
+## How（方案）
+<高层解决方案>
+
+### 技术方向
+- <方向 1>
+- <方向 2>
+
+### 实现策略
+- <策略 1>
+- <策略 2>
+
+## Success（成功）
+<可检查的成功标准>
+
+### 量化指标
+- <指标 1>: <目标值>
+- <指标 2>: <目标值>
+
+### 验证标准
+- <标准 1>
+- <标准 2>
+
+### BDD 映射
+- <场景 1>
+- <场景 2>
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.prp，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=per-change；resumable=true；parallelizable=false。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 依赖 new，下一步是 confirm。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Suggestion 条例 5 (Documentation)**: PRP 应有清晰文档
 
 ## Evidence Contract
-- 默认证据路径：stdd/changes/<change-id>/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- PRP document
-- acceptance checklist
+- PRP 文档写入 `stdd/changes/<change-id>/prp.md`
+- 验收清单写入 `stdd/changes/<change-id>/acceptance.md`
 
 ## Related Skills
-- stdd.confirm
-- stdd.new
+- **stdd.confirm** - 确认 PRP
+- **stdd.new** - 创建变更
+- **stdd.spec** - 生成 BDD 规格
+
+## 参考资源
+
+### 问题解决
+- [Problem Solving Frameworks](https://www.mindtools.com/pages/article/newTON_44.htm)
+- [Root Cause Analysis](https://en.wikipedia.org/wiki/Root_cause_analysis)
+
+## 设计决策
+
+### Why PRP 结构？
+- **清晰**: 四段结构清晰
+- **完整**: 覆盖问题到方案
+- **可执行**: 明确的成功标准
+
+### Why 高层方案？
+- **灵活**: 不限制实现方式
+- **讨论**: 便于团队讨论
+- **决策**: 聚焦方向而非细节

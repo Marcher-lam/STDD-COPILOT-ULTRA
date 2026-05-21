@@ -1,39 +1,84 @@
 ---
-description: Execute the Ralph Loop TDD closed-loop
+description: Execute the Ralph Loop TDD closed-loop (language-agnostic)
 ---
 
 # Command: /stdd:execute
 
 ## Usage
-```
-/stdd:execute                  # Execute all pending tasks
-/stdd:execute --task=TASK-001  # Execute specific task
-/stdd:execute --next           # Execute next task
+```bash
+stdd execute <change-id>              # Execute all pending tasks
+stdd execute <change-id> --task=TASK-001  # Execute specific task
+stdd execute <change-id> --next       # Execute next phase only
+stdd execute <change-id> --phase=GREEN # Start from specific phase
+stdd execute <change-id> --test-command "pytest"  # Custom test command
+stdd execute <change-id> --workspace packages/api # Workspace scope
 ```
 
 ## Description
-Starts the strict Ralph Loop TDD execution closed-loop. Processes tasks from `tasks.md` through the full TDD cycle.
+Executes the Ralph Loop TDD closed-loop: **RED → CHECK → GREEN → MUTATION → REFACTOR**.
 
-## Execution Flow
-### Loop Stages
-```
-RED → CHECK → GREEN → MUTATION → REFACTOR
-```
+Processes tasks from `tasks.md` through the enhanced TDD cycle with circuit breaker protection.
 
-1. **RED**: Write failing test for the next task
-2. **CHECK**: Run static analysis (syntax, type, style checks)
-3. **GREEN**: Implement minimal code to pass tests
-4. **MUTATION**: Verify tests detect code mutations (anti-fake-green)
-5. **REFACTOR**: Optimize code structure while keeping tests green
+## Ralph Loop Stages
 
-### Fuse Mechanism
-If a task fails 3 consecutive times, the circuit breaker triggers and manual intervention is recommended.
+### 1. RED
+Write a failing test that describes the expected behavior.
+
+**Test frameworks by language**:
+- JavaScript/TypeScript: Jest, Vitest, Mocha → `npm test`
+- Python: pytest, unittest → `pytest`
+- Java: JUnit, TestNG → `mvn test`
+- Go: testing → `go test ./...`
+- Rust: Rusttest → `cargo test`
+- C#: xUnit, NUnit → `dotnet test`
+- PHP: PHPUnit → `vendor/bin/phpunit`
+
+### 2. CHECK
+Run static analysis: type checking, linting, formatting.
+
+**Static analysis tools by language**:
+- JavaScript/TypeScript: `tsc --noEmit`, ESLint, Prettier
+- Python: mypy, pylint/ruff, Black
+- Java: javac, Checkstyle, Spotless
+- Go: go vet, golangci-lint, gofmt
+- Rust: rustc, clippy, rustfmt
+- C#: Roslyn, StyleCop, dotnet format
+- PHP: PHPStan, Psalm, PHP CS Fixer
+
+### 3. GREEN
+Implement minimal code to make tests pass.
+
+### 4. MUTATION
+Verify tests detect code defects (anti-fake-green).
+
+**Mutation testing tools by language**:
+- JavaScript/TypeScript: [StrykerJS](https://stryker-mutator.io/) → `npx stryker run`
+- Python: [Mutmut](https://github.com/mutmut/mutmut) → `mutmut run`
+- Java: [PIT](https://pitest.org/) → `mvn org.pitest:pitest-maven:mutationCoverage`
+- Go: [Gremlins](https://github.com/go-gremlins/gremlins) → `gremlins test`
+- Rust: [cargo-mutants](https://mutants.rs/) → `cargo mutants`
+- C#: [Stryker.NET](https://stryker-mutator.io/) → `dotnet stryker`
+- PHP: [Infection](https://github.com/infection/infection) → `vendor/bin/infection`
+
+### 5. REFACTOR
+Optimize code structure while keeping tests green.
+
+## Circuit Breaker
+If a task fails 3 consecutive times, the circuit breaker triggers:
+- Stops automatic execution
+- Suggests manual intervention
+- Generates fix-packet if needed
 
 ## Referenced Skill
 - `/stdd:execute`
 
 ## Output
-- Implemented code files
-- Test files
 - Updated task status in `tasks.md`
-- Execution log in `apply.log`
+- Execution log in `stdd/changes/<change-id>/apply.log`
+- Evidence in `stdd/changes/<change-id>/evidence/execute-*.json`
+- Circuit breaker state in `stdd/changes/<change-id>/circuit-breaker.json`
+
+## Related Commands
+- `/stdd:apply` - Task-level TDD execution
+- `/stdd:plan` - Generate task list
+- `/stdd:mutation` - Detailed mutation testing

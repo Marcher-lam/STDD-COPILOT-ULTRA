@@ -1,8 +1,8 @@
 ---
 id: stdd.context
 command: /stdd:context
-description: 装配 foundation/component/feature 三层上下文
-version: "2.0"
+description: 装配三层上下文（Foundation/Components/Contracts）用于 AI 交互（语言无关）
+version: "3.0"
 category: workspace
 phase: all
 read_only: true
@@ -15,16 +15,16 @@ depends_on: [stdd.init]
 next: []
 on_failure: []
 inputs:
-  - layer
+  - layer 选择
   - change-id
   - workspace
   - export 选项
 outputs:
   - assembled context
-  - exported context
+  - exported context (JSON/Markdown)
 evidence:
   required: false
-  path: stdd/evidence/
+  path: stdd/memory/
 constitution_articles:
   blocking: []
   warning: [5]
@@ -39,61 +39,250 @@ graph:
 # STDD Skill: /stdd:context
 
 ## Purpose
-装配 foundation/component/feature 三层上下文。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**装配三层上下文用于 AI 交互**。这是 STDD Copilot 的上下文管理 skill，为 AI 助手提供精确、相关的项目上下文，避免信息过载。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言和项目类型
+- **三层架构**：Foundation、Components、Contracts 分层管理
+- **按需加载**：只提供相关上下文，不塞入全仓库
+- **AI 优化**：专为 AI 对话和 handoff 设计
 
 ## When to Use
-- 需要执行 /stdd:context 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要 AI 理解项目结构时
+- 需要提供代码上下文给 AI 助手时
+- 需要导出项目文档时
+- 在 monorepo 中需要 workspace 上下文时
+- AI 需要了解当前变更背景时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## 三层上下文架构
 
-## Inputs
-- layer
-- change-id
-- workspace
-- export 选项
+### Layer 1: Foundation (基础层)
+**文件**: `stdd/memory/foundation.md`
 
-## Workflow
-- 加载 foundation、component、feature 三层上下文。
-- 优先当前 change、workspace、相关 specs 和 evidence。
-- 导出给 AI 会话或 handoff，避免全仓库塞入上下文。
+**内容**:
+- 项目概述
+- 技术栈
+- 架构原则
+- 开发约定
+- 构建和测试命令
+
+**示例**:
+```markdown
+# Project Foundation
+
+## Tech Stack
+- Language: TypeScript
+- Framework: React + Node.js
+- Testing: Jest + Playwright
+- Build: Vite
+
+## Architecture Principles
+- Spec-First TDD
+- Component-based architecture
+- Separation of concerns
+
+## Development Conventions
+- Conventional Commits
+- ESLint + Prettier
+- Git flow workflow
+
+## Common Commands
+- `npm test` - Run tests
+- `npm run lint` - Check code style
+- `npm run build` - Build for production
+```
+
+### Layer 2: Components (组件层)
+**文件**: `stdd/memory/components.md`
+
+**内容**:
+- 组件列表
+- 模块结构
+- 关键类和函数
+- 依赖关系
+
+**示例**:
+```markdown
+# Components
+
+## Core Modules
+- `src/auth/` - Authentication module
+  - `AuthService` - Login/logout logic
+  - `JwtMiddleware` - JWT validation
+  
+- `src/api/` - API layer
+  - `router.ts` - Route definitions
+  - `handlers/` - Request handlers
+
+## Utilities
+- `src/utils/logger.ts` - Logging utility
+- `src/utils/config.ts` - Configuration management
+```
+
+### Layer 3: Contracts (契约层)
+**文件**: `stdd/memory/contracts.md`
+
+**内容**:
+- API 端点
+- 数据模型
+- 接口定义
+- 消息格式
+
+**示例**:
+```markdown
+# Contracts
+
+## API Endpoints
+- `POST /auth/login` - User login
+- `POST /auth/logout` - User logout
+- `GET /users/:id` - Get user by ID
+
+## Data Models
+- `User` - User entity
+  - `id: string`
+  - `email: string`
+  - `name: string`
+
+## Interfaces
+- `IAuthService` - Authentication service interface
+- `IConfigService` - Configuration service interface
+```
 
 ## CLI Runtime
+
 ```bash
+# 显示所有层
+stdd context
+
+# 显示特定层
+stdd context --layer foundation
+stdd context --layer components
+stdd context --layer contracts
+
+# JSON 格式输出
+stdd context --json
+
+# 导出上下文
 stdd context --export
-stdd context feature --workspace packages/api
+stdd context --export --format json
+stdd context --export --output context.md
+
+# 复制到剪贴板
+stdd context --export --copy
+
+# Workspace 上下文
+stdd context --workspace packages/api
+stdd context --workspace packages/web --export
 ```
-支持 CLI 与 `/stdd:context` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 导出格式
+
+### Markdown 格式（默认）
+```markdown
+# Project Context
+
+## 1. Foundation
+
+## Tech Stack
+- Language: TypeScript
+...
+
+## 2. Components
+
+## Core Modules
+...
+
+## 3. Contracts
+
+## API Endpoints
+...
+```
+
+### JSON 格式
+```json
+{
+  "foundation": "# Foundation\n...",
+  "components": "# Components\n...",
+  "contracts": "# Contracts\n...",
+  "workspace": {
+    "name": "api",
+    "path": "packages/api"
+  }
+}
+```
+
+## Monorepo 支持
+
+### Workspace 上下文
+```bash
+# 获取特定 workspace 的上下文
+stdd context --workspace packages/api
+
+# Workspace 上下文包含：
+# - Workspace 名称和路径
+# - Workspace 特定的 foundation
+# - Workspace 范围内的 components
+# - Workspace 特定的 contracts
+```
+
+## AI 交互集成
+
+### 用于 AI 助手
+```bash
+# 导出上下文供 AI 使用
+stdd context --export --copy
+
+# 在 AI 对话中引用
+# "Here's the project context:\n\n<PASTE CONTEXT>"
+```
+
+### Context 优化原则
+- **精确性**: 只包含相关代码
+- **简洁性**: 避免冗余信息
+- **结构化**: 使用标准格式
+- **可更新**: 定期同步代码变化
 
 ## Graph Semantics
 - 节点 ID 为 stdd.context，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=none；resumable=true；parallelizable=true。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
+- 依赖 init，无下游依赖。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Warning 条例 5**: 文档缺失时警告
 
 ## Evidence Contract
-- 默认证据路径：stdd/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- assembled context
-- exported context
+- 上下文文件保存在 `stdd/memory/`
+- foundation.md, components.md, contracts.md
+- 导出的上下文保存在用户指定位置
 
 ## Related Skills
-- stdd.init
+- **stdd.init** - 初始化上下文文件
+- **stdd.memory** - 管理项目记忆
+- **stdd.learn** - 从代码学习上下文
+
+## 参考资源
+
+### 上下文管理
+- [AI Context Management Best Practices](https://platform.openai.com/docs/guides/prompt-engineering)
+- [Codebase Context for AI Assistants](https://codeium.com/blog/context-aware-code-assist)
+
+### 文档架构
+- [Diátaxis Framework](https://diataxis.fr/) - Documentation framework
+- [C4 Model](https://c4model.com/) - Architecture diagram model
+
+## 设计决策
+
+### 为什么分三层？
+- **Foundation**: 静态的基础信息
+- **Components**: 动态的代码结构
+- **Contracts**: 接口和 API 定义
+
+### 为什么需要导出？
+- **AI 交互**: 方便粘贴给 AI 助手
+- **文档生成**: 生成项目文档
+- **团队共享**: 共享项目知识
+
+### 为什么是只读 skill？
+- **安全**: 不修改代码
+- **灵活**: 由其他技能更新上下文
+- **快速**: 专注于读取和导出

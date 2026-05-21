@@ -1,8 +1,8 @@
 ---
 id: stdd.learn
 command: /stdd:learn
-description: 从项目代码和反馈学习本地模式与偏好
-version: "2.0"
+description: 从项目代码和反馈学习本地模式与偏好（语言无关）
+version: "3.0"
 category: workspace
 phase: all
 read_only: false
@@ -39,65 +39,151 @@ graph:
 # STDD Skill: /stdd:learn
 
 ## Purpose
-从项目代码和反馈学习本地模式与偏好。这是 STDD Copilot 的 Spec-First + TDD CLI skill，服务 Skill Graph 编排、Constitution gate、evidence 留痕和 workspace 作用域。
+**从项目代码和反馈学习本地模式与偏好**。这是 STDD Copilot 的学习 skill，通过分析代码和反馈来理解项目约定。
+
+**核心设计原则：**
+- **语言无关**：适用于任何编程语言
+- **模式识别**：自动识别代码模式
+- **反馈驱动**：从用户反馈学习
+- **增量更新**：持续改进
 
 ## When to Use
-- 需要执行 /stdd:learn 对应能力时。
-- greenfield 项目用于建立或推进规范化工作流。
-- brownfield 项目先读取现有代码、测试、README 和约定后再行动。
-- monorepo 中使用 --workspace <path-or-package> 限定作用域。
+- 需要了解项目代码风格时
+- 需要记录团队偏好时
+- 需要提供反馈时
+- 需要更新风格指南时
 
-## Preconditions
-- 已在仓库根或目标 workspace 中运行 stdd init；只读技能例外但仍应识别项目状态。
-- 明确 <change-id>、scope 或 topic；未明确时先询问或运行 stdd status / stdd recommend。
-- 不得伪造 evidence；缺失测试、mutation 或 Constitution 结果必须显式标记。
+## 学习维度
 
-## Inputs
-- 源码/测试
-- 用户反馈
-- 已有学习状态
+### 1. 代码模式
+- 命名约定
+- 文件组织
+- 导入模式
+- 错误处理
 
-## Workflow
-- 扫描代码、测试、命名、错误处理、导入和注释模式。
-- 记录 good/bad/suggest 反馈并加权。
-- 更新 styleguide，不覆盖 Constitution。
-- 将学习结果用于 propose/plan/apply 的默认建议。
+### 2. 测试模式
+- 测试框架
+- 测试结构
+- Mock 模式
+- 断言风格
+
+### 3. 用户反馈
+- good: 正向强化
+- bad: 负向标记
+- suggest: 改进建议
 
 ## CLI Runtime
+
 ```bash
+# 扫描代码模式
 stdd learn scan
+
+# 分析模式
 stdd learn analyze-patterns
+
+# 记录反馈
 stdd learn good "prefer explicit errors"
 stdd learn bad "avoid implicit any"
+stdd learn suggest "add more tests"
+
+# 查看状态
 stdd learn status --json
+
+# 更新风格指南
+stdd learn update-styleguide
 ```
-支持 CLI 与 `/stdd:learn` 双入口；在 monorepo 中优先传入 `--workspace <path-or-package>` 并把证据写入对应作用域。
+
+## 多语言模式识别
+
+### JavaScript/TypeScript
+```typescript
+// 检测到的模式
+{
+  "naming": "camelCase",
+  "imports": "ES6 import",
+  "exports": "named exports",
+  "async": "async/await",
+  "errorHandling": "explicit Error types"
+}
+```
+
+### Python
+```python
+# 检测到的模式
+{
+  "naming": "snake_case",
+  "imports": "PEP 8 imports",
+  "exports": "__all__",
+  "async": "async/await",
+  "errorHandling": "exceptions"
+}
+```
+
+### Go
+```go
+// 检测到的模式
+{
+  "naming": "PascalCase for exported",
+  "imports": "grouped imports",
+  "exports": "capitalized",
+  "errorHandling": "explicit error returns"
+}
+```
+
+## 反馈系统
+
+### 反馈类型
+| 类型 | 用途 | 权重 |
+|------|------|------|
+| good | 强化正确模式 | +1 |
+| bad | 标记不良模式 | -1 |
+| suggest | 改进建议 | 0 |
+
+### 反馈记录
+```json
+{
+  "timestamp": "2025-05-19T10:30:00Z",
+  "type": "good",
+  "pattern": "explicit errors",
+  "context": "auth/login",
+  "weight": 1
+}
+```
 
 ## Graph Semantics
 - 节点 ID 为 stdd.learn，由 frontmatter 暴露给 Skill Graph。
 - checkpoint=none；resumable=true；parallelizable=true。
-- Graph 必须尊重 depends_on/next，不得越过 confirm、verify、archive 等 gate。
 
 ## Constitution Gates
-- Blocking 条例失败时停止并返回修复建议。
-- Warning 条例必须在报告中列出，可由用户决定是否继续。
-- Suggestion 条例用于改进可维护性和文档质量，不应伪装成已完成工作。
+- **Warning 条例 4 (Code Style)**: 学习应遵循代码规范
+- **Warning 条例 6 (Error Handling)**: 学习应包含错误处理模式
 
 ## Evidence Contract
-- 默认证据路径：stdd/evidence/
-- 变更级 evidence 使用 stdd/changes/<change-id>/evidence/；全局 guard/audit 使用 stdd/evidence/。
-- 证据文件应包含 command、timestamp、workspace、input summary、result、exit code 和关键 stdout/stderr 摘要。
-
-## Error Handling
-- 缺少 STDD 初始化时提示 stdd init。
-- 缺少 change-id 时列出 stdd list / stdd status 的下一步。
-- 连续失败 3 次触发熔断，生成或建议 stdd fix-packet <change-id>。
-- workspace 不存在时提示 stdd workspace validate / repair。
-
-## Outputs
-- feedback.jsonl
-- code-patterns.json
-- styleguide.md
+- 反馈写入 `stdd/feedback.jsonl`
+- 模式写入 `stdd/code-patterns.json`
+- 风格指南写入 `stdd/styleguide.md`
 
 ## Related Skills
-- stdd.init
+- **stdd.init** - 初始化
+- **stdd.memory** - 存储学习结果
+
+## 参考资源
+
+### 代码分析
+- [AST Parsing](https://en.wikipedia.org/wiki/Abstract_syntax_tree)
+- [Code Pattern Recognition](https://en.wikipedia.org/wiki/Pattern_recognition)
+
+### 机器学习
+- [Incremental Learning](https://en.wikipedia.org/wiki/Online_machine_learning)
+
+## 设计决策
+
+### 为什么需要学习？
+- **适应性**: 适应项目特定风格
+- **一致性**: 保持代码一致
+- **效率**: 减少重复配置
+
+### 为什么反馈驱动？
+- **准确性**: 用户反馈最准确
+- **灵活性**: 可以随时调整
+- **透明**: 明确的偏好记录
