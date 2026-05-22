@@ -1,13 +1,13 @@
 # STDD Copilot 用户实操手册：从零构建一个完整项目
 
-> 本手册使用一个简单 **calculator** 项目作为载体，带你实操 STDD Copilot 的完整工作流。
-> 每一步都可以直接在终端或 AI 编码助手（Claude Code 等）中执行。
+> **版本**: v1.0.4-preview | **更新日期**: 2026-05-22
+> **适用场景**: 从零开始的新项目，完整掌握 STDD Copilot 工作流
 
 ---
 
 ## 你将学到什么
 
-- STDD 的核心工作流：`init → ff → apply → verify → archive`
+- STDD 的核心工作流：`init → ff → spec → apply → verify → archive`
 - 快捷命令：`ff`（快速生成）、`turbo`（一键全流程）、`issue`（Bug 修复）
 - 质量治理：`constitution`、`guard`、`mutation`、`doctor`
 - Graph 引擎：`graph run`、`graph recommend`、`graph history`
@@ -18,8 +18,8 @@
 
 ## 前置条件
 
-| 依赖 | 版本 |
-|------|------|
+| 依赖 | 版本要求 |
+|------|----------|
 | Node.js | >= 20.0.0 |
 | Git | 任意现代版本 |
 | AI 编码助手 | Claude Code / Cursor / 其他（可选） |
@@ -744,5 +744,11 @@ node --test
 
 ---
 
-> STDD Copilot 共提供 75 个 CLI 命令、75 个 Command 模板和 47 个 Skill 模板。
+> **STDD Copilot v1.0.4-preview**
+> - 75 个 CLI 命令
+> - 75 个 Command 模板
+> - 47 个 Skill 模板
+> - 171 测试套件，3810 测试用例，100% 通过率
+> - 97.33% 语句覆盖，91.03% 分支覆盖
+>
 > 完整列表见 `stdd --help`、`stdd skills`、`stdd commands`。
