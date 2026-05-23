@@ -220,6 +220,17 @@ stdd-copilot/
 
 ---
 
+---
+
+## Documentation
+
+- [docs/cli-guide.md](./docs/cli-guide.md) — Full CLI reference
+- [docs/getting-started.md](./docs/getting-started.md) — First-run workflow and quick reference
+- [USAGE.md](./USAGE.md) — Complete usage guide
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — System architecture
+- [CHANGELOG.md](./CHANGELOG.md) — Version history
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — Contribution guide
+
 ## License
 
 [MIT](LICENSE)

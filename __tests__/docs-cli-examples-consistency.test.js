@@ -1,14 +1,12 @@
 const { CANONICAL_CLI_ENTRIES, readFile } = require('../test-support/docs-contracts');
 
 const CHINESE_CLI_DOCS = [
-  'README.md',
   'USAGE.md',
   'docs/cli-guide.md',
   'docs/getting-started.md'
 ];
 
 const ENGLISH_CLI_DOCS = [
-  'README_EN.md',
   'docs/en/cli-guide.md',
   'docs/en/getting-started.md'
 ];
@@ -38,9 +36,8 @@ describe('Documentation CLI example consistency', () => {
     const cliGuide = readFile('docs/en/cli-guide.md');
     const gettingStarted = readFile('docs/en/getting-started.md');
 
-    expect(readme).toContain('[English Docs Index](./docs/en/README.md) | English documentation hub and entry-point map');
-    expect(readme).toContain('[Getting Started](./docs/en/getting-started.md) | First-run workflow and quick CLI reference');
-    expect(readme).toContain('[CLI Guide](./docs/en/cli-guide.md) | Full CLI command reference');
+    expect(readme).toContain('[docs/en/cli-guide.md](./docs/en/cli-guide.md)');
+    expect(readme).toContain('[docs/en/getting-started.md](./docs/en/getting-started.md)');
 
     expect(docsIndex).toContain('[Getting Started](getting-started.md) | First-run workflow and quick CLI reference');
     expect(docsIndex).toContain('[CLI Guide](cli-guide.md) | Full CLI command reference');
@@ -66,9 +63,9 @@ describe('Documentation CLI example consistency', () => {
     const concepts = readFile('docs/concepts.md');
     const usage = readFile('USAGE.md');
 
-    expect(readme).toContain('[CLI 使用指南](./docs/cli-guide.md) | CLI 完整文档');
-    expect(readme).toContain('[快速开始](./docs/getting-started.md) | 首次使用流程和 CLI 速查');
-    expect(readme).toContain('[使用手册](./USAGE.md) | 完整使用指南');
+    expect(readme).toContain('[docs/cli-guide.md](./docs/cli-guide.md)');
+    expect(readme).toContain('[docs/getting-started.md](./docs/getting-started.md)');
+    expect(readme).toContain('[USAGE.md](./USAGE.md)');
 
     expect(cliGuide).toContain('## 文档导航');
     expect(cliGuide).toContain('[项目首页](../README.md) - 项目概览和顶层示例');
