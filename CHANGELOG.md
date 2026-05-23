@@ -7,11 +7,13 @@ All notable changes to STDD Copilot will be documented in this file.
 ### Added
 - Added project-local BDD template override coverage for `stdd/templates/bdd-templates.yaml`.
 - Added regression coverage for hotfix graph runs using generated and explicit change names.
+- Added the missing `/stdd:commit` command template backed by the existing `stdd commit` CLI.
 
 ### Changed
 - Externalized BDD generation templates to `stdd/templates/bdd-templates.yaml` with project-local override support.
 - Clarified mutation quick mode as a heuristic score rather than real mutation testing.
 - Updated package metadata and documentation for the v1.0.5 release.
+- Updated slash command taxonomy from 75 to 76 command templates.
 
 ### Fixed
 - Fixed `stdd graph run --intent hotfix` so the generated change name is passed through to `stdd issue`, `apply`, `verify`, and `archive` consistently.

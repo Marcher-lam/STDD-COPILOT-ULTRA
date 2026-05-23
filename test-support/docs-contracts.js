@@ -18,6 +18,7 @@ const COMMAND_FILE_BACKED_ENTRIES = [
   '/stdd:clarify',
   '/stdd:complexity',
   '/stdd:commands',
+  '/stdd:commit',
   '/stdd:commit-msg',
   '/stdd:confirm',
   '/stdd:constitution',
