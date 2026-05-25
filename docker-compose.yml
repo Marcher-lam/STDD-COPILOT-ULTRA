@@ -1,4 +1,4 @@
-# Docker Compose for STDD Copilot
+# Docker Compose for STDD Copilot Ultra
 # Usage: docker-compose up -d
 
 version: '3.8'
@@ -8,8 +8,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: stdd-copilot:latest
-    container_name: stdd-copilot
+    image: stdd-copilot-ultra:latest
+    container_name: stdd-copilot-ultra
     volumes:
       # Mount project directory for development
       - ./:/workspace:delegated

@@ -1,7 +1,7 @@
 {
-  "name": "@marcher-lam/stdd-copilot",
-  "version": "1.0.7",
-  "description": "STDD (Specification + Test Driven Development) Copilot CLI",
+  "name": "@marcher-lam/stdd-copilot-ultra",
+  "version": "2.0.0",
+  "description": "STDD Copilot Ultra — Smart Team-Driven Development: full-lifecycle AI development platform from ideation to verified delivery",
   "main": "cli.js",
   "engines": {
     "node": ">=20.0.0"
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Marcher-lam/STDD-COPILOT.git"
+    "url": "git+https://github.com/Marcher-lam/STDD-COPILOT-ULTRA.git"
   },
   "bin": {
     "stdd": "cli.js"

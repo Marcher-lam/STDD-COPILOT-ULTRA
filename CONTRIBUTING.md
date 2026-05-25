@@ -1,13 +1,13 @@
 # 贡献指南
 
-感谢你对 STDD Copilot 的关注！欢迎提交 Issue 和 Pull Request。
+感谢你对 STDD Copilot Ultra 的关注！欢迎提交 Issue 和 Pull Request。
 
 ## 开发环境设置
 
 ```bash
 # 克隆仓库
-git clone https://github.com/Marcher-lam/STDD-COPILOT.git
-cd STDD-COPILOT
+git clone https://github.com/Marcher-lam/STDD-COPILOT-ULTRA.git
+cd STDD-COPILOT-ULTRA
 
 # 安装依赖
 npm install

@@ -97,7 +97,7 @@ class HelpCommand {
     }
 
     output.push(chalk.dim('─'.repeat(50)));
-    output.push(`  ${chalk.dim('Full docs: https://github.com/Marcher-lam/STDD-COPILOT')}\n`);
+    output.push(`  ${chalk.dim('Full docs: https://github.com/Marcher-lam/STDD-COPILOT-ULTRA')}\n`);
 
     console.log(output.join('\n'));
     return { topic: 'overview', techStack };
@@ -354,7 +354,7 @@ class HelpCommand {
       chalk.bold('Get More Help:'),
       '  stdd help <command>            # Command-specific help',
       '  stdd help search <term>        # Search documentation',
-      `  ${chalk.dim('https://github.com/Marcher-lam/STDD-COPILOT/issues')}\n`,
+      `  ${chalk.dim('https://github.com/Marcher-lam/STDD-COPILOT-ULTRA/issues')}\n`,
     ];
 
     console.log(output.join('\n'));

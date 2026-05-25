@@ -110,7 +110,7 @@ class StartersCommand {
     console.log(`  npm install`);
     console.log(`  npm test\n`);
     console.log(chalk.dim('Then start with: /stdd:new your-first-feature'));
-    console.log(chalk.dim('Documentation: https://github.com/Marcher-lam/STDD-COPILOT'));
+    console.log(chalk.dim('Documentation: https://github.com/Marcher-lam/STDD-COPILOT-ULTRA'));
   }
 
   async _copyTemplate(templatePath, targetPath, projectName) {

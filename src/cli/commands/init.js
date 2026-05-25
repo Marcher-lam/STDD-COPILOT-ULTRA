@@ -50,7 +50,7 @@ STDD Copilot (Spec + Test Driven Development) 是一个融合了 SDD 和 TDD 最
 /stdd:new → /stdd:apply → /stdd:archive
 \`\`\`
 
-详见: https://github.com/Marcher-lam/STDD-COPILOT
+详见: https://github.com/Marcher-lam/STDD-COPILOT-ULTRA
 `;
 
 function formatWorkspaceRegistry(workspaces, targetPath) {
@@ -542,7 +542,7 @@ ${workspaceSection}
     console.log(chalk.cyan('     /stdd:explore understand the codebase\n'));
     console.log('  3. View all commands:');
     console.log(chalk.cyan('     stdd commands\n'));
-    console.log(chalk.dim('Documentation: https://github.com/Marcher-lam/STDD-COPILOT'));
+    console.log(chalk.dim('Documentation: https://github.com/Marcher-lam/STDD-COPILOT-ULTRA'));
   }
 }
 

@@ -6,7 +6,7 @@
 > 产品名称：STDD Copilot — Specification & Test-Driven Development Copilot
 > 产品版本：v1.0.5
 > 作者：Marcher-lam
-> 仓库：https://github.com/Marcher-lam/STDD-COPILOT
+> 仓库：https://github.com/Marcher-lam/STDD-COPILOT-ULTRA
 
 ---
 
@@ -842,4 +842,4 @@ Data Analyst           — 数据分析、指标监控
 >
 > Made with love by [Marcher-lam](https://github.com/Marcher-lam)
 > License: MIT
-> Repository: https://github.com/Marcher-lam/STDD-COPILOT
+> Repository: https://github.com/Marcher-lam/STDD-COPILOT-ULTRA

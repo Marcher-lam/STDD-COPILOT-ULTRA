@@ -11,7 +11,7 @@ function getPackageRoot() {
     if (fs.existsSync(pkgPath)) {
       try {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-        if (pkg.name === 'stdd-copilot' || pkg.name === '@marcher-lam/stdd-copilot') {
+        if (pkg.name === 'stdd-copilot-ultra' || pkg.name === '@marcher-lam/stdd-copilot-ultra' || pkg.name === '@marcher-lam/stdd-copilot') {
           return currentDir; // 精准命中
         }
       } catch (e) {

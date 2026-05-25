@@ -61,14 +61,14 @@ STDD 在老项目中的定位是：
 **方式 A: npm 全局安装**
 
 ```bash
-npm install -g @marcher-lam/stdd-copilot@latest
+npm install -g @marcher-lam/stdd-copilot-ultra@latest
 stdd --version
 ```
 
 **方式 B: 源码安装**
 
 ```bash
-git clone https://github.com/Marcher-lam/STDD-COPILOT.git ~/stdd-copilot
+git clone https://github.com/Marcher-lam/STDD-COPILOT-ULTRA.git ~/stdd-copilot
 cd ~/stdd-copilot
 npm install
 npm link

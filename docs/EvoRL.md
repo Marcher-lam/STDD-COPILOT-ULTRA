@@ -32,11 +32,11 @@
 
 ```bash
 # A: npm 全局安装（推荐）
-npm install -g @marcher-lam/stdd-copilot@latest
+npm install -g @marcher-lam/stdd-copilot-ultra@latest
 stdd --version
 
 # B: 源码安装
-git clone https://github.com/Marcher-lam/STDD-COPILOT.git ~/stdd-copilot
+git clone https://github.com/Marcher-lam/STDD-COPILOT-ULTRA.git ~/stdd-copilot
 cd ~/stdd-copilot && npm install && npm link
 stdd --version
 

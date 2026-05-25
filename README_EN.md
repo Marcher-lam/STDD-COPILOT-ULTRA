@@ -1,12 +1,12 @@
 <div align="center">
 
-# STDD Copilot
+# STDD Copilot Ultra
 
-**Specification-Driven + Test-Driven Development · A Process Control Layer for AI Coding Assistants**
+**Smart Team-Driven Development · Full-Lifecycle AI Development Platform**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
-[![npm](https://img.shields.io/npm/v/@marcher-lam/stdd-copilot)](https://www.npmjs.com/package/@marcher-lam/stdd-copilot)
+[![npm](https://img.shields.io/npm/v/@marcher-lam/stdd-copilot-ultra)](https://www.npmjs.com/package/@marcher-lam/stdd-copilot-ultra)
 [![Tests](https://img.shields.io/badge/tests-4158%2F4158%20passing-brightgreen.svg)](CONTRIBUTING.md)
 [![Coverage](https://img.shields.io/badge/coverage-97%25%20stmts%20%7C%2093%25%20branch-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -18,8 +18,8 @@
 
 ## Table of Contents
 
-- [What is STDD Copilot](#what-is-stdd-copilot)
-- [Why STDD](#why-stdd)
+- [What is STDD Copilot Ultra](#what-is-stdd-copilot-ultra)
+- [Why Ultra](#why-ultra)
 - [Quick Start](#quick-start)
 - [Core Concepts](#core-concepts)
 - [Full Workflow](#full-workflow)
@@ -29,14 +29,22 @@
 - [Project Structure](#project-structure)
 - [Documentation](#documentation)
 - [Installation & Contributing](#installation--contributing)
+- [Upgrading from STDD Copilot](#upgrading-from-stdd-copilot)
 
 ---
 
-## What is STDD Copilot
+## What is STDD Copilot Ultra
 
-**STDD Copilot** is a CLI workflow framework that brings **Spec-First** discipline and **TDD** rigor to AI-assisted development. It generates a chain of checkpoint artifacts — BDD specifications, task lists, design documents, test evidence, and compliance audits — that keep AI coding assistants on a predetermined track, transforming vague prompts into verifiable engineering deliverables.
+**STDD Copilot Ultra** is a full-lifecycle AI development platform — from product ideation to verified delivery.
 
-> **STDD is not an AI.** It is a process control layer that AI coding assistants execute against.
+**STDD = Smart Team-Driven Development**
+
+It unifies three dimensions:
+- **Upstream Exploration** — Multi-role AI Agent collaboration (PM, Architect, UX, QA) for ideation through architecture design
+- **Specification-Driven** — Spec-First methodology with BDD specifications, task decomposition, and design documents
+- **TDD Execution** — Ralph Loop closed-loop implementation with mutation testing, evidence chains, and quality gates
+
+> **STDD is not an AI.** It is a process control layer and quality assurance system that AI coding assistants execute against.
 
 ### Key Metrics
 
@@ -67,12 +75,24 @@ stdd verify login
 
 ---
 
-## Why STDD
+## Why Ultra
 
-AI coding assistants are powerful but prone to drift. STDD applies constraints at every stage:
+STDD Copilot Ultra builds on the original STDD Copilot, absorbing upstream strengths from BMAD-METHOD to form a complete closed loop from ideation to delivery:
 
-| Pain Point | How STDD Addresses It |
-|------------|----------------------|
+| Capability | Original STDD | Ultra |
+|------------|---------------|-------|
+| Product ideation | Basic `brainstorm` | Multi-role Agent collaboration (PM/Architect/UX/QA) |
+| Requirements | proposal + clarify | Adaptive planning depth (auto-adjusts by project complexity) |
+| Spec-driven | BDD + Spec Guardian | BDD + Spec Guardian + complexity adaptation |
+| TDD execution | Ralph Loop closed-loop | Ralph Loop + mutation testing + anti-fake-green |
+| Quality governance | 9-article Constitution | 9-article Constitution + audit + waivers |
+| Module ecosystem | Built-in commands | Extensible modules + extensions registry |
+| Visualization | CLI text output | Graph visualization + DESIGN.md previews |
+
+### Pain Points Solved
+
+| Pain Point | How STDD Copilot Ultra Addresses It |
+|------------|--------------------------------------|
 | AI misinterprets your intent | Multi-round clarification → Confirm Gate → BDD specification lock-in |
 | AI ships untested code | Ralph Loop TDD closed-loop: Red → Green → Mutation → Refactor |
 | No consistent quality bar | 9-article Constitution with automatic hook enforcement |
@@ -81,6 +101,7 @@ AI coding assistants are powerful but prone to drift. STDD applies constraints a
 | Over-implementation beyond scope | Micro-task decomposition (~30 min per task) + Confirmation Gates |
 | Fake-green tests (pass but wrong) | Mutation testing (Quick Heuristic + Stryker deep mutation) |
 | Multiple AI agents conflicting | Skill Graph topology scheduling + parallel executor |
+| Unclear requirements source | Multi-role Agent collaboration starting from product ideation |
 
 ---
 
@@ -89,7 +110,7 @@ AI coding assistants are powerful but prone to drift. STDD applies constraints a
 ### Installation
 
 ```bash
-npm install -g @marcher-lam/stdd-copilot@latest
+npm install -g @marcher-lam/stdd-copilot-ultra@latest
 ```
 
 > For source builds and Docker, see [INSTALL.md](./INSTALL.md).
@@ -120,34 +141,33 @@ stdd archive add-dark-mode             # Archive and merge specs
 
 ## Core Concepts
 
+### Three-Phase Coverage: Ideation → Specification → Execution
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Phase 1: Exploration & Ideation                             │
+│  brainstorm · roles party · explore · design · vision        │
+│  Multi-role Agent collaboration to explore requirements      │
+├──────────────────────────────────────────────────────────────┤
+│  Phase 2: Specification & Planning                           │
+│  propose → clarify → confirm → spec → plan                   │
+│  Spec-First methodology with BDD specification lock-in       │
+├──────────────────────────────────────────────────────────────┤
+│  Phase 3: TDD Execution & Verification                       │
+│  apply → verify → mutation → archive                         │
+│  Ralph Loop closed-loop + quality gates + evidence archival  │
+└──────────────────────────────────────────────────────────────┘
+```
+
 ### Dual Mode: User-Driven + Agent-Driven
 
 STDD automatically switches behavior based on your input:
 
 | Input | Mode | Behavior |
 |-------|------|----------|
-| `/stdd:apply` (slash command) | **User-Driven** | Execute the specified command immediately, no orchestration |
+| `/stdd:apply` (slash command) | **User-Driven** | Execute the specified command immediately |
 | "Implement login" (natural language) | **Agent-Driven** | Auto-plan full execution path, pause only at confirmation gates |
 | "Continue" / "Next step" | **Agent-Driven** | Advance to the next Phase |
-
-```
-User: Implement user login
-Agent: [Read Skill Graph] → [Detect state] → [Auto-advance full workflow]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📍 Phase 1/7: Requirement Proposal (propose)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-... (auto-generates proposal)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📍 Phase 2/7: Requirement Clarification (clarify)
-✅ Previous: proposal generated
-🔜 Next: confirm ⚠️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠️ Confirmation Gate: Does the above understanding match your intent?
-   Reply "confirm" to proceed, or provide corrections.
-```
 
 ### Dual Scenario: Greenfield + Brownfield
 
@@ -155,11 +175,6 @@ Agent: [Read Skill Graph] → [Detect state] → [Auto-advance full workflow]
 |----------|---------|----------|
 | **Greenfield** | Empty directory or brand-new project | `init` → tech stack interview → standard STDD flow |
 | **Brownfield** | Existing code but no `stdd/` config | Deep read → understanding report → user confirmation → standard STDD flow |
-
-In Brownfield mode, STDD automatically:
-1. Reads `package.json`, directory structure, and key entry files
-2. Generates a project understanding report (tech stack, module dependencies, test coverage)
-3. Waits for you to confirm the change scope before initializing STDD
 
 ### 5-Layer Anti-Drift Defense
 
@@ -238,11 +253,26 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd ff <desc>` | `/stdd:ff` | Fast-forward: proposal → specs → tasks |
 | `stdd turbo <desc>` | `/stdd:turbo` | Full auto-pilot execution |
 
+### Exploration & Ideation (Ultra Enhanced)
+
+| CLI | Purpose |
+|-----|---------|
+| `stdd brainstorm <topic>` | 60+ structured reasoning methods, multi-angle analysis |
+| `stdd explore [scope]` | Read-only project exploration (architecture, patterns, constraints) |
+| `stdd roles party / review` | 12-role collaborative agent simulation |
+| `stdd supervisor start / status / roles` | Multi-agent supervision coordination |
+| `stdd design create / list` | DESIGN.md design system generation (modern / dark / minimal presets) |
+| `stdd story create / to-bdd` | Story Mapping → BDD conversion |
+| `stdd vision show / update` | Project vision management |
+| `stdd complexity analyze / hotspots / report` | Cyclomatic complexity analysis |
+| `stdd certainty assess / history / configure` | Certainty protocol assessment |
+| `stdd learn` | Pattern extraction and style guide generation |
+
 ### SDD Enhancements (Specification-Driven Development)
 
 | CLI | Purpose |
 |-----|---------|
-| `stdd api-spec [change]` | Generate OpenAPI 3.0 + multilanguage types/mocks/validators (TS/JS/Python/Java/Go/Rust/C#/PHP) |
+| `stdd api-spec [change]` | Generate OpenAPI 3.0 + multilanguage types/mocks/validators |
 | `stdd schema create / validate / fork` | JSON Schema / Zod type definitions |
 | `stdd contract generate / verify` | Consumer-driven contract testing |
 | `stdd validate [change]` | Spec Guardian consistency checks |
@@ -251,7 +281,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd product-proposal` | Full product proposal from all STDD artifacts |
 | `stdd context --export` | 3-layer project context export |
 
-### TDD Enhancements (Test-Driven Development)
+### TDD Enhancements
 
 | CLI | Purpose |
 |-----|---------|
@@ -289,27 +319,12 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd graph recommend` | Smart next-step recommendation |
 | `stdd graph analyze` | Bottleneck analysis and path optimization |
 
-### Exploration & Design
-
-| CLI | Purpose |
-|-----|---------|
-| `stdd explore [scope]` | Read-only project exploration (architecture, patterns, constraints) |
-| `stdd brainstorm <topic>` | 60+ structured reasoning methods, multi-angle analysis |
-| `stdd design create / list` | DESIGN.md design system generation (modern / dark / minimal presets), with `preview.html` and `preview-dark.html` by default |
-| `stdd complexity analyze / hotspots / report` | Cyclomatic complexity analysis |
-| `stdd certainty assess / history / configure` | Certainty protocol assessment |
-| `stdd learn` | Pattern extraction and style guide generation |
-| `stdd vision show / update` | Project vision management |
-
 ### Collaboration & Extensions
 
 | CLI | Purpose |
 |-----|---------|
 | `stdd workspace list / validate / repair` | Monorepo workspace management |
-| `stdd roles party / review` | 12-role collaborative agent simulation |
-| `stdd supervisor start / status / roles` | Multi-agent supervision coordination |
 | `stdd parallel <cmd>` | Cross-workspace parallel execution |
-| `stdd story create / to-bdd` | Story Mapping → BDD conversion |
 | `stdd user-test [change]` | Human + agent test scripts |
 | `stdd pipeline [change]` | Generate IR + acceptance test skeletons from specs |
 | `stdd starters` | Project starter templates (JS / TS / Python / Go / Rust) |
@@ -348,51 +363,27 @@ stdd constitution status                              # Health score dashboard
 stdd constitution audit                               # Historical compliance audit
 ```
 
-### Health Score Example
-
-```
-Constitution Health
-Workspace: @myapp/api (packages/api)
-85%
-  ✅  Art 1: Library-First
-  ✅  Art 2: TDD
-  ❌  Art 3: Small Commits (2 oversized commits found)
-  ✅  Art 4: Code Style
-  ⚠️  Art 5: Documentation (Waived for 14 days)
-  ✅  Art 6: Error Handling
-  ✅  Art 7: Security
-  ✅  Art 8: Performance
-  ❌  Art 9: CI/CD (No CI config found)
-  6 passed, 2 failed, 1 waived
-```
-
 ---
 
 ## Architecture Overview
 
-STDD Copilot fuses Spec-First and TDD via a **Skill Graph** engine. The architecture consists of four layers:
+STDD Copilot Ultra fuses exploration, specification, and TDD via a **Skill Graph** engine. Four layers:
 
 ```
-┌──────────────────────────────────────────────┐
-│              User Layer                       │
-│  CLI (stdd)    │    IDE Integration           │
-├──────────────────────────────────────────────┤
-│         Skill Graph Engine                    │
-│  DAG Runner  │  Visualizer  │  Analyzer      │
-├──────────────────────────────────────────────┤
-│            Core Executors                     │
-│  75 Command Modules  │  21 Utility Modules    │
-├──────────────────────────────────────────────┤
-│            Infrastructure                     │
-│  Templates  │  Hooks  │  Logger  │  Security  │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                  User Layer                                │
+│  CLI (stdd)    │    IDE Integration (Claude/Cursor/etc.)   │
+├──────────────────────────────────────────────────────────┤
+│             Skill Graph Engine                             │
+│  DAG Runner  │  Visualizer  │  Analyzer  │  Recommender   │
+├──────────────────────────────────────────────────────────┤
+│              Core Executors                                │
+│  75 Commands  │  21 Utilities  │  Agent Simulator  │  RT   │
+├──────────────────────────────────────────────────────────┤
+│              Infrastructure                                │
+│  Templates  │  Hooks  │  Logger  │  Security  │  Memory   │
+└──────────────────────────────────────────────────────────┘
 ```
-
-**Key Design Decisions:**
-- Each CLI command is an independent class module, dynamically loaded via `CommandLoader`
-- The Skill Graph automatically selects the DAG path based on user intent
-- All artifacts are persisted as files, enabling AI context recovery from disk
-- Supports 4 tiers of 24 external AI engine adapters
 
 For the complete architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
@@ -401,7 +392,7 @@ For the complete architecture documentation, see [ARCHITECTURE.md](./ARCHITECTUR
 ## Project Structure
 
 ```
-stdd-copilot/
+stdd-copilot-ultra/
 ├── cli.js                          # CLI entry point (Commander.js)
 ├── src/
 │   ├── cli/
@@ -424,17 +415,7 @@ stdd-copilot/
 │   └── reporters/                  # Test reporter plugins
 ├── __tests__/                      # 191 suites / 4,158 tests
 ├── docs/                           # Documentation
-│   ├── agent-protocol.md           # AI Agent behavior protocol
-│   ├── cli-guide.md                # Full CLI reference
-│   ├── getting-started.md          # Getting started guide
-│   ├── command-reference.md        # Detailed command reference
-│   ├── concepts.md                 # Core concepts
-│   ├── capabilities.md             # Capability catalog
-│   ├── workflows.md                # Workflow details
-│   └── en/                         # English documentation
 ├── schemas/                        # JSON / YAML Schemas
-│   ├── spec-driven/                # Spec templates
-│   └── constitution/               # 9 articles
 └── tools/                          # Utility scripts
 ```
 
@@ -450,14 +431,13 @@ stdd-copilot/
 | [docs/concepts.md](./docs/concepts.md) | Core concepts: Spec-First, Ralph Loop, Constitution |
 | [docs/workflows.md](./docs/workflows.md) | Workflow details: Greenfield / Brownfield / Quick Fix |
 | [docs/capabilities.md](./docs/capabilities.md) | Full capability catalog |
-| [docs/agent-protocol.md](./docs/agent-protocol.md) | AI Agent behavior protocol (Phase transitions, gates, path selection) |
+| [docs/agent-protocol.md](./docs/agent-protocol.md) | AI Agent behavior protocol |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System architecture (with Mermaid diagrams) |
 | [USAGE.md](./USAGE.md) | Complete usage guide |
 | [INSTALL.md](./INSTALL.md) | Installation guide (npm / source / Docker) |
 | [EXAMPLES.md](./EXAMPLES.md) | Multi-scenario practical examples |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution guide |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
-| [fix.md](./fix.md) | Incremental optimization tracker |
 | [docs/en/](./docs/en/) | English documentation |
 
 ---
@@ -468,17 +448,15 @@ stdd-copilot/
 
 ```bash
 # Global install via npm (recommended)
-npm install -g @marcher-lam/stdd-copilot@latest
+npm install -g @marcher-lam/stdd-copilot-ultra@latest
 
 # From source
-git clone https://github.com/Marcher-lam/STDD-COPILOT.git
-cd STDD-COPILOT && npm install && npm link
+git clone https://github.com/Marcher-lam/STDD-COPILOT-ULTRA.git
+cd STDD-COPILOT-ULTRA && npm install && npm link
 
 # Docker
 docker compose up -d
 ```
-
-See [INSTALL.md](./INSTALL.md) for details.
 
 ### Development & Testing
 
@@ -495,10 +473,27 @@ Issues and PRs are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideli
 
 ---
 
+## Upgrading from STDD Copilot
+
+Already using the original STDD Copilot?
+
+```bash
+# 1. Install Ultra
+npm install -g @marcher-lam/stdd-copilot-ultra@latest
+
+# 2. CLI commands unchanged, no migration needed
+stdd status              # All commands work identically
+stdd list                # Existing changes remain accessible
+```
+
+**Fully backward compatible** — The `stdd` CLI command and `stdd/` runtime directory are unchanged. Ultra only extends upstream capabilities (exploration, ideation, multi-role collaboration).
+
+---
+
 ## License
 
 [MIT](LICENSE)
 
 ---
 
-*STDD Copilot — Keeping AI coding assistants on the right track.*
+*STDD Copilot Ultra — From ideation to delivery, keeping AI teams on the right track.*

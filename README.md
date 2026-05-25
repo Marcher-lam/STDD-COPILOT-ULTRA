@@ -1,12 +1,12 @@
 <div align="center">
 
-# STDD Copilot
+# STDD Copilot Ultra
 
-**规格驱动 + 测试驱动开发 · AI 编码助手的流程控制层**
+**Smart Team-Driven Development · AI 全生命周期开发平台**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
-[![npm](https://img.shields.io/npm/v/@marcher-lam/stdd-copilot)](https://www.npmjs.com/package/@marcher-lam/stdd-copilot)
+[![npm](https://img.shields.io/npm/v/@marcher-lam/stdd-copilot-ultra)](https://www.npmjs.com/package/@marcher-lam/stdd-copilot-ultra)
 [![Tests](https://img.shields.io/badge/tests-4158%2F4158%20passing-brightgreen.svg)](CONTRIBUTING.md)
 [![Coverage](https://img.shields.io/badge/coverage-97%25%20stmts%20%7C%2093%25%20branch-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -18,8 +18,8 @@
 
 ## 目录
 
-- [什么是 STDD Copilot](#什么是-stdd-copilot)
-- [为什么需要它](#为什么需要它)
+- [什么是 STDD Copilot Ultra](#什么是-stdd-copilot-ultra)
+- [为什么选择 Ultra](#为什么选择-ultra)
 - [快速开始](#快速开始)
 - [核心理念](#核心理念)
 - [完整工作流](#完整工作流)
@@ -29,14 +29,22 @@
 - [项目结构](#项目结构)
 - [文档导航](#文档导航)
 - [安装与贡献](#安装与贡献)
+- [从 STDD Copilot 升级](#从-stdd-copilot-升级)
 
 ---
 
-## 什么是 STDD Copilot
+## 什么是 STDD Copilot Ultra
 
-**STDD Copilot** 是一个 CLI 工作流框架，将 **Spec-First（规格优先）** 的纪律和 **TDD（测试驱动开发）** 的严谨性带入 AI 辅助开发。它生成一系列检查点产物——BDD 规格、任务清单、设计文档、测试证据、合规审计——让 AI 编码助手始终在预定轨道上运行，将模糊的需求描述转化为可验证的工程交付。
+**STDD Copilot Ultra** 是一个 AI 全生命周期开发平台，从产品构思到可验证交付的完整链路。
 
-> **STDD 不是 AI。** 它是一个流程控制层，AI 编码助手在其上执行工作。
+**STDD = Smart Team-Driven Development（智能团队驱动开发）**
+
+它将三个维度融为一体：
+- **上游探索** — 多角色 AI Agent 协作（PM、Architect、UX、QA），从需求构思到架构设计
+- **规格驱动** — Spec-First 方法论，BDD 规格 + 任务拆解 + 设计文档
+- **TDD 执行** — Ralph Loop 闭环实现，变异测试 + 证据链 + 质量门禁
+
+> **STDD 不是 AI。** 它是 AI 编码助手的流程控制层和质量保证系统。
 
 ### 核心数据
 
@@ -69,12 +77,24 @@ stdd verify login
 
 ---
 
-## 为什么需要它
+## 为什么选择 Ultra
 
-AI 编码助手很强大，但也容易跑偏。STDD 在每个阶段施加约束：
+STDD Copilot Ultra 在原版 STDD Copilot 基础上，吸收了 BMAD-METHOD 的上游优势，形成从构思到交付的完整闭环：
 
-| 痛点 | STDD 的解决方案 |
-|------|----------------|
+| 能力维度 | 原版 STDD | Ultra 版 |
+|----------|-----------|----------|
+| 产品构思 | `brainstorm` 基础分析 | 多角色 Agent 协作探索（PM/Architect/UX/QA） |
+| 需求管理 | proposal + clarify | 自适应规划深度（按项目复杂度自动调节） |
+| 规格驱动 | BDD + Spec Guardian | BDD + Spec Guardian + 复杂度自适应 |
+| TDD 执行 | Ralph Loop 完整闭环 | Ralph Loop + 变异测试 + 假绿灯防护 |
+| 质量治理 | 9 条 Constitution | 9 条 Constitution + 审计 + 豁免 |
+| 模块生态 | 内置命令 | 可扩展模块 + extensions registry |
+| 可视化 | CLI 文本输出 | Graph 可视化 + DESIGN.md 预览 |
+
+### 解决的痛点
+
+| 痛点 | STDD Copilot Ultra 的解决方案 |
+|------|-------------------------------|
 | AI 误解你的意图 | 多轮需求澄清 → 确认门 → BDD 规格锁定 |
 | AI 交付未测试代码 | Ralph Loop TDD 闭环：红灯 → 绿灯 → 变异 → 重构 |
 | 缺乏统一质量基线 | 9 条 Constitution 条例 + 自动 Hook 执行 |
@@ -83,6 +103,7 @@ AI 编码助手很强大，但也容易跑偏。STDD 在每个阶段施加约束
 | 过度实现超出范围 | 微型任务拆分（每任务 ~30 分钟）+ 确认门 |
 | 假绿灯（测试通过但逻辑错误） | 变异测试（Quick Heuristic + Stryker） |
 | 多个 AI 交叉修改同一区域 | Skill Graph 拓扑调度 + 并行执行器 |
+| 需求源头不清晰 | 多角色 Agent 从产品构思开始协作 |
 
 ---
 
@@ -91,7 +112,7 @@ AI 编码助手很强大，但也容易跑偏。STDD 在每个阶段施加约束
 ### 安装
 
 ```bash
-npm install -g @marcher-lam/stdd-copilot@latest
+npm install -g @marcher-lam/stdd-copilot-ultra@latest
 ```
 
 > 其他安装方式（源码构建、Docker）详见 [INSTALL.md](./INSTALL.md)
@@ -121,6 +142,26 @@ stdd archive add-dark-mode             # 归档并合并规格
 ---
 
 ## 核心理念
+
+### 三阶段覆盖：构思 → 规格 → 执行
+
+STDD Copilot Ultra 覆盖完整的开发生命周期：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  阶段 1: 探索与构思                                          │
+│  brainstorm · roles party · explore · design · vision       │
+│  多角色 Agent 协作，充分探索需求空间                           │
+├─────────────────────────────────────────────────────────────┤
+│  阶段 2: 规格与规划                                          │
+│  propose → clarify → confirm → spec → plan                  │
+│  Spec-First 方法论，BDD 规格锁定需求                         │
+├─────────────────────────────────────────────────────────────┤
+│  阶段 3: TDD 执行与验证                                      │
+│  apply → verify → mutation → archive                        │
+│  Ralph Loop 闭环 + 质量门禁 + 证据归档                       │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### 双模式：用户交互 + Agent 自主编排
 
@@ -240,11 +281,26 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd ff <desc>` | `/stdd:ff` | 快速生成（提案+规格+任务） |
 | `stdd turbo <desc>` | `/stdd:turbo` | 一键全流程自动执行 |
 
-### SDD 增强（规格驱动开发）
+### 探索与构思（Ultra 增强）
 
 | CLI | 用途 |
 |-----|------|
-| `stdd api-spec [change]` | 从 BDD 生成 OpenAPI 3.0 + 多语言类型/桩/校验器（TS/JS/Python/Java/Go/Rust/C#/PHP） |
+| `stdd brainstorm <topic>` | 60+ 结构化推理方法，多维度头脑风暴 |
+| `stdd explore [scope]` | 只读项目探索，分析架构、模式、约束 |
+| `stdd roles party / review` | 12 角色 Agent 协作模拟 |
+| `stdd supervisor start / status / roles` | 多 Agent 监督协调 |
+| `stdd design create / list` | DESIGN.md 设计系统生成（modern / dark / minimal 预设） |
+| `stdd story create / to-bdd` | Story Mapping → BDD 转换 |
+| `stdd vision show / update` | 项目愿景管理 |
+| `stdd complexity analyze / hotspots / report` | 圈复杂度分析 |
+| `stdd certainty assess / history / configure` | 置信度协议评估 |
+| `stdd learn` | 模式提取与风格指南生成 |
+
+### 规格驱动开发（SDD）
+
+| CLI | 用途 |
+|-----|------|
+| `stdd api-spec [change]` | 从 BDD 生成 OpenAPI 3.0 + 多语言类型/桩/校验器 |
 | `stdd schema create / validate / fork` | JSON Schema / Zod 类型定义 |
 | `stdd contract generate / verify` | 消费者驱动契约测试 |
 | `stdd validate [change]` | Spec Guardian 一致性检查 |
@@ -253,7 +309,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd product-proposal` | 从全部 STDD 产物生成完整产品提案 |
 | `stdd context --export` | 3 层项目上下文导出 |
 
-### TDD 增强（测试驱动开发）
+### TDD 增强
 
 | CLI | 用途 |
 |-----|------|
@@ -291,27 +347,12 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd graph recommend` | 智能下一步推荐 |
 | `stdd graph analyze` | 瓶颈分析与路径优化 |
 
-### 探索与设计
-
-| CLI | 用途 |
-|-----|------|
-| `stdd explore [scope]` | 只读项目探索，分析架构、模式、约束 |
-| `stdd brainstorm <topic>` | 60+ 结构化推理方法，多维度头脑风暴 |
-| `stdd design create / list` | DESIGN.md 设计系统生成（modern / dark / minimal 预设），默认生成 `preview.html` 与 `preview-dark.html` |
-| `stdd complexity analyze / hotspots / report` | 圈复杂度分析 |
-| `stdd certainty assess / history / configure` | 置信度协议评估 |
-| `stdd learn` | 模式提取与风格指南生成 |
-| `stdd vision show / update` | 项目愿景管理 |
-
 ### 协作与扩展
 
 | CLI | 用途 |
 |-----|------|
 | `stdd workspace list / validate / repair` | Monorepo 工作区管理 |
-| `stdd roles party / review` | 12 角色协作 Agent 模拟 |
-| `stdd supervisor start / status / roles` | 多 Agent 监督协调 |
 | `stdd parallel <cmd>` | 跨 workspace 并行执行 |
-| `stdd story create / to-bdd` | Story Mapping → BDD 转换 |
 | `stdd user-test [change]` | 人机协作测试 |
 | `stdd pipeline [change]` | 从 Spec 生成 IR + Acceptance 测试骨架 |
 | `stdd starters` | 项目启动模板（JS / TS / Python / Go / Rust） |
@@ -372,22 +413,22 @@ Workspace: @myapp/api (packages/api)
 
 ## 架构概览
 
-STDD Copilot 基于 **Skill Graph（技能图谱）** 将 Spec-First 与 TDD 深度融合。架构分为四层：
+STDD Copilot Ultra 基于 **Skill Graph（技能图谱）** 将探索、规格与 TDD 深度融合。架构分为四层：
 
 ```
-┌──────────────────────────────────────────────┐
-│              用户层 (User Layer)               │
-│  CLI (stdd)    │    IDE 集成 (Claude / Cursor) │
-├──────────────────────────────────────────────┤
-│         Skill Graph 引擎 (Graph Engine)        │
-│  DAG Runner  │  Visualizer  │  Analyzer       │
-├──────────────────────────────────────────────┤
-│           核心执行层 (Core Executors)           │
-│  75 命令模块  │  21 工具模块  │  运行时模拟器    │
-├──────────────────────────────────────────────┤
-│           基础设施层 (Infrastructure)           │
-│  模板引擎  │  Hook 系统  │  Logger  │  文件安全  │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                  用户层 (User Layer)                       │
+│  CLI (stdd)    │    IDE 集成 (Claude / Cursor / Windsurf) │
+├──────────────────────────────────────────────────────────┤
+│             Skill Graph 引擎 (Graph Engine)                │
+│  DAG Runner  │  Visualizer  │  Analyzer  │  Recommender  │
+├──────────────────────────────────────────────────────────┤
+│              核心执行层 (Core Executors)                    │
+│  75 命令模块  │  21 工具模块  │  Agent 模拟器  │  运行时    │
+├──────────────────────────────────────────────────────────┤
+│              基础设施层 (Infrastructure)                    │
+│  模板引擎  │  Hook 系统  │  Logger  │  文件安全  │  记忆   │
+└──────────────────────────────────────────────────────────┘
 ```
 
 **关键设计决策：**
@@ -395,6 +436,7 @@ STDD Copilot 基于 **Skill Graph（技能图谱）** 将 Spec-First 与 TDD 深
 - Skill Graph 根据用户意图自动选择 DAG 路径
 - 所有产物以文件形式持久化，AI 读取即可恢复上下文
 - 支持 4 层 24 种外部 AI 引擎的适配
+- 12 角色 Agent 协作（PM、Architect、UX、QA 等）
 
 完整的架构文档见 [ARCHITECTURE.md](./ARCHITECTURE.md)。
 
@@ -403,7 +445,7 @@ STDD Copilot 基于 **Skill Graph（技能图谱）** 将 Spec-First 与 TDD 深
 ## 项目结构
 
 ```
-stdd-copilot/
+stdd-copilot-ultra/
 ├── cli.js                          # CLI 入口（Commander.js）
 ├── src/
 │   ├── cli/
@@ -470,11 +512,11 @@ stdd-copilot/
 
 ```bash
 # npm 全局安装（推荐）
-npm install -g @marcher-lam/stdd-copilot@latest
+npm install -g @marcher-lam/stdd-copilot-ultra@latest
 
 # 源码安装
-git clone https://github.com/Marcher-lam/STDD-COPILOT.git
-cd STDD-COPILOT && npm install && npm link
+git clone https://github.com/Marcher-lam/STDD-COPILOT-ULTRA.git
+cd STDD-COPILOT-ULTRA && npm install && npm link
 
 # Docker
 docker compose up -d
@@ -497,10 +539,27 @@ npm run test:coverage   # 带覆盖率报告运行
 
 ---
 
+## 从 STDD Copilot 升级
+
+如果你已经在使用原版 STDD Copilot：
+
+```bash
+# 1. 安装 Ultra 版
+npm install -g @marcher-lam/stdd-copilot-ultra@latest
+
+# 2. CLI 命令不变，无需迁移
+stdd status              # 所有命令保持一致
+stdd list                # 已有变更继续可用
+```
+
+**完全向后兼容** — CLI 命令 `stdd` 和运行时目录 `stdd/` 保持不变。Ultra 版仅扩展了上游能力（探索、构思、多角色协作）。
+
+---
+
 ## License
 
 [MIT](LICENSE)
 
 ---
 
-*STDD Copilot — 让 AI 编码助手在正确的轨道上运行。*
+*STDD Copilot Ultra — 从构思到交付，让 AI 团队在正确的轨道上运行。*
