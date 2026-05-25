@@ -68,34 +68,41 @@ function renderDesignMD(preset = 'modern', custom = {}) {
 
 This project uses a **${p.name.split(' ')[0].toLowerCase()}** design style with emphasis on clarity and consistency.
 
-## Colors
+### Design Philosophy
+
+- Density: balanced, scannable, suitable for product UI and technical workflows
+- Tone: precise, trustworthy, and implementation-ready
+- Visual rhythm: repeatable spacing, restrained contrast, clear hierarchy
+- AI usage: this file is the source of truth for generated UI decisions
+
+## Color Palette & Roles
 
 ### Semantic Tokens
 
-\`\`\`
---color-primary: ${colors.primary}
---color-secondary: ${colors.secondary}
---color-success: ${colors.success}
---color-warning: ${colors.warning}
---color-error: ${colors.error}
-\`\`\`
+| Token | Value | Role |
+|-------|-------|------|
+| \`--color-primary\` | \`${colors.primary}\` | Primary CTA, active navigation, focus ring |
+| \`--color-secondary\` | \`${colors.secondary}\` | Secondary CTA, accent panels, badges |
+| \`--color-success\` | \`${colors.success}\` | Success states, completed tasks, passing checks |
+| \`--color-warning\` | \`${colors.warning}\` | Warnings, pending reviews, soft alerts |
+| \`--color-error\` | \`${colors.error}\` | Errors, failed checks, destructive actions |
 
 ### Neutral Scale
 
-\`\`\`
---color-gray-50: ${colors.neutral[0]}
---color-gray-100: ${colors.neutral[1]}
---color-gray-200: ${colors.neutral[2]}
---color-gray-300: ${colors.neutral[3]}
---color-gray-400: ${colors.neutral[4]}
---color-gray-500: ${colors.neutral[5]}
---color-gray-600: ${colors.neutral[6]}
---color-gray-700: ${colors.neutral[7]}
---color-gray-800: ${colors.neutral[8]}
---color-gray-900: ${colors.neutral[9]}
-\`\`\`
+| Token | Value | Typical Use |
+|-------|-------|-------------|
+| \`--color-gray-50\` | \`${colors.neutral[0]}\` | App background / lowest surface |
+| \`--color-gray-100\` | \`${colors.neutral[1]}\` | Subtle surface |
+| \`--color-gray-200\` | \`${colors.neutral[2]}\` | Border / divider |
+| \`--color-gray-300\` | \`${colors.neutral[3]}\` | Strong border |
+| \`--color-gray-400\` | \`${colors.neutral[4]}\` | Muted text |
+| \`--color-gray-500\` | \`${colors.neutral[5]}\` | Secondary text |
+| \`--color-gray-600\` | \`${colors.neutral[6]}\` | Body text on light surfaces |
+| \`--color-gray-700\` | \`${colors.neutral[7]}\` | Headings / emphasis |
+| \`--color-gray-800\` | \`${colors.neutral[8]}\` | High emphasis |
+| \`--color-gray-900\` | \`${colors.neutral[9]}\` | Maximum contrast text |
 
-## Typography
+## Typography Rules
 
 ### Font Stack
 
@@ -106,19 +113,21 @@ This project uses a **${p.name.split(' ')[0].toLowerCase()}** design style with 
 
 ### Type Scale
 
-\`\`\`
---text-xs: 0.75rem     /* 12px */
---text-sm: 0.875rem    /* 14px */
---text-base: 1rem      /* 16px */
---text-lg: 1.125rem    /* 18px */
---text-xl: 1.25rem     /* 20px */
---text-2xl: 1.5rem     /* 24px */
---text-3xl: 1.875rem   /* 30px */
---text-4xl: 2.25rem    /* 36px */
---text-5xl: 3rem       /* 48px */
-\`\`\`
+| Token | Size | Use |
+|-------|------|-----|
+| \`--text-xs\` | 0.75rem / 12px | Captions, metadata |
+| \`--text-sm\` | 0.875rem / 14px | Secondary labels |
+| \`--text-base\` | 1rem / 16px | Body text |
+| \`--text-lg\` | 1.125rem / 18px | Lead body |
+| \`--text-xl\` | 1.25rem / 20px | Section heading |
+| \`--text-2xl\` | 1.5rem / 24px | Card title |
+| \`--text-3xl\` | 1.875rem / 30px | Page title |
+| \`--text-4xl\` | 2.25rem / 36px | Hero heading |
+| \`--text-5xl\` | 3rem / 48px | Marketing display |
 
-## Spacing
+## Layout Principles
+
+### Spacing Scale
 
 \`\`\`
 --spacing-xs: ${p.spacing.xs}
@@ -130,6 +139,12 @@ This project uses a **${p.name.split(' ')[0].toLowerCase()}** design style with 
 --spacing-3xl: ${p.spacing['3xl']}
 \`\`\`
 
+- Max content width: 1200px
+- Grid system: 12 columns
+- Gutter: \`--spacing-md\`
+- Container padding: \`--spacing-lg\`
+- Prefer fewer, stronger layout regions over many small boxes
+
 ## Border Radius
 
 \`\`\`
@@ -140,7 +155,7 @@ This project uses a **${p.name.split(' ')[0].toLowerCase()}** design style with 
 --radius-full: ${p.borderRadius.full}
 \`\`\`
 
-## Component Guidelines
+## Component Stylings
 
 ### Buttons
 
@@ -148,7 +163,8 @@ This project uses a **${p.name.split(' ')[0].toLowerCase()}** design style with 
 - Secondary buttons use \`--color-secondary\` background
 - Border radius: \`--radius-md\`
 - Padding: \`--spacing-sm\` \`--spacing-md\`
-- Hover: Darken background by 10%
+- Hover: darken background by 10% or raise elevation subtly
+- Disabled: 50% opacity, no hover movement
 
 ### Inputs
 
@@ -156,6 +172,7 @@ This project uses a **${p.name.split(' ')[0].toLowerCase()}** design style with 
 - Border radius: \`--radius-md\`
 - Padding: \`--spacing-sm\` \`--spacing-md\`
 - Focus: Outline with \`--color-primary\`
+- Error: Border and helper text use \`--color-error\`
 
 ### Cards
 
@@ -163,15 +180,27 @@ This project uses a **${p.name.split(' ')[0].toLowerCase()}** design style with 
 - Border: 1px solid \`--color-gray-200\`
 - Border radius: \`--radius-lg\`
 - Padding: \`--spacing-lg\`
+- Hover: elevate one level only when card is interactive
 
-## Layout Principles
+### Navigation
 
-- Max content width: 1200px
-- Grid system: 12 columns
-- Gutter: \`--spacing-md\`
-- Container padding: \`--spacing-lg\`
+- Active item: \`--color-primary\` text or subtle primary background
+- Inactive item: secondary text, no heavy borders
+- Mobile navigation collapses into a drawer or compact menu
 
-## Responsive Breakpoints
+## Depth & Elevation
+
+| Token | Shadow | Use |
+|-------|--------|-----|
+| \`--shadow-sm\` | \`0 1px 2px rgba(0,0,0,.06)\` | Inputs, subtle surfaces |
+| \`--shadow-md\` | \`0 8px 24px rgba(0,0,0,.10)\` | Cards, menus |
+| \`--shadow-lg\` | \`0 20px 48px rgba(0,0,0,.16)\` | Dialogs, command palettes |
+
+- Avoid stacking more than two elevated layers at once
+- Prefer border + background for static sections
+- Use shadow only to communicate interactivity or overlay depth
+
+## Responsive Behavior
 
 \`\`\`
 --breakpoint-sm: 640px
@@ -180,16 +209,20 @@ This project uses a **${p.name.split(' ')[0].toLowerCase()}** design style with 
 --breakpoint-xl: 1280px
 \`\`\`
 
+- Touch targets: minimum 44px height on mobile
+- Tables collapse into cards below \`--breakpoint-md\`
+- Primary action stays visible above the fold
+- Use one-column forms on mobile, two-column forms only on desktop
+
 ## Do's and Don'ts
 
-\`\`\`
-✓ DO use semantic color tokens
-✓ DO follow the spacing scale
-✓ DO maintain consistent border radius
-✗ DON'T use arbitrary hex values
-✗ DON'T mix fonts within components
-✗ DON'T create custom spacing values
-\`\`\`
+| Do | Don't |
+|----|-------|
+| Use semantic color tokens | Use arbitrary hex values in components |
+| Follow the spacing scale | Invent custom spacing per component |
+| Maintain consistent radius | Mix square and rounded styles randomly |
+| Keep hierarchy explicit | Rely on color alone for meaning |
+| Use clear empty/error states | Hide failure states or use vague copy |
 
 ## Agent Prompt Guide
 
@@ -200,11 +233,82 @@ When generating UI code:
 3. Use semantic color names, not hex values
 4. Apply spacing from the defined scale
 5. Match border radius to component type
+6. Preserve responsive behavior and touch targets
+7. Generate accessible labels, focus states, and error states
+
+### Ready-to-use Prompt
+
+\`\`\`
+Use DESIGN.md as the visual source of truth. Build the UI with the defined color roles, type scale, spacing, radius, elevation, responsive behavior, and component states. Do not introduce unapproved colors, fonts, or spacing values.
+\`\`\`
 
 ---
 
 *This DESIGN.md should be updated when design requirements change.*
 `;
+}
+
+function renderPreviewHTML(preset = 'modern', dark = false) {
+  const p = PRESETS[preset] || PRESETS.modern;
+  const colors = p.colors;
+  const bg = dark ? colors.neutral[0] : colors.neutral[0];
+  const surface = dark ? colors.neutral[1] : '#ffffff';
+  const text = dark ? colors.neutral[9] : colors.neutral[8];
+  const muted = dark ? colors.neutral[6] : colors.neutral[5];
+  const border = dark ? colors.neutral[3] : colors.neutral[2];
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${p.name} Design Preview</title>
+  <style>
+    :root {
+      --color-primary: ${colors.primary};
+      --color-secondary: ${colors.secondary};
+      --color-success: ${colors.success};
+      --color-warning: ${colors.warning};
+      --color-error: ${colors.error};
+      --bg: ${bg};
+      --surface: ${surface};
+      --text: ${text};
+      --muted: ${muted};
+      --border: ${border};
+      --font: ${p.fontFamily};
+      --radius: ${p.borderRadius.lg};
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
+    main { max-width: 1120px; margin: 0 auto; padding: 48px 24px; }
+    .hero { display: grid; gap: 16px; margin-bottom: 32px; }
+    h1 { font-size: clamp(2rem, 5vw, 4rem); line-height: 1; margin: 0; letter-spacing: -0.04em; }
+    p { color: var(--muted); line-height: 1.7; max-width: 680px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+    .swatch { height: 72px; border-radius: 12px; margin-bottom: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0; }
+    button { border: 0; border-radius: ${p.borderRadius.md}; padding: 10px 16px; font: inherit; cursor: pointer; }
+    .primary { background: var(--color-primary); color: white; }
+    .secondary { background: var(--color-secondary); color: white; }
+    .ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    input { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: ${p.borderRadius.md}; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+    code { color: var(--color-primary); }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>${p.name}</h1>
+      <p>Visual catalog generated from DESIGN.md tokens. Use it to verify color roles, type scale, components, cards, and form states.</p>
+      <div class="actions"><button class="primary">Primary Action</button><button class="secondary">Secondary</button><button class="ghost">Ghost</button></div>
+    </section>
+    <section class="grid">
+      ${Object.entries({ primary: colors.primary, secondary: colors.secondary, success: colors.success, warning: colors.warning, error: colors.error }).map(([name, value]) => `<div class="card"><div class="swatch" style="background:${value}"></div><strong>${name}</strong><p><code>${value}</code></p></div>`).join('')}
+    </section>
+    <section class="card" style="margin-top:16px"><h2>Form Preview</h2><p>Inputs use semantic borders, radius, focus, and spacing.</p><input placeholder="Email address" /></section>
+  </main>
+</body>
+</html>`;
 }
 
 class DesignCommand {
@@ -222,6 +326,9 @@ class DesignCommand {
       case 'show':
       case 'view':
         return this.show(options);
+      case 'list':
+      case 'presets':
+        return this.list(options);
       case 'check':
         return this.check(options);
       case 'update':
@@ -245,16 +352,39 @@ class DesignCommand {
 
     const content = renderDesignMD(preset);
     fs.writeFileSync(this.designPath, content, 'utf8');
+    const previews = this.writePreviews(preset, options);
 
     if (options.json) {
-      console.log(JSON.stringify({ path: this.designPath, preset, created: true }, null, 2));
+      console.log(JSON.stringify({ path: this.designPath, preset, created: true, previews }, null, 2));
     } else {
       console.log(chalk.bold('\n✓ DESIGN.md created\n'));
       console.log(`  ${chalk.cyan(path.relative(this.cwd, this.designPath))}`);
       console.log(`  Preset: ${chalk.cyan(preset)} (${PRESETS[preset].name})`);
+      previews.forEach(file => console.log(`  Preview: ${chalk.cyan(path.relative(this.cwd, file))}`));
       console.log(chalk.dim('\n  AI agents will now use this design system for UI generation.\n'));
     }
-    return { path: this.designPath, preset, created: true };
+    return { path: this.designPath, preset, created: true, previews };
+  }
+
+  writePreviews(preset, options = {}) {
+    if (options.preview === false || options.noPreview) return [];
+    const lightPath = path.join(this.cwd, 'preview.html');
+    const darkPath = path.join(this.cwd, 'preview-dark.html');
+    fs.writeFileSync(lightPath, renderPreviewHTML(preset, false), 'utf8');
+    fs.writeFileSync(darkPath, renderPreviewHTML(preset, true), 'utf8');
+    return [lightPath, darkPath];
+  }
+
+  list(options = {}) {
+    const presets = Object.entries(PRESETS).map(([key, value]) => ({ key, name: value.name }));
+    if (options.json) {
+      console.log(JSON.stringify({ presets }, null, 2));
+    } else {
+      console.log(chalk.bold('\nAvailable DESIGN.md presets\n'));
+      presets.forEach(preset => console.log(`  ${chalk.cyan(preset.key)} - ${preset.name}`));
+      console.log('');
+    }
+    return presets;
   }
 
   show(options = {}) {
@@ -288,12 +418,14 @@ class DesignCommand {
     const content = fs.readFileSync(this.designPath, 'utf8');
     const issues = [];
     const checks = {
-      hasColors: /##\s*Colors/i.test(content) && /--color-/.test(content),
+      hasColors: (/##\s*Colors/i.test(content) || /##\s*Color Palette & Roles/i.test(content)) && /--color-/.test(content),
       hasTypography: /##\s*Typography/i.test(content) && /--text-/.test(content),
-      hasSpacing: /##\s*Spacing/i.test(content) && /--spacing-/.test(content),
+      hasSpacing: (/##\s*Spacing/i.test(content) || /###\s*Spacing Scale/i.test(content)) && /--spacing-/.test(content),
       hasBorderRadius: /##\s*Border Radius/i.test(content) && /--radius-/.test(content),
-      hasComponents: /##\s*Component Guidelines/i.test(content),
+      hasComponents: /##\s*Component (Guidelines|Stylings)/i.test(content),
+      hasElevation: /##\s*Depth & Elevation/i.test(content) && /--shadow-/.test(content),
       hasResponsive: /##\s*Responsive/i.test(content) || /breakpoint/i.test(content),
+      hasPromptGuide: /##\s*Agent Prompt Guide/i.test(content),
       usesCssVars: /--[\w-]+:/g.test(content),
     };
 
@@ -301,8 +433,10 @@ class DesignCommand {
     if (!checks.hasTypography) issues.push('Typography section missing or incomplete');
     if (!checks.hasSpacing) issues.push('Spacing section missing or incomplete');
     if (!checks.hasBorderRadius) issues.push('Border Radius section missing or incomplete');
-    if (!checks.hasComponents) issues.push('Component Guidelines section missing');
+    if (!checks.hasComponents) issues.push('Component Stylings section missing');
+    if (!checks.hasElevation) issues.push('Depth & Elevation section missing or incomplete');
     if (!checks.hasResponsive) issues.push('Responsive breakpoints missing');
+    if (!checks.hasPromptGuide) issues.push('Agent Prompt Guide section missing');
     if (!checks.usesCssVars) issues.push('No CSS variables found (use --var-name: value format)');
 
     const result = {
@@ -348,16 +482,17 @@ class DesignCommand {
 
     const content = renderDesignMD(preset);
     fs.writeFileSync(this.designPath, content, 'utf8');
+    const previews = this.writePreviews(preset, options);
 
     if (options.json) {
-      console.log(JSON.stringify({ path: this.designPath, preset, updated: true }, null, 2));
+      console.log(JSON.stringify({ path: this.designPath, preset, updated: true, previews }, null, 2));
     } else {
       console.log(chalk.bold('\n✓ DESIGN.md updated\n'));
       console.log(`  ${chalk.cyan(path.relative(this.cwd, this.designPath))}`);
       console.log(`  Preset: ${chalk.cyan(preset)} (${PRESETS[preset].name})\n`);
     }
-    return { path: this.designPath, preset, updated: true };
+    return { path: this.designPath, preset, updated: true, previews };
   }
 }
 
-module.exports = { DesignCommand };
+module.exports = { DesignCommand, renderDesignMD, renderPreviewHTML };

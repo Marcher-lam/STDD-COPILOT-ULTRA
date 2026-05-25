@@ -295,7 +295,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 |-----|---------|
 | `stdd explore [scope]` | Read-only project exploration (architecture, patterns, constraints) |
 | `stdd brainstorm <topic>` | 60+ structured reasoning methods, multi-angle analysis |
-| `stdd design create / list` | DESIGN.md design system generation (modern / dark / minimal presets) |
+| `stdd design create / list` | DESIGN.md design system generation (modern / dark / minimal presets), with `preview.html` and `preview-dark.html` by default |
 | `stdd complexity analyze / hotspots / report` | Cyclomatic complexity analysis |
 | `stdd certainty assess / history / configure` | Certainty protocol assessment |
 | `stdd learn` | Pattern extraction and style guide generation |

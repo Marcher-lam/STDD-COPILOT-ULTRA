@@ -406,6 +406,7 @@ program.command('design [action]')
   .option('--json', 'JSON output')
   .option('--preset <name>', 'Design preset (modern, dark, minimal)')
   .option('-p <name>', 'Design preset (shorthand)')
+  .option('--no-preview', 'Skip preview.html and preview-dark.html generation')
   .option('--force', 'Force overwrite')
   .action(safeAction(async (action, options) => {
     const cmd = new DesignCommand(process.cwd());

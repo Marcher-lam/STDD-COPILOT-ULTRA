@@ -297,7 +297,7 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 |-----|------|
 | `stdd explore [scope]` | 只读项目探索，分析架构、模式、约束 |
 | `stdd brainstorm <topic>` | 60+ 结构化推理方法，多维度头脑风暴 |
-| `stdd design create / list` | DESIGN.md 设计系统生成（modern / dark / minimal 预设） |
+| `stdd design create / list` | DESIGN.md 设计系统生成（modern / dark / minimal 预设），默认生成 `preview.html` 与 `preview-dark.html` |
 | `stdd complexity analyze / hotspots / report` | 圈复杂度分析 |
 | `stdd certainty assess / history / configure` | 置信度协议评估 |
 | `stdd learn` | 模式提取与风格指南生成 |

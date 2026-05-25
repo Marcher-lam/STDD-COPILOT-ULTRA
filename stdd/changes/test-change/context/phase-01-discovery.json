@@ -1,0 +1,10 @@
+{
+  "phase": "discovery",
+  "phaseNum": 1,
+  "timestamp": "2026-05-23T17:24:01.401Z",
+  "decisions": [],
+  "artifacts": [],
+  "constraints": [],
+  "unresolved": [],
+  "previous": "/Users/marcher/Desktop/stdd-copliot/stdd/changes/test-change/context/phase-00-init.json"
+}

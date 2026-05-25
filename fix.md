@@ -81,6 +81,52 @@ Coverage:    ~97%+ Stmts | ~93%+ Branch | ~97%+ Funcs | ~97%+ Lines
 
 结果：190→191 套件，4150→4158 测试。
 
+## 前端/UI 能力现状（2026-05-24）
+
+当前 STDD 在前端方向的定位是：**awesome-design-md 风格设计规范 + 预览目录 + 测试支撑 + 浏览器辅助 + Agent 协议** 已具备；**可视化 Web Dashboard、页面/组件生成器、视觉回归闭环、现有 UI 自动反推设计系统** 尚未实现。
+
+### awesome-design-md 对齐增强
+
+已仔细阅读 VoltAgent/awesome-design-md，提炼并落地以下能力：
+- DESIGN.md 采用更接近 Stitch/awesome-design-md 的扩展结构：Visual Theme & Atmosphere、Color Palette & Roles、Typography Rules、Component Stylings、Layout Principles、Depth & Elevation、Do's and Don'ts、Responsive Behavior、Agent Prompt Guide。
+- `stdd design create/update` 默认同时生成 `preview.html` 与 `preview-dark.html`，用于可视化查看色板、按钮、卡片、表单等基础组件。
+- 新增 `--no-preview` 选项，允许只生成 DESIGN.md，不生成预览 HTML。
+- `stdd design check` 增强检查：支持 Color Palette & Roles、Component Stylings、Depth & Elevation、Agent Prompt Guide 等新版章节。
+- `stdd design list` 补齐为可用动作，支持普通输出和 JSON 输出。
+
+### 已具备能力
+
+| 能力 | 当前状态 | 说明 |
+|------|----------|------|
+| DESIGN.md 设计系统生成 | 已增强 | `stdd design create/show/check/update/list`，支持 modern/dark/minimal 三套预设 |
+| 前端设计规范 | 已增强 | 生成颜色角色、字体规则、布局原则、组件状态、深度/阴影、设计 guardrails、响应式策略、Agent Prompt Guide |
+| 设计预览目录 | 已实现 | 默认生成 `preview.html` 与 `preview-dark.html`，可用 `--no-preview` 跳过 |
+| 前端技术栈识别 | 部分实现 | `design.js` 调用 `detectTechStack`，并 fallback 到 `TechStackDetector.analyze` |
+| Brownfield 前端流程 | 协议层实现 | `docs/agent-protocol.md` 定义 React/Vue/HTML 项目检测、缺失 DESIGN.md 提示、理解报告流程 |
+| 浏览器辅助 | 已实现 | `stdd browser snapshot/inspect/doctor`，依赖 Playwright，用于截图、页面检查、浏览器环境诊断 |
+| 用户测试脚本 | 已实现 | `stdd user-test` 从 BDD 规格生成 `user-test-human.md` 与 `user-test-agent.json` |
+| 前端 API 支撑 | 已实现 | `stdd api-spec` 可生成 OpenAPI、TypeScript 类型、MSW handlers、Zod validators |
+
+### 未完成能力
+
+| 能力 | 状态 | 缺口 |
+|------|------|------|
+| Web UI Dashboard | 未实现 | 尚无浏览器端 STDD 控制台、进度面板、指标仪表盘 |
+| UI 页面/组件生成器 | 未实现 | 尚无 `stdd ui generate` / `stdd page create` / `stdd component create` 类命令 |
+| 视觉回归测试 | 未实现 | 尚无 baseline 截图、diff 比对、阈值判定、CI 报告、失败 evidence 自动归档 |
+| 现有 UI 自动反推设计系统 | 未实现 | 尚未扫描 Tailwind/CSS/组件库并提取真实颜色、字体、spacing |
+| 前端组件测试闭环 | 未实现 | 尚无 React Testing Library、Storybook stories、Playwright specs、accessibility checks 自动生成闭环 |
+
+### 后续建议优先级
+
+| 优先级 | 建议项 | 价值 |
+|--------|--------|------|
+| P1 | Web UI Dashboard | 可视化展示 changes、phase、tasks、coverage、constitution、evidence |
+| P1 | 视觉回归闭环 | 将 `stdd browser snapshot` 扩展为可比较、可归档、可 CI 阻断的视觉质量门 |
+| P2 | DESIGN.md 反推增强 | 从现有 CSS/Tailwind/组件库反推真实设计系统，而非仅 preset 生成 |
+| P2 | UI 生成命令 | 基于 DESIGN.md + BDD 规格生成页面/组件骨架 |
+| P2 | 前端测试生成 | 生成 RTL/Playwright/Storybook 测试骨架，与 `stdd user-test` 串联 |
+
 ## 各模块覆盖率详情
 
 ### 100% 全覆盖的模块
