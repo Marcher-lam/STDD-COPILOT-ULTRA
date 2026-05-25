@@ -4,6 +4,8 @@
   "historyDir": "stdd/history",
   "maxParallelWorkers": 4,
   "defaultTimeout": 3600000,
+  "defaultProfile": "standard",
+  "profileOverrides": {},
   "retryPolicy": {
     "maxRetries": 3,
     "backoffMs": 1000,

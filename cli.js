@@ -41,6 +41,11 @@ const {
   ProposeCommand, ClarifyCommand, ConfirmCommand, PlanCommand,
   ExecuteCommand, FinalDocCommand, CommitTddCommand,
   ProfileCommand,
+  UICommand,
+  BuilderCommand,
+  ModulesCommand,
+  DashboardCommand,
+  DocsCommand,
 } = require('./src/cli/commands/index');
 
 const { ProgressCommand } = require('./src/cli/commands/progress');
@@ -129,12 +134,17 @@ const commandFactories = {
   FinalDocCommand,
   CommitTddCommand,
   ProfileCommand,
+  UICommand,
+  BuilderCommand,
+  ModulesCommand,
+  DashboardCommand,
+  DocsCommand,
 };
 
 const loader = new CommandLoader(program, {
   commandFactories,
   createSpinner,
-  skipNames: ['constitution [action] [target]', 'hooks', 'graph', 'runtime', 'recommend', 'doctor', 'start', 'memory <action> [args...]', 'baby-steps [task]', 'sudo run [file]', 'list', 'status [change]', 'progress', 'vision [action]', 'prp [action]', 'design [action]', 'certainty [action]', 'complexity [action]', 'factory [action]', 'iterate [action]', 'help [topic]', 'parallel [action]', 'supervisor [action]', 'memory-scan [action]', 'graph-history [action] [id]', 'profile [action]'],
+  skipNames: ['constitution [action] [target]', 'hooks', 'graph', 'runtime', 'recommend', 'doctor', 'start', 'memory <action> [args...]', 'baby-steps [task]', 'sudo run [file]', 'list', 'status [change]', 'progress', 'vision [action]', 'prp [action]', 'design [action]', 'certainty [action]', 'complexity [action]', 'factory [action]', 'iterate [action]', 'help [topic]', 'parallel [action]', 'supervisor [action]', 'memory-scan [action]', 'graph-history [action] [id]', 'profile [action]', 'ui [action]', 'builder [action]', 'modules [action] [args...]', 'dashboard [action]', 'docs [action]'],
 });
 loader.registerAll();
 
@@ -494,6 +504,112 @@ program.command('profile [action]')
   .action(safeAction(async (action, options) => {
     const cmd = new ProfileCommand(process.cwd());
     await cmd.execute(action || 'detect', [], options);
+  }));
+
+program.command('modules [action] [args...]')
+  .description('Browse, search, install, and manage STDD modules from the marketplace')
+  .option('--json', 'JSON output')
+  .option('--category <cat>', 'Filter by category (for search)')
+  .addHelpText('after', `Actions: featured, search, install, list, info, publish, categories
+
+Examples:
+  stdd modules                     # Show featured/official modules
+  stdd modules search tdd          # Search for modules matching "tdd"
+  stdd modules search workflow --category workflow
+  stdd modules install stdd-tdd-core
+  stdd modules info stdd-tdd-core
+  stdd modules list
+  stdd modules categories
+  stdd modules publish ./my-module`)
+  .action(safeAction(async (action, args, options) => {
+    const cmd = new ModulesCommand(process.cwd());
+    await cmd.execute(action || 'featured', args || [], options);
+  }));
+
+program.command('dashboard [action]')
+  .description('Generate static HTML dashboard showing project health, changes, and evidence')
+  .option('--json', 'Output raw dashboard data as JSON')
+  .option('--output <path>', 'Custom output file path')
+  .addHelpText('after', `Actions: generate (default), open
+
+Examples:
+  stdd dashboard                # Generate dashboard to stdd/dashboard/index.html
+  stdd dashboard generate       # Same as above
+  stdd dashboard open           # Generate and open in browser
+  stdd dashboard --json         # Output raw data as JSON
+  stdd dashboard --output ./report.html`)
+  .action(safeAction(async (action, options) => {
+    const cmd = new DashboardCommand(process.cwd());
+    await cmd.execute(action || 'generate', [], options);
+  }));
+
+program.command('builder [action] [name]')
+  .description('Create custom agents, workflows, and skills')
+  .option('--json', 'JSON output')
+  .option('--type <type>', 'Type for export: agent, workflow, skill')
+  .option('--expertise <list>', 'Comma-separated expertise areas (agent)')
+  .option('--lens <text>', 'Review lens description (agent)')
+  .option('--focus <list>', 'Comma-separated review focus areas (agent)')
+  .option('--phases <list>', 'Comma-separated STDD phases (workflow)')
+  .option('--intent <text>', 'Workflow intent description')
+  .option('--description <text>', 'Description (skill)')
+  .option('--category <cat>', 'Category (skill)')
+  .option('--phase <phase>', 'STDD phase (skill)')
+  .option('--force', 'Force overwrite existing')
+  .addHelpText('after', `Actions: agent, workflow, skill, list, validate, export\n\nExamples:\n  stdd builder agent security-reviewer\n  stdd builder workflow custom-pipeline --phases stdd-propose,stdd-spec,stdd-plan\n  stdd builder skill data-validator\n  stdd builder list\n  stdd builder validate stdd/builders/agents/my-agent.json\n  stdd builder export my-agent --type agent`)
+  .action(safeAction(async (action, name, options) => {
+    const cmd = new BuilderCommand(process.cwd());
+    await cmd.execute(action || 'list', [name || ''], options);
+  }));
+
+program.command('ui [action] [name]')
+  .description('Generate frontend pages and components using DESIGN.md design tokens')
+  .option('--json', 'JSON output')
+  .option('--framework <fw>', 'Framework: react, vue, vanilla (default: react)')
+  .option('--layout <layout>', 'Page layout: centered, sidebar, full (default: centered)')
+  .option('--sections <list>', 'Comma-separated page sections')
+  .option('--type <type>', 'Component type: button, card, form, input, modal, nav, table, list')
+  .option('--style <style>', 'Style format: css, scss, tailwind, css-modules (default: css)')
+  .option('--force', 'Force overwrite')
+  .addHelpText('after', `Actions: page, component, scaffold, preview, list
+
+Examples:
+  stdd ui page dashboard                     # Generate a React page
+  stdd ui page home --layout sidebar         # Page with sidebar layout
+  stdd ui page about --framework vanilla     # Vanilla HTML page
+  stdd ui component SubmitButton --type button  # Generate a button component
+  stdd ui component UserCard --type card     # Generate a card component
+  stdd ui scaffold                           # Scaffold full UI app structure
+  stdd ui preview                            # Generate preview gallery
+  stdd ui list                               # List generated artifacts`)
+  .action(safeAction(async (action, name, options) => {
+    const cmd = new UICommand(process.cwd());
+    const validActions = ['page', 'component', 'scaffold', 'preview', 'list'];
+    if (!validActions.includes(action)) {
+      await cmd.execute('list', [], options);
+    } else {
+      await cmd.execute(action, [name || ''], options);
+    }
+  }));
+
+program.command('docs [action]')
+  .description('Generate a static HTML documentation site from project docs')
+  .option('--json', 'JSON output')
+  .option('--output <path>', 'Custom output directory')
+  .option('--lang <lang>', 'Language filter: zh or en')
+  .addHelpText('after', `Actions: generate (default), open, sources
+
+Examples:
+  stdd docs                     # Generate docs site to stdd/docs-site/
+  stdd docs generate            # Same as above
+  stdd docs open                # Generate and open in browser
+  stdd docs sources             # List documentation sources
+  stdd docs --json              # Output source listing as JSON
+  stdd docs --lang en           # Generate English-only docs
+  stdd docs --output ./my-docs  # Custom output directory`)
+  .action(safeAction(async (action, options) => {
+    const cmd = new DocsCommand(process.cwd());
+    await cmd.execute(action || 'generate', [], options);
   }));
 
 // ─── Parse with progress tracking ───

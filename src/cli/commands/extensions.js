@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ensureInsideDir } = require('../../utils/change-utils');
+const { ModuleRegistry } = require('../../config/module-registry');
 
 function validateExtensionName(name) {
   if (!name || typeof name !== 'string') throw new Error('Extension manifest name is required.');
@@ -13,12 +14,19 @@ function validateExtensionName(name) {
 }
 
 class ExtensionsCommand {
-  constructor(cwd = process.cwd()) { this.cwd = cwd; }
+  constructor(cwd = process.cwd()) {
+    this.cwd = cwd;
+    this.registry = new ModuleRegistry();
+  }
 
   execute(action = 'list', args = [], options = {}) {
     if (action === 'install') return this.install(args[0], options);
     if (action === 'validate') return this.validate(args[0], options);
     if (action === 'publish') return this.publish(args[0], options);
+    if (action === 'search') return this.search(args[0], options);
+    if (action === 'info') return this.info(args[0], options);
+    if (action === 'update') return this.update(args[0], options);
+    if (action === 'remove') return this.remove(args[0], options);
     return this.list(options);
   }
 
@@ -104,6 +112,82 @@ class ExtensionsCommand {
       if (entry.isDirectory()) this.walk(fullPath, visit);
       else if (entry.isFile()) visit(fullPath);
     }
+  }
+
+  // ─── Marketplace actions ───
+
+  search(query, options = {}) {
+    if (!query) throw new Error('Search query is required.');
+    const matches = this.registry.search(query, {
+      catalogPath: this.catalogPath(),
+      category: options.category,
+    });
+    if (options.json) {
+      console.log(JSON.stringify({ query, category: options.category || null, results: matches }, null, 2));
+    } else {
+      console.log(`\nSearch results for "${query}"${options.category ? ` (category: ${options.category})` : ''}\n`);
+      if (!matches.length) {
+        console.log('  No matching modules found.');
+      } else {
+        for (const m of matches) {
+          console.log(`  ${m.name} v${m.version || '?'} — ${m.description || ''}`);
+          console.log(`    category: ${m.category || 'uncategorized'}  official: ${m.official ? 'yes' : 'no'}  keywords: ${(m.keywords || []).join(', ')}`);
+        }
+      }
+      console.log('');
+    }
+    return { query, results: matches };
+  }
+
+  info(moduleName, options = {}) {
+    if (!moduleName) throw new Error('Module name is required.');
+    const mod = this.registry.getInfo(moduleName, { catalogPath: this.catalogPath() });
+    if (!mod) throw new Error(`Module not found: ${moduleName}`);
+    if (options.json) {
+      console.log(JSON.stringify(mod, null, 2));
+    } else {
+      console.log(`\nModule: ${mod.name}`);
+      console.log(`  Version:     ${mod.version || '?'}`);
+      console.log(`  Description: ${mod.description || ''}`);
+      console.log(`  Category:    ${mod.category || 'uncategorized'}`);
+      console.log(`  Author:      ${mod.author || 'unknown'}`);
+      console.log(`  Official:    ${mod.official ? 'yes' : 'no'}`);
+      console.log(`  Keywords:    ${(mod.keywords || []).join(', ')}`);
+      if (mod.installedAt) console.log(`  Installed:   ${mod.installedAt}`);
+      if (mod.path) console.log(`  Path:        ${mod.path}`);
+      console.log('');
+    }
+    return mod;
+  }
+
+  update(moduleName, options = {}) {
+    if (!moduleName) throw new Error('Module name is required.');
+    const result = this.registry.update(moduleName, {
+      catalogPath: this.catalogPath(),
+      installedDir: this.installedDir(),
+    });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(result.status === 'up-to-date'
+        ? `${moduleName} is already at latest version (${result.currentVersion}).`
+        : result.message);
+    }
+    return result;
+  }
+
+  remove(moduleName, options = {}) {
+    if (!moduleName) throw new Error('Module name is required.');
+    const result = this.registry.remove(moduleName, {
+      catalogPath: this.catalogPath(),
+      installedDir: this.installedDir(),
+    });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`Removed module: ${moduleName}`);
+    }
+    return result;
   }
 }
 

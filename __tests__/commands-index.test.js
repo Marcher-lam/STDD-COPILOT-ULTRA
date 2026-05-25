@@ -21,6 +21,7 @@ describe('commands/index.js re-exports', () => {
     'VisionCommand', 'PrpCommand', 'DesignCommand', 'CertaintyCommand', 'ComplexityCommand',
     'FactoryCommand', 'MockCommand', 'MemoryCommand', 'IterateCommand', 'HelpCommand',
     'ParallelCommand', 'SupervisorCommand', 'ProfileCommand',
+    'BuilderCommand', 'UICommand', 'ModulesCommand', 'DashboardCommand', 'DocsCommand',
     // Skill-based workflow commands
     'ProposeCommand', 'ClarifyCommand', 'ConfirmCommand', 'PlanCommand',
     'ExecuteCommand', 'FinalDocCommand', 'CommitTddCommand',

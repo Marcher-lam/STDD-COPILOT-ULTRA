@@ -8,6 +8,7 @@ const path = require('path');
 const chalk = require('chalk');
 const { createLogger } = require('../../utils/logger');
 const { TechStackDetector } = require('../../utils/tech-stack-detector');
+const { ProfileEngine } = require('../../utils/profile-engine');
 const logger = createLogger('plan');
 
 class PlanCommand {
@@ -26,6 +27,34 @@ class PlanCommand {
       throw new Error('No active change found. Use `stdd new change <name>` first.');
     }
 
+    // --- Profile detection (additive, non-breaking) ---
+    let profileInfo = null;
+    try {
+      const profileEngine = new ProfileEngine();
+      if (options.profile) {
+        // Explicit profile takes priority
+        const { PROFILES } = require('../../config/planning-profiles');
+        const profile = PROFILES[options.profile];
+        if (profile) {
+          profileInfo = { profileId: options.profile, profile, source: 'cli-option' };
+        }
+      }
+      if (!profileInfo) {
+        // Auto-detect from project data
+        profileInfo = profileEngine.detectFromProject(process.cwd());
+      }
+
+      // Adjust maxTasks based on detected profile
+      if (profileInfo && profileInfo.profile && profileInfo.profile.phaseConfig) {
+        const profileMax = profileInfo.profile.phaseConfig.maxTasks;
+        if (typeof profileMax === 'number') {
+          this.maxTasks = profileMax;
+        }
+      }
+    } catch (err) {
+      logger.warn(`Profile detection failed, using defaults: ${err.message}`);
+    }
+
     const proposalPath = path.join(changeDir, 'proposal.md');
     const proposalExists = await this.fileExists(proposalPath);
 
@@ -37,9 +66,17 @@ class PlanCommand {
     const techStack = TechStackDetector.analyze(process.cwd());
 
     console.log('');
-    console.log(chalk.bold('📋 Generating Task Breakdown'));
-    console.log(chalk.dim('═'.repeat(50)));
+    console.log(chalk.bold('Generating Task Breakdown'));
+    console.log(chalk.dim('='.repeat(50)));
     console.log('');
+
+    // Display profile info when available
+    if (profileInfo) {
+      console.log(chalk.dim(`Profile: ${profileInfo.profile.name} (${profileInfo.profileId}) [${profileInfo.source}]`));
+      console.log(chalk.dim(`Max tasks: ${this.maxTasks}`));
+      console.log('');
+    }
+
     console.log(chalk.dim('Analyzing requirements and tech stack...'));
     console.log('');
 
@@ -50,20 +87,26 @@ class PlanCommand {
       console.log(chalk.yellow('Dry run - tasks not saved'));
       console.log('');
       console.log(tasksContent);
-      return tasks;
+      if (profileInfo) {
+        console.log(chalk.dim(`Profile: ${profileInfo.profile.name} | Depth: ${profileInfo.profile.depth} | Source: ${profileInfo.source}`));
+      }
+      return { tasks, profile: profileInfo || undefined };
     }
 
     const tasksPath = path.join(changeDir, 'tasks.md');
     await fs.writeFile(tasksPath, tasksContent);
 
-    console.log(chalk.green(`✓ Tasks generated: ${tasksPath}`));
+    console.log(chalk.green(`Tasks generated: ${tasksPath}`));
     console.log('');
     this.printTaskSummary(tasks);
+    if (profileInfo) {
+      console.log(chalk.dim(`Profile: ${profileInfo.profile.name} (${profileInfo.profileId}) | Depth: ${profileInfo.profile.depth} | Source: ${profileInfo.source}`));
+    }
     console.log('');
     console.log(chalk.cyan(`Next step: stdd apply ${path.basename(changeDir)}`));
     console.log('');
 
-    return tasks;
+    return { tasks, profile: profileInfo || undefined };
   }
 
   async getActiveChangeDir(changesDir) {

@@ -1,3 +1,58 @@
 {
-  "extensions": []
+  "extensions": [
+    {
+      "name": "stdd-tdd-core",
+      "version": "1.0.0",
+      "description": "Core TDD workflow: apply, verify, mutation testing, Ralph Loop",
+      "category": "workflow",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["tdd", "testing", "mutation", "verify"]
+    },
+    {
+      "name": "stdd-design-system",
+      "version": "1.0.0",
+      "description": "DESIGN.md generation with presets and HTML preview",
+      "category": "design",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["design", "ui", "preview", "tokens"]
+    },
+    {
+      "name": "stdd-roles-pack",
+      "version": "1.0.0",
+      "description": "12-agent role system with adversarial review and party mode",
+      "category": "collaboration",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["roles", "agents", "review", "party"]
+    },
+    {
+      "name": "stdd-graph-engine",
+      "version": "1.0.0",
+      "description": "DAG-based workflow orchestration with parallel execution",
+      "category": "workflow",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["graph", "dag", "parallel", "orchestration"]
+    },
+    {
+      "name": "stdd-constitution",
+      "version": "1.0.0",
+      "description": "9-article quality governance with audit and waivers",
+      "category": "quality",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["constitution", "quality", "governance", "audit"]
+    },
+    {
+      "name": "stdd-profile-engine",
+      "version": "1.0.0",
+      "description": "Adaptive planning profiles: quick/standard/thorough/enterprise",
+      "category": "planning",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["profile", "planning", "adaptive", "complexity"]
+    }
+  ]
 }

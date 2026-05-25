@@ -720,6 +720,71 @@ const commandRegistry = [
     action: 'ProfileCommand',
     helpText: `Actions: detect, set, list, recommend\n\nExamples:\n  stdd profile detect\n  stdd profile set thorough\n  stdd profile list\n  stdd profile recommend --change feature\n\nProfiles: quick (depth 1), standard (depth 2), thorough (depth 3), enterprise (depth 4)`,
   },
+  {
+    name: 'modules [action] [args...]',
+    description: 'Browse, search, install, and manage STDD modules from the marketplace',
+    options: [
+      { flags: '--json', description: 'JSON output' },
+      { flags: '--category <cat>', description: 'Filter by category (for search)' },
+    ],
+    action: 'ModulesCommand',
+    helpText: `Actions: featured, search, install, list, info, publish, categories\n\nExamples:\n  stdd modules                     # Show featured/official modules\n  stdd modules search tdd          # Search for modules matching "tdd"\n  stdd modules search workflow --category workflow\n  stdd modules install stdd-tdd-core\n  stdd modules info stdd-tdd-core\n  stdd modules list\n  stdd modules categories`,
+  },
+  {
+    name: 'dashboard [action]',
+    description: 'Generate static HTML dashboard showing project health, changes, and evidence',
+    options: [
+      { flags: '--json', description: 'Output raw dashboard data as JSON' },
+      { flags: '--output <path>', description: 'Custom output file path' },
+    ],
+    action: 'DashboardCommand',
+    helpText: `Actions: generate (default), open\n\nExamples:\n  stdd dashboard                # Generate dashboard to stdd/dashboard/index.html\n  stdd dashboard generate       # Same as above\n  stdd dashboard open           # Generate and open in browser\n  stdd dashboard --json         # Output raw data as JSON\n  stdd dashboard --output ./report.html`,
+  },
+  {
+    name: 'builder [action] [name]',
+    description: 'Create custom agents, workflows, and skills',
+    options: [
+      { flags: '--json', description: 'JSON output' },
+      { flags: '--type <type>', description: 'Type for export: agent, workflow, skill' },
+      { flags: '--expertise <list>', description: 'Comma-separated expertise areas (agent)' },
+      { flags: '--lens <text>', description: 'Review lens description (agent)' },
+      { flags: '--focus <list>', description: 'Comma-separated review focus areas (agent)' },
+      { flags: '--phases <list>', description: 'Comma-separated STDD phases (workflow)' },
+      { flags: '--intent <text>', description: 'Workflow intent description' },
+      { flags: '--description <text>', description: 'Description (skill)' },
+      { flags: '--category <cat>', description: 'Category (skill)' },
+      { flags: '--phase <phase>', description: 'STDD phase (skill)' },
+      { flags: '--force', description: 'Force overwrite existing' },
+    ],
+    action: 'BuilderCommand',
+    helpText: `Actions: agent, workflow, skill, list, validate, export\n\nExamples:\n  stdd builder agent security-reviewer\n  stdd builder workflow custom-pipeline --phases stdd-propose,stdd-spec,stdd-plan\n  stdd builder skill data-validator\n  stdd builder list\n  stdd builder validate stdd/builders/agents/my-agent.json\n  stdd builder export my-agent --type agent`,
+  },
+  {
+    name: 'ui [action] [name]',
+    description: 'Generate frontend pages and components using DESIGN.md design tokens',
+    options: [
+      { flags: '--json', description: 'JSON output' },
+      { flags: '--framework <fw>', description: 'Framework: react, vue, vanilla (default: react)' },
+      { flags: '--layout <layout>', description: 'Page layout: centered, sidebar, full (default: centered)' },
+      { flags: '--sections <list>', description: 'Comma-separated page sections' },
+      { flags: '--type <type>', description: 'Component type: button, card, form, input, modal, nav, table, list' },
+      { flags: '--style <style>', description: 'Style format: css, scss, tailwind, css-modules (default: css)' },
+      { flags: '--force', description: 'Force overwrite' },
+    ],
+    action: 'UICommand',
+    helpText: `Actions: page, component, scaffold, preview, list\n\nExamples:\n  stdd ui page dashboard                     # Generate a React page\n  stdd ui page home --layout sidebar         # Page with sidebar layout\n  stdd ui page about --framework vanilla     # Vanilla HTML page\n  stdd ui component SubmitButton --type button  # Button component\n  stdd ui component UserCard --type card     # Card component\n  stdd ui scaffold                           # Scaffold full UI app\n  stdd ui preview                            # Generate preview gallery\n  stdd ui list                               # List generated artifacts`,
+  },
+  {
+    name: 'docs [action]',
+    description: 'Generate a static HTML documentation site from project docs',
+    options: [
+      { flags: '--json', description: 'JSON output' },
+      { flags: '--output <path>', description: 'Custom output directory' },
+      { flags: '--lang <lang>', description: 'Language filter: zh or en' },
+    ],
+    action: 'DocsCommand',
+    helpText: `Actions: generate (default), open, sources\n\nExamples:\n  stdd docs                     # Generate docs site to stdd/docs-site/\n  stdd docs generate            # Same as above\n  stdd docs open                # Generate and open in browser\n  stdd docs sources             # List documentation sources\n  stdd docs --json              # Output source listing as JSON\n  stdd docs --lang en           # Generate English-only docs\n  stdd docs --output ./my-docs  # Custom output directory`,
+  },
 ];
 
 module.exports = { commandRegistry };

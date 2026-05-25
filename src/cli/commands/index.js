@@ -83,4 +83,9 @@ module.exports = {
   FinalDocCommand: require('./final-doc').FinalDocCommand,
   CommitTddCommand: require('./commit-tdd').CommitTddCommand,
   ProfileCommand: require('./profile').ProfileCommand,
+  UICommand: require('./ui').UICommand,
+  BuilderCommand: require('./builder').BuilderCommand,
+  ModulesCommand: require('./modules').ModulesCommand,
+  DocsCommand: require('./docs').DocsCommand,
+  DashboardCommand: require('./dashboard').DashboardCommand,
 };
