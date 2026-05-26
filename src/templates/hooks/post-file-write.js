@@ -55,7 +55,30 @@ async function analyzeCode(data) {
 }
 
 function isSourceFile(filePath) {
-  return /\.(ts|js|py|go|java)$/.test(filePath);
+  return /\.(ts|tsx|js|jsx|py|go|java)$/.test(filePath);
+}
+
+function shouldSyncCodeGraph(filePath) {
+  if (process.env.STDD_CODEGRAPH_DISABLED || process.env.STDD_CODEGRAPH_SYNCING) return false;
+  if (!/\.(ts|tsx|js|jsx|py)$/.test(filePath || '')) return false;
+  return !/(^|\/)(node_modules|\.git|stdd\/graph\/cache|stdd\/graph\/codegraph)(\/|$)/.test(filePath);
+}
+
+function syncCodeGraphFile(filePath) {
+  if (!shouldSyncCodeGraph(filePath)) return false;
+  try {
+    const { spawnSync } = require('child_process');
+    const bin = process.env.STDD_BIN || 'stdd';
+    const result = spawnSync(bin, ['codegraph', 'sync', '--file', filePath, '--silent'], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      timeout: 10000,
+      env: { ...process.env, STDD_CODEGRAPH_SYNCING: '1' },
+    });
+    return result.status === 0;
+  } catch (_) {
+    return false;
+  }
 }
 
 function hasDocumentation(content) {
@@ -118,6 +141,8 @@ module.exports = {
   hasNPlusOnePattern,
   extractBraceBody,
   formatSuggestions,
+  shouldSyncCodeGraph,
+  syncCodeGraphFile,
 };
 
 // ─── stdin entry point (only runs when executed directly) ───
@@ -136,6 +161,7 @@ if (require.main === module) {
 
       const data = JSON.parse(inputData);
       const suggestions = await analyzeCode(data);
+      syncCodeGraphFile(data.tool_input && data.tool_input.file_path);
 
       if (suggestions.length > 0) {
         console.log(JSON.stringify({

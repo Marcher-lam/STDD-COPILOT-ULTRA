@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
+const yaml = require('js-yaml');
 const { findActiveChange, checkTasksCompletion } = require('../../utils/change-utils');
 const { ConstitutionChecker } = require('./constitution-checker');
 const EvidenceCapture = require('../../utils/evidence-capture');
@@ -17,6 +18,7 @@ const { resolveTestCommands, getConfigTestCommand } = require('../../utils/test-
 const { commandToWorkspaceScope, resolveWorkspaceScope } = require('../../utils/workspace-scope');
 const { findLatestMutationEvidence } = require('./mutation');
 const { runCommand: runParsedCommand } = require('../../utils/command-runner');
+const { VisualRegression } = require('../../utils/visual-regression');
 
 // getConfigTestCommand is now imported from test-command-resolver
 
@@ -198,6 +200,63 @@ class VerifyCommand {
       console.log(`\n  ${chalk.dim('Mutation: skipped (no evidence; run `stdd mutation`)')}`);
     }
 
+    // Visual Regression Gate
+    report.visual = null;
+    const configPath = path.join(stddDir, 'config.yaml');
+    if (fs.existsSync(configPath)) {
+      try {
+        const configRaw = fs.readFileSync(configPath, 'utf-8');
+        const config = yaml.load(configRaw);
+        const vr = config?.defense?.visual_regression;
+
+        if (vr && vr.enabled && Array.isArray(vr.routes) && vr.routes.length > 0) {
+          console.log(`\n  ${chalk.bold('Visual Regression Gate')}`);
+          const visual = new VisualRegression(cwd);
+          const visualResults = [];
+          const threshold = vr.threshold ?? 0.01;
+
+          for (const route of vr.routes) {
+            if (!route.url) continue;
+            const name = route.name || route.url;
+            console.log(`  Checking: ${chalk.cyan(name)} → ${route.url}`);
+            try {
+              const result = await visual.runVisualCheck(route.url, name, { threshold });
+              visualResults.push({ name, url: route.url, ...result });
+              if (result.status === 'baseline_created') {
+                console.log(`    ${chalk.yellow('⚠')} ${result.message}`);
+              } else if (result.passed) {
+                const pct = (result.diffRatio * 100).toFixed(3);
+                console.log(`    ${chalk.green('✓')} Visual check passed (diff: ${pct}%)`);
+              } else {
+                const pct = (result.diffRatio * 100).toFixed(3);
+                console.log(`    ${chalk.red('✗')} Visual check FAILED (diff: ${pct}% > ${(threshold * 100).toFixed(1)}%)`);
+                if (result.diffImagePath) {
+                  console.log(`      ${chalk.dim('Diff: ' + result.diffImagePath)}`);
+                }
+              }
+            } catch (vrErr) {
+              visualResults.push({ name, url: route.url, status: 'error', message: vrErr.message });
+              console.log(`    ${chalk.red('✗')} Error: ${vrErr.message}`);
+            }
+          }
+
+          const allPassed = visualResults.every(r => r.passed || r.status === 'baseline_created');
+          report.visual = { passed: allPassed, threshold, results: visualResults };
+
+          if (!allPassed) {
+            console.log(`  ${chalk.red('✗')} Visual regression: FAILED — diff exceeds threshold, blocking archival`);
+            healthy = false;
+          } else {
+            console.log(`  ${chalk.green('✓')} Visual regression: passed`);
+          }
+        } else if (vr && vr.enabled && (!vr.routes || vr.routes.length === 0)) {
+          console.log(`\n  ${chalk.dim('Visual regression: enabled but no routes configured in stdd/config.yaml')}`);
+        }
+      } catch (configErr) {
+        console.log(`\n  ${chalk.dim('Visual regression: config read error — ' + configErr.message)}`);
+      }
+    }
+
     // 4) Optional lint check (--lint or --lint-command)
     if (options.lint || options.lintCommand) {
       const lintCmd = options.lintCommand || 'npm run lint';
@@ -231,6 +290,9 @@ class VerifyCommand {
       console.log(`  Tests:       ${chalk.yellow('SKIP')}`);
     }
     console.log(`  Constitution: ${report.constitution.status === 'pass' ? chalk.green('PASS') : chalk.red('FAIL')}`);
+    if (report.visual !== null) {
+      console.log(`  Visual:      ${report.visual.passed ? chalk.green('PASS') : chalk.red('FAIL')}`);
+    }
     if (report.lint !== null) {
       console.log(`  Lint:        ${report.lint.passed ? chalk.green('PASS') : chalk.red('FAIL')}`);
     }

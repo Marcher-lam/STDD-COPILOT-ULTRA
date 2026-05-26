@@ -27,6 +27,7 @@ module.exports = {
   IssueCommand: require('./issue').IssueCommand,
   CommitCommand: require('./commit-msg').CommitCommand,
   ContextCommand: require('./context').ContextCommand,
+  CodeGraphCommand: require('./codegraph').CodeGraphCommand,
   CiGeneratorCommand: require('./ci-generator').CiGeneratorCommand,
   RecommendEngine: require('./recommend').RecommendEngine,
   printRecommendations: require('./recommend').printRecommendations,
@@ -88,4 +89,5 @@ module.exports = {
   ModulesCommand: require('./modules').ModulesCommand,
   DocsCommand: require('./docs').DocsCommand,
   DashboardCommand: require('./dashboard').DashboardCommand,
+  PrfaqCommand: require('./prfaq').PrfaqCommand,
 };

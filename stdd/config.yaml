@@ -153,6 +153,14 @@ defense:
     enabled: true
     detect_fake_green: true
 
+  # Visual Constitution Gate (阶段 1 新增)
+  visual_regression:
+    enabled: false                        # 设为 true 启用视觉回归检测
+    threshold: 0.01                       # 最大允许差异率 (1%)
+    routes: []                            # 待检测 URL 列表
+                                          # e.g. [{ url: "http://localhost:3000", name: "homepage" }]
+    auto_baseline: true                   # 无 baseline 时自动创建
+
 # 外部 AI 引擎（完整注册表见 stdd/config/engines.yaml）
 # 支持 24 种 AI 代码助手，按兼容性分 4 个 Tier
 ai_engines:

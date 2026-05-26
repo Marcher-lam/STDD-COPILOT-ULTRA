@@ -335,6 +335,9 @@ function generateDashboardHTML(data) {
       <button class="tab" onclick="switchTab('progress')">Progress</button>
       <button class="tab" onclick="switchTab('constitution')">Constitution</button>
       <button class="tab" onclick="switchTab('evidence')">Evidence</button>
+      <button class="tab" onclick="switchTab('personas')">Personas</button>
+      <button class="tab" onclick="switchTab('modules')">Modules</button>
+      <button class="tab" onclick="switchTab('activity')">Activity</button>
     </div>
 
     <!-- Tab: Overview -->
@@ -415,6 +418,84 @@ function generateDashboardHTML(data) {
       </div>
     </div>
 
+    <!-- Tab: Personas -->
+    <div id="tab-personas" class="tab-panel">
+      <div class="card">
+        <h3>Agent Personas</h3>
+        <p style="color:var(--c-muted);margin-bottom:16px">12 named specialists with persistent memory and activation protocols</p>
+        <div class="grid grid-3">
+          ${[
+            {name:'Maya',role:'Product Owner',tone:'warm',icon:'&#x1F4BC;'},
+            {name:'Alex',role:'Developer',tone:'casual',icon:'&#x1F4BB;'},
+            {name:'Sam',role:'Tester',tone:'direct',icon:'&#x1F9EA;'},
+            {name:'Rex',role:'Reviewer',tone:'professional',icon:'&#x1F50D;'},
+            {name:'Wei',role:'Architect',tone:'thoughtful',icon:'&#x1F3D7;'},
+            {name:'Shield',role:'Security',tone:'serious',icon:'&#x1F6E1;'},
+            {name:'Ops',role:'DevOps',tone:'practical',icon:'&#x2699;'},
+            {name:'Luna',role:'UX Designer',tone:'warm',icon:'&#x1F3A8;'},
+            {name:'Jordan',role:'Business Analyst',tone:'formal',icon:'&#x1F4CA;'},
+            {name:'Page',role:'Tech Writer',tone:'friendly',icon:'&#x1F4DD;'},
+            {name:'QC',role:'QA Lead',tone:'authoritative',icon:'&#x2705;'},
+            {name:'Data',role:'Data Analyst',tone:'curious',icon:'&#x1F4C8;'},
+          ].map(p => `
+            <div class="card" style="padding:16px;text-align:center">
+              <div style="font-size:2rem;margin-bottom:8px">${p.icon}</div>
+              <div style="font-weight:600;margin-bottom:4px">${p.name}</div>
+              <div style="color:var(--c-muted);font-size:0.85rem">${p.role}</div>
+              <div style="margin-top:8px"><span style="background:var(--c-surface-alt);padding:2px 8px;border-radius:4px;font-size:0.75rem;color:var(--c-text-secondary)">${p.tone}</span></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Modules -->
+    <div id="tab-modules" class="tab-panel">
+      <div class="card">
+        <h3>Official Modules</h3>
+        <p style="color:var(--c-muted);margin-bottom:16px">9 official modules with programmatic engines and capabilities</p>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="border-bottom:1px solid var(--c-border)">
+              <th style="text-align:left;padding:8px;color:var(--c-muted)">Module</th>
+              <th style="text-align:left;padding:8px;color:var(--c-muted)">Version</th>
+              <th style="text-align:left;padding:8px;color:var(--c-muted)">Capabilities</th>
+            </tr>
+          </thead>
+          <tbody>
+          ${[
+            {name:'stdd-tdd-core',v:'1.0',caps:['ralph-loop','mutation','anti-fake-green','coverage-gates']},
+            {name:'stdd-roles-pack',v:'2.0',caps:['12-personas','activation-protocol','real-party-mode']},
+            {name:'stdd-constitution',v:'1.0',caps:['9-articles','auto-fix','waivers','compliance-audit']},
+            {name:'stdd-persona-system',v:'1.0',caps:['12-personas','greeting-protocol','persistent-facts']},
+            {name:'stdd-context-engine',v:'1.0',caps:['code-distillation','heading-sharding','shard-map']},
+            {name:'stdd-prfaq',v:'1.0',caps:['5-stage-workflow','data-driven','quantitative-verdict']},
+            {name:'stdd-design-system',v:'1.0',caps:['design-tokens','theme-presets','multi-framework']},
+            {name:'stdd-graph-engine',v:'1.0',caps:['intent-routing','profile-adaptive','parallel-exec']},
+            {name:'stdd-profile-engine',v:'1.0',caps:['auto-detection','condition-engine','change-overrides']},
+          ].map(m => `
+            <tr style="border-bottom:1px solid var(--c-border)">
+              <td style="padding:8px"><strong>${m.name}</strong></td>
+              <td style="padding:8px;color:var(--c-muted)">v${m.v}</td>
+              <td style="padding:8px">${m.caps.map(c=>'<span style="background:var(--c-surface-alt);padding:2px 6px;border-radius:4px;font-size:0.75rem;margin-right:4px">'+c+'</span>').join('')}</td>
+            </tr>
+          `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Activity -->
+    <div id="tab-activity" class="tab-panel">
+      <div class="card">
+        <h3>Activity Timeline</h3>
+        <p style="color:var(--c-muted);margin-bottom:16px">Recent commands and events from progress tracking</p>
+        <div id="activity-feed">
+          ${renderActivity(progress)}
+        </div>
+      </div>
+    </div>
+
     <!-- Footer -->
     <div class="footer">
       Generated by STDD Copilot &middot; ${new Date().toISOString()}
@@ -464,6 +545,50 @@ function generateEmptyDashboard(projectName = 'Unknown Project') {
   </div>
 </body>
 </html>`;
+}
+
+/**
+ * Render activity timeline from progress entries.
+ * progress: array of { type, name, status, timestamp? } or empty array
+ */
+function renderActivity(progress) {
+  if (!Array.isArray(progress) || progress.length === 0) {
+    return '<p style="color:var(--c-muted)">No activity recorded yet. Use STDD commands to generate events.</p>';
+  }
+
+  const TYPE_ICONS = {
+    spec: '&#128196;', plan: '&#128203;', apply: '&#9889;', verify: '&#9989;',
+    archive: '&#128230;', propose: '&#128172;', commit: '&#128190;',
+    mutation: '&#129514;', design: '&#127912;', test: '&#129524;',
+    brainstorm: '&#128161;', roles: '&#128101;', dashboard: '&#128200;',
+    story: '&#128214;', turbo: '&#128640;', ui: '&#127912;',
+    build: '&#128296;', deploy: '&#128640;', default: '&#9670;',
+  };
+
+  const STATUS_COLORS = {
+    completed: 'var(--c-success)', passed: 'var(--c-success)',
+    failed: 'var(--c-error)', error: 'var(--c-error)',
+    running: 'var(--c-warning)', pending: 'var(--c-muted)',
+    active: 'var(--c-primary)', default: 'var(--c-text-secondary)',
+  };
+
+  const recent = progress.slice(-20).reverse();
+  return `<div class="activity-timeline">${recent.map(e => {
+    const icon = TYPE_ICONS[e.type] || TYPE_ICONS.default;
+    const color = STATUS_COLORS[e.status] || STATUS_COLORS.default;
+    const ts = e.timestamp ? new Date(e.timestamp).toLocaleString() : '';
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--c-border)">
+      <span style="font-size:1.2rem;flex-shrink:0">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong style="font-size:0.9rem">${escHtml(e.type || 'event')}</strong>
+          <span style="font-size:0.7rem;padding:2px 8px;border-radius:4px;background:${color};color:#fff">${escHtml(e.status || 'unknown')}</span>
+        </div>
+        <div style="color:var(--c-text-secondary);font-size:0.85rem;margin-top:2px">${escHtml(e.name || '')}</div>
+        ${ts ? `<div style="color:var(--c-muted);font-size:0.75rem;margin-top:2px">${ts}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
 }
 
 /**

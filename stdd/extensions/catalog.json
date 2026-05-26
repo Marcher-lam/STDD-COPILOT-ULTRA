@@ -7,7 +7,8 @@
       "category": "workflow",
       "official": true,
       "author": "STDD",
-      "keywords": ["tdd", "testing", "mutation", "verify"]
+      "keywords": ["tdd", "testing", "mutation", "verify"],
+      "capabilities": ["ralph-loop", "mutation-testing", "anti-fake-green", "coverage-gates"]
     },
     {
       "name": "stdd-design-system",
@@ -16,16 +17,18 @@
       "category": "design",
       "official": true,
       "author": "STDD",
-      "keywords": ["design", "ui", "preview", "tokens"]
+      "keywords": ["design", "ui", "preview", "tokens"],
+      "capabilities": ["design-tokens", "theme-presets", "html-preview", "multi-framework"]
     },
     {
       "name": "stdd-roles-pack",
-      "version": "1.0.0",
-      "description": "12-agent role system with adversarial review and party mode",
+      "version": "2.0.0",
+      "description": "12 named agent personas with adversarial review, party mode, and activation protocol",
       "category": "collaboration",
       "official": true,
       "author": "STDD",
-      "keywords": ["roles", "agents", "review", "party"]
+      "keywords": ["roles", "agents", "personas", "party-mode", "review"],
+      "capabilities": ["12-personas", "activation-protocol", "persistent-facts", "real-party-mode", "cross-talk-analysis"]
     },
     {
       "name": "stdd-graph-engine",
@@ -34,7 +37,8 @@
       "category": "workflow",
       "official": true,
       "author": "STDD",
-      "keywords": ["graph", "dag", "parallel", "orchestration"]
+      "keywords": ["graph", "dag", "parallel", "orchestration"],
+      "capabilities": ["intent-routing", "profile-adaptive", "parallel-execution", "graph-caching"]
     },
     {
       "name": "stdd-constitution",
@@ -43,7 +47,8 @@
       "category": "quality",
       "official": true,
       "author": "STDD",
-      "keywords": ["constitution", "quality", "governance", "audit"]
+      "keywords": ["constitution", "quality", "governance", "audit"],
+      "capabilities": ["9-articles", "auto-fix", "waivers", "compliance-audit"]
     },
     {
       "name": "stdd-profile-engine",
@@ -52,7 +57,48 @@
       "category": "planning",
       "official": true,
       "author": "STDD",
-      "keywords": ["profile", "planning", "adaptive", "complexity"]
+      "keywords": ["profile", "planning", "adaptive", "complexity"],
+      "capabilities": ["auto-detection", "condition-engine", "change-type-overrides", "user-skill-level"]
+    },
+    {
+      "name": "stdd-persona-system",
+      "version": "1.0.0",
+      "description": "Named agent personas with personality, communication style, and 8-step activation protocol",
+      "category": "collaboration",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["personas", "agents", "activation", "memory"],
+      "capabilities": ["12-personas", "greeting-protocol", "persistent-facts", "communication-style"]
+    },
+    {
+      "name": "stdd-context-engine",
+      "version": "1.0.0",
+      "description": "LLM-optimized document distillation and context sharding for large codebases",
+      "category": "engineering",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["context", "distillation", "sharding", "token-optimization"],
+      "capabilities": ["code-distillation", "markdown-distillation", "spec-distillation", "heading-aware-sharding", "shard-map"]
+    },
+    {
+      "name": "stdd-prfaq",
+      "version": "1.0.0",
+      "description": "Amazon Working Backwards PRFAQ workflow with data-driven scoring",
+      "category": "planning",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["prfaq", "amazon", "working-backwards", "verdict"],
+      "capabilities": ["5-stage-workflow", "data-driven", "quantitative-verdict", "constitution-integration"]
+    },
+    {
+      "name": "stdd-game-dev",
+      "version": "1.0.0",
+      "description": "Game development workflow: ECS patterns, game loop specs, playtesting, and asset pipelines",
+      "category": "vertical",
+      "official": true,
+      "author": "STDD",
+      "keywords": ["game", "ecs", "game-loop", "playtest", "asset-pipeline", "gamedev"],
+      "capabilities": ["ecs-architecture", "game-loop-spec", "playtest-evidence", "asset-validation", "frame-budget", "state-machine-testing"]
     }
   ]
 }

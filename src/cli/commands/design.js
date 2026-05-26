@@ -8,6 +8,7 @@ const path = require('path');
 const chalk = require('chalk');
 const { createLogger } = require('../../utils/logger');
 const { TechStackDetector, detectTechStack: _detectTechStack } = require('../../utils/tech-stack-detector');
+const { CssExtractor } = require('../../utils/css-extractor');
 const logger = createLogger('design');
 
 const PRESETS = {
@@ -333,6 +334,9 @@ class DesignCommand {
         return this.check(options);
       case 'update':
         return await this.update(options);
+      case 'reverse-scan':
+      case 'scan':
+        return this.reverseScan(options);
       default:
         return await this.create(options);
     }
@@ -492,6 +496,65 @@ class DesignCommand {
       console.log(`  Preset: ${chalk.cyan(preset)} (${PRESETS[preset].name})\n`);
     }
     return { path: this.designPath, preset, updated: true, previews };
+  }
+
+  reverseScan(options = {}) {
+    const scanDir = options.dir ? path.resolve(this.cwd, options.dir) : this.cwd;
+
+    if (!fs.existsSync(scanDir)) {
+      throw new Error(`Directory not found: ${scanDir}`);
+    }
+
+    console.log(chalk.cyan(`\nReverse-scanning design tokens from: ${path.relative(this.cwd, scanDir) || '.'}`));
+
+    const extractor = new CssExtractor(this.cwd);
+    const tokens = extractor.extract(scanDir, {
+      maxDepth: options.maxDepth ?? 5,
+      excludeDirs: options.excludeDirs,
+    });
+
+    const stats = {
+      cssVariables: tokens.cssVariables.length,
+      semanticColors: Object.keys(tokens.colors.semantic).length,
+      rawColors: tokens.colors.raw.length,
+      fonts: tokens.fonts.length,
+      borderRadius: tokens.borderRadius.length,
+      shadows: tokens.shadows.length,
+      spacing: tokens.spacing.length,
+    };
+
+    console.log(chalk.dim(`  CSS variables: ${stats.cssVariables}`));
+    console.log(chalk.dim(`  Semantic colors: ${stats.semanticColors}`));
+    console.log(chalk.dim(`  Raw colors: ${stats.rawColors}`));
+    console.log(chalk.dim(`  Fonts: ${stats.fonts}`));
+    console.log(chalk.dim(`  Border radius values: ${stats.borderRadius}`));
+    console.log(chalk.dim(`  Shadows: ${stats.shadows}`));
+    console.log(chalk.dim(`  Spacing values: ${stats.spacing}`));
+
+    const content = extractor.generateDesignMD(tokens);
+
+    if (options.dryRun) {
+      console.log(chalk.bold('\n--- DESIGN.md Preview (dry-run) ---\n'));
+      console.log(content);
+      return { stats, dryRun: true, content };
+    }
+
+    const outputPath = options.output
+      ? path.resolve(this.cwd, options.output)
+      : this.designPath;
+
+    fs.writeFileSync(outputPath, content, 'utf-8');
+    const relativePath = path.relative(this.cwd, outputPath);
+
+    console.log(chalk.green(`\n  ✓ DESIGN.md generated from project styles`));
+    console.log(`  ${chalk.cyan(relativePath)}`);
+    console.log(chalk.dim(`  ${Object.values(stats).reduce((a, b) => a + b, 0)} design tokens extracted\n`));
+
+    if (options.json) {
+      console.log(JSON.stringify({ path: outputPath, stats, generated: true }, null, 2));
+    }
+
+    return { path: outputPath, stats, generated: true, content };
   }
 }
 

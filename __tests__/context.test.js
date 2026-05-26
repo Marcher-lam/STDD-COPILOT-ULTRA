@@ -73,14 +73,16 @@ describe('ContextCommand', () => {
       expect(output).not.toContain('[Contracts]');
     });
 
-    it('should print message when no layers exist', async () => {
+    it('should auto-generate codegraph layer when other layers do not exist', async () => {
       const baseDir = createTempDir();
       createMemoryDir(baseDir, {});
 
       const cmd = new ContextCommand(baseDir);
       await cmd.execute({});
 
-      expect(logSpy.mock.calls).toHaveLength(0);
+      const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
+      expect(output).toContain('[Codegraph]');
+      expect(output).toContain('CodeGraph Memory');
     });
   });
 
@@ -192,7 +194,7 @@ describe('ContextCommand', () => {
       expect(data).not.toHaveProperty('contracts');
     });
 
-    it('should output empty JSON object when no layers exist', async () => {
+    it('should output generated codegraph JSON when no other layers exist', async () => {
       const baseDir = createTempDir();
       createMemoryDir(baseDir, {});
 
@@ -201,7 +203,7 @@ describe('ContextCommand', () => {
 
       const output = logSpy.mock.calls.map(c => String(c[0])).join('\n');
       const data = JSON.parse(output);
-      expect(data).toEqual({});
+      expect(data.codegraph).toContain('CodeGraph Memory');
     });
   });
 

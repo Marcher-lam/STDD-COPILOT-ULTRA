@@ -17,6 +17,7 @@ const SETTINGS_BACKUP_SUFFIX = '.backup';
 
 const GIT_HOOK_SCRIPT = `#!/bin/sh
 echo "\\033[1m\\033[36m🛡️ Running STDD Guard...\\033[0m"
+npx stdd codegraph sync --changed --silent || true
 npx stdd guard --no-constitution --no-lint
 `;
 

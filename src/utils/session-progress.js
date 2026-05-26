@@ -20,10 +20,52 @@ class SessionProgress {
     this.stddDir = stddDir;
     this.filePath = stddDir ? path.join(stddDir, FILENAME) : null;
     this._active = stddDir && fs.existsSync(stddDir);
+    this._traceId = null;
+  }
+
+  /**
+   * Generate a new TraceID for this session/operation
+   * @returns {string} TraceID in format: trace-<hex>
+   */
+  generateTraceId() {
+    this._traceId = `trace-${crypto.randomBytes(8).toString('hex')}`;
+    return this._traceId;
+  }
+
+  /**
+   * Generate a SpanID for a sub-operation
+   * @returns {string} SpanID in format: span-<hex>
+   */
+  generateSpanId() {
+    return `span-${crypto.randomBytes(4).toString('hex')}`;
+  }
+
+  /**
+   * Get the current TraceID (generates one if none exists)
+   */
+  getTraceId() {
+    if (!this._traceId) this.generateTraceId();
+    return this._traceId;
+  }
+
+  /**
+   * Set an external TraceID (for propagation from upstream)
+   */
+  setTraceId(traceId) {
+    this._traceId = traceId;
   }
 
   _append(entry) {
     if (!this._active) return;
+    // Auto-generate traceId on first use
+    if (!this._traceId) this.getTraceId();
+    // Inject trace context into every entry
+    if (!entry.traceId) {
+      entry.traceId = this._traceId;
+    }
+    if (!entry.spanId) {
+      entry.spanId = this.generateSpanId();
+    }
     try { fs.appendFileSync(this.filePath, JSON.stringify(entry) + '\n', 'utf8'); }
     catch { /* never block the main flow */ }
   }

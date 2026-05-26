@@ -8,6 +8,7 @@ const path = require('path');
 const { getPackageRoot } = require('../../utils/path-resolver');
 const { TechStackDetector } = require('../../utils/tech-stack-detector');
 const { detectWorkspaces } = require('../../utils/workspace-detector');
+const { CodeGraphIndexer } = require('../../utils/codegraph/indexer');
 const chalk = require('chalk');
 const { createLogger } = require('../../utils/logger');
 const logger = createLogger('init');
@@ -102,6 +103,29 @@ graph:
   max_parallel: 4
   timeout: 3600
   history_limit: 100
+
+# CodeGraph Configuration
+codegraph:
+  enabled: true
+  auto_index: true
+  auto_sync: true
+  context_layer: true
+  max_file_size_kb: 512
+  source_roots:
+    - src
+    - lib
+    - app
+    - packages
+    - __tests__
+  ignore:
+    - node_modules
+    - .git
+    - .claude
+    - coverage
+    - dist
+    - build
+    - .next
+    - stdd/graph/cache
 
 # TDD Configuration
 tdd:
@@ -237,6 +261,10 @@ class InitCommand {
     this.spinner.text = 'Creating foundation.md...';
     await this.createFoundationMd(targetPath, techStack, workspaces);
 
+    // Create CodeGraph baseline
+    this.spinner.text = 'Building CodeGraph...';
+    await this.createCodeGraph(targetPath);
+
     // Copy Engine commands
     this.spinner.text = 'Copying Claude commands...';
     await this.copyClaudeCommands(targetPath, selectedAgents);
@@ -287,6 +315,7 @@ class InitCommand {
       'stdd/changes/archive',
       'stdd/memory',
       'stdd/graph',
+      'stdd/graph/codegraph',
       'stdd/explorations'
     ];
 
@@ -351,8 +380,15 @@ ${workspaceSection}
     );
   }
 
-  
-  
+  async createCodeGraph(targetPath) {
+    try {
+      const indexer = new CodeGraphIndexer(targetPath);
+      indexer.build();
+    } catch (error) {
+      logger.warn(`CodeGraph initialization skipped: ${error.message}`);
+    }
+  }
+
   async copySkills(targetPath, selectedAgents) {
     const sourceDir = path.join(getPackageRoot(), 'src', 'templates', 'skills', 'stdd');
 

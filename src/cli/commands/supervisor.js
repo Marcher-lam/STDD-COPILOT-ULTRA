@@ -10,21 +10,22 @@ const chalk = require('chalk');
 const { createLogger } = require('../../utils/logger');
 const inquirer = require('inquirer');
 const { AgentEngine } = require('../../runtime/agent-simulator');
+const { getPersona } = require('../../config/persona-profiles');
 const logger = createLogger('supervisor');
 
 const ROLES = {
-  'Product Owner': { color: 'blue', expertise: 'requirements, priorities, business value' },
-  'Developer': { color: 'green', expertise: 'implementation, code quality, testing' },
-  'Tester': { color: 'yellow', expertise: 'quality assurance, test coverage, edge cases' },
-  'Reviewer': { color: 'red', expertise: 'code review, best practices, security' },
-  'Architect': { color: 'cyan', expertise: 'architecture, design patterns, scalability' },
-  'Security': { color: 'magenta', expertise: 'security, vulnerabilities, compliance' },
-  'DevOps': { color: 'white', expertise: 'deployment, CI/CD, infrastructure' },
-  'UX': { color: 'brightBlue', expertise: 'user experience, accessibility, design' },
-  'BA': { color: 'brightGreen', expertise: 'business analysis, requirements, workflows' },
-  'Tech Writer': { color: 'brightYellow', expertise: 'documentation, API docs, guides' },
-  'QA Lead': { color: 'brightRed', expertise: 'test strategy, quality planning, metrics' },
-  'Data Analyst': { color: 'brightMagenta', expertise: 'data, metrics, analytics' },
+  'Product Owner': { color: 'blue', expertise: 'requirements, priorities, business value', roleId: 'po' },
+  'Developer': { color: 'green', expertise: 'implementation, code quality, testing', roleId: 'developer' },
+  'Tester': { color: 'yellow', expertise: 'quality assurance, test coverage, edge cases', roleId: 'tester' },
+  'Reviewer': { color: 'red', expertise: 'code review, best practices, security', roleId: 'reviewer' },
+  'Architect': { color: 'cyan', expertise: 'architecture, design patterns, scalability', roleId: 'architect' },
+  'Security': { color: 'magenta', expertise: 'security, vulnerabilities, compliance', roleId: 'security' },
+  'DevOps': { color: 'white', expertise: 'deployment, CI/CD, infrastructure', roleId: 'devops' },
+  'UX': { color: 'brightBlue', expertise: 'user experience, accessibility, design', roleId: 'ux' },
+  'BA': { color: 'brightGreen', expertise: 'business analysis, requirements, workflows', roleId: 'ba' },
+  'Tech Writer': { color: 'brightYellow', expertise: 'documentation, API docs, guides', roleId: 'techwriter' },
+  'QA Lead': { color: 'brightRed', expertise: 'test strategy, quality planning, metrics', roleId: 'qalead' },
+  'Data Analyst': { color: 'brightMagenta', expertise: 'data, metrics, analytics', roleId: 'dataanalyst' },
 };
 
 // ---------------------------------------------------------------------------

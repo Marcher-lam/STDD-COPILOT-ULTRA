@@ -2,6 +2,8 @@
  * Agent Simulation Engine
  * Manages state machine for multi-agent turn-based interactions.
  * Moves STDD from "Prompt Template" to "Interaction Runtime".
+ *
+ * Phase 3 extension: AI-powered debate mode via PartyOrchestrator integration.
  */
 
 const fs = require('fs');
@@ -118,6 +120,139 @@ class AgentEngine {
     state.status = 'stopped';
     this.saveState(state);
     return state;
+  }
+
+  /**
+   * Start an AI-powered multi-role debate on a topic.
+   * Integrates with PartyOrchestrator for real agent-driven discussion.
+   * @param {string} topic - The topic to debate
+   * @param {object} options - { roleIds, rounds, executorType, command, context }
+   * @returns {Promise<object>} Debate result with rounds, convergence, and proposal
+   */
+  async startDebate(topic, options = {}) {
+    this.ensureRuntimeDir();
+
+    const { PartyOrchestrator } = require('./party-orchestrator');
+    const orchestrator = new PartyOrchestrator({
+      executorType: options.executorType || 'noop',
+      command: options.command,
+      cwd: this.cwd,
+      maxRounds: options.rounds || 2,
+      timeout: options.timeout || 60000,
+    });
+
+    const roleIds = options.roleIds || ['po', 'arch', 'dev', 'qa'];
+    const debateState = {
+      status: 'debating',
+      topic,
+      roleIds,
+      startedAt: new Date().toISOString(),
+    };
+    this.saveState({ ...this.getDefaultState(), ...debateState });
+
+    try {
+      const result = await orchestrator.execute(topic, roleIds, {
+        rounds: options.rounds || 2,
+        context: options.context || {},
+        onAgentComplete: (output) => {
+          this.recordTurn(output.role, output.response);
+        },
+      });
+
+      // Converge debate to a structured proposal
+      const proposal = this.convergeToProposal(result);
+
+      const finalState = this.loadState();
+      finalState.status = 'debate-completed';
+      finalState.convergenceDetected = result.convergence.score > 50;
+      finalState.completedAt = new Date().toISOString();
+      this.saveState(finalState);
+
+      return {
+        ...result,
+        proposal,
+        status: 'completed',
+      };
+    } catch (err) {
+      const finalState = this.loadState();
+      finalState.status = 'debate-error';
+      finalState.error = err.message;
+      this.saveState(finalState);
+      throw err;
+    }
+  }
+
+  /**
+   * Converge a multi-round debate result into a structured product proposal.
+   * Extracts key themes, agreements, and action items.
+   * @param {object} debateResult - Output from PartyOrchestrator.execute()
+   * @returns {object} Structured proposal
+   */
+  convergeToProposal(debateResult) {
+    const allResponses = [];
+    const themes = new Map();
+
+    for (const round of debateResult.rounds || []) {
+      for (const agent of round.agents || []) {
+        allResponses.push({
+          role: agent.role,
+          name: agent.fullName || agent.name,
+          round: agent.round,
+          content: agent.response || '',
+        });
+      }
+      // Collect themes from round summaries
+      for (const theme of round.summary?.themes || []) {
+        themes.set(theme, (themes.get(theme) || 0) + 1);
+      }
+    }
+
+    // Extract agreements
+    const agreements = [];
+    const disagreementPoints = [];
+    for (const round of debateResult.rounds || []) {
+      for (const a of round.summary?.agreements || []) {
+        if (!agreements.includes(a)) agreements.push(a);
+      }
+      for (const d of round.summary?.disagreements || []) {
+        if (!disagreementPoints.includes(d)) disagreementPoints.push(d);
+      }
+    }
+
+    // Synthesize action items from agent responses
+    const actionItems = [];
+    const actionPatterns = /(?:should|must|need to|recommend|action item)[:\s]+([^.!\n]{10,80})/gi;
+    for (const resp of allResponses) {
+      let match;
+      actionPatterns.lastIndex = 0;
+      while ((match = actionPatterns.exec(resp.content)) !== null) {
+        actionItems.push({ from: resp.name, item: match[1].trim() });
+      }
+    }
+
+    return {
+      topic: debateResult.topic,
+      summary: this._generateProposalSummary(allResponses, agreements),
+      keyThemes: [...themes.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t),
+      agreements,
+      openQuestions: disagreementPoints,
+      actionItems: actionItems.slice(0, 10),
+      convergence: debateResult.convergence,
+      participants: debateResult.participants || [],
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  _generateProposalSummary(responses, agreements) {
+    const totalResponseLength = responses.reduce((sum, r) => sum + r.content.length, 0);
+    const avgLength = Math.round(totalResponseLength / Math.max(responses.length, 1));
+
+    if (agreements.length >= 3) {
+      return `Strong consensus reached across ${responses.length} agent responses. ${agreements.length} agreement points identified with ${responses.length} participants contributing an average of ${avgLength} characters each.`;
+    } else if (agreements.length > 0) {
+      return `Partial consensus with ${agreements.length} agreement points. ${responses.length} agent responses received across ${new Set(responses.map(r => r.round)).size} rounds.`;
+    }
+    return `Discussion completed with ${responses.length} agent responses. No clear consensus detected — further deliberation recommended.`;
   }
 }
 

@@ -13,6 +13,23 @@ const logger = createLogger('evidence-capture');
 class EvidenceCapture {
   constructor() {
     this.chain = []; // 证据链：多跳传播时逐跳累积
+    this._traceId = null;
+  }
+
+  /**
+   * Set the TraceID for this evidence capture session
+   * @param {string} traceId
+   */
+  setTraceId(traceId) {
+    this._traceId = traceId;
+  }
+
+  /**
+   * Generate a SpanID for evidence correlation
+   * @returns {string}
+   */
+  _generateSpanId() {
+    return `span-${crypto.randomBytes(4).toString('hex')}`;
   }
 
   /**
@@ -55,6 +72,8 @@ class EvidenceCapture {
       id: crypto.createHash('sha256').update(JSON.stringify({ type, ts: Date.now(), results })).digest('hex').slice(0, 16),
       timestamp: new Date().toISOString(),
       unixTimestamp: Date.now(),
+      traceId: this._traceId || metadata.traceId || null,
+      spanId: this._generateSpanId(),
       results,
       metadata,
       status: this._determineStatus(results, type),
@@ -163,7 +182,8 @@ class EvidenceCapture {
       const testsOk = results.tests && (results.tests.passed === true || results.tests.passed === null);
       const constOk = results.constitution && results.constitution.status === 'pass';
       const lintOk = results.lint === null || (results.lint && results.lint.passed !== false);
-      if (tasksOk && testsOk && constOk && lintOk) return 'pass';
+      const visualOk = results.visual == null || (results.visual && results.visual.passed !== false);
+      if (tasksOk && testsOk && constOk && lintOk && visualOk) return 'pass';
       return 'fail';
     }
     if (type === 'guard') {

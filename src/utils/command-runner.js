@@ -17,6 +17,25 @@ const DANGEROUS_COMMANDS = [
   /\bpowershell\b.*-Command\b/i,
 ];
 
+// Sandbox: blocked binaries that should never run in sandbox mode
+const SANDBOX_BLOCKED_BINS = [
+  'rm', 'del', 'format', 'shred', 'mkfs', 'dd', 'sudo',
+  'curl', 'wget', 'nc', 'netcat', 'ssh', 'scp', 'rsync',
+  'docker', 'kubectl', 'helm',
+  'npm', 'yarn', 'pnpm', 'pip', 'pip3', 'gem', 'cargo',
+];
+
+// Sandbox: write path patterns that are blocked outside cwd
+const SANDBOX_BLOCKED_WRITE_PATHS = [
+  /^\/etc\//,
+  /^\/usr\//,
+  /^\/var\//,
+  /^\/tmp\/(?!stdd)/,
+  /^\/System\//,
+  /^~\//,
+  /^C:\\Windows\\/i,
+];
+
 function isDangerous(command) {
   for (const pattern of DANGEROUS_COMMANDS) {
     if (pattern.test(command)) {
@@ -24,6 +43,11 @@ function isDangerous(command) {
     }
   }
   return false;
+}
+
+function isSandboxBlocked(bin) {
+  const baseBin = bin.split('/').pop().split('\\').pop();
+  return SANDBOX_BLOCKED_BINS.includes(baseBin);
 }
 
 function parseCommandLocal(command) {
@@ -50,6 +74,25 @@ function validateCommand(command, _options = {}) {
   return true;
 }
 
+function validateSandbox(bin, options = {}) {
+  if (!options.sandbox) return;
+
+  if (isSandboxBlocked(bin)) {
+    throw new Error(`Sandbox: Binary "${bin}" is blocked in sandbox mode. Restricted binaries: ${SANDBOX_BLOCKED_BINS.join(', ')}`);
+  }
+
+  // Check for write path violations in args
+  const cwd = options.cwd || process.cwd();
+  const args = Array.isArray(options._args) ? options._args : [];
+  for (const arg of args) {
+    for (const pattern of SANDBOX_BLOCKED_WRITE_PATHS) {
+      if (pattern.test(arg)) {
+        throw new Error(`Sandbox: Path "${arg}" is outside the allowed workspace. Sandbox restricts writes to ${cwd}`);
+      }
+    }
+  }
+}
+
 function runCommand(command, options = {}) {
   const input = String(command || '').trim();
 
@@ -57,13 +100,27 @@ function runCommand(command, options = {}) {
   validateCommand(input, options);
 
   const { bin, args } = parseCommandLocal(command);
+
+  // Sandbox validation
+  if (options.sandbox) {
+    validateSandbox(bin, { ...options, _args: args });
+  }
+
+  const env = { ...options.env };
+  if (options.sandbox) {
+    env.STDD_SANDBOX = '1';
+  }
+
   return spawnSync(bin, args, {
     cwd: options.cwd,
     stdio: options.stdio || 'pipe',
     encoding: 'utf-8',
-    env: options.env,
+    env: Object.keys(env).length > 0 ? env : undefined,
     timeout: options.timeout,
   });
 }
 
-module.exports = { parseCommand, runCommand, validateCommand, isDangerous };
+module.exports = {
+  parseCommand, runCommand, validateCommand, isDangerous,
+  validateSandbox, isSandboxBlocked, SANDBOX_BLOCKED_BINS, SANDBOX_BLOCKED_WRITE_PATHS,
+};

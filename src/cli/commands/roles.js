@@ -15,6 +15,8 @@ const { createLogger } = require('../../utils/logger');
 const { TechStackDetector } = require('../../utils/tech-stack-detector');
 const { ROLE_DEFINITIONS, ROLES: RICH_ROLES } = require('../../config/role-definitions');
 const { ROLE_REVIEW_PATTERNS, REVIEW_PATTERNS: FLAT_PATTERNS } = require('../../config/role-review-strategies');
+const { getPersona, activatePersona, listPersonaNames } = require('../../config/persona-profiles');
+const { PersonaMemory } = require('../../config/persona-memory');
 
 const logger = createLogger('roles');
 
@@ -41,6 +43,8 @@ class RolesCommand {
         return this.consult(args[0], args.slice(1).join(' '), options);
       case 'perspective':
         return this.rolePerspective(args[0], args.slice(1).join(' '), options);
+      case 'activate':
+        return this.activate(args[0], args.slice(1).join(' '), options);
       case 'list':
       default:
         return this.list(options);
@@ -53,13 +57,15 @@ class RolesCommand {
       console.log(JSON.stringify(ROLES, null, 2));
       return ROLES;
     }
-    console.log(chalk.bold('\nSTDD Roles\n'));
+    console.log(chalk.bold('\nSTDD Agent Personas\n'));
     for (const role of ROLES) {
       const def = ROLE_DEFINITIONS[role.id];
+      const persona = getPersona(role.id);
+      const displayName = persona ? `${chalk.bold(persona.firstName)} (${role.name})` : role.name;
       const expertisePreview = def
         ? def.expertise.slice(0, 4).join(', ') + (def.expertise.length > 4 ? ', ...' : '')
         : role.lens;
-      console.log(`  ${chalk.cyan(role.id.padEnd(12))} ${role.name}`);
+      console.log(`  ${chalk.cyan(role.id.padEnd(12))} ${displayName}`);
       console.log(`  ${''.padEnd(12)} Lens: ${chalk.dim(role.lens)}`);
       console.log(`  ${''.padEnd(12)} Expertise: ${chalk.dim(expertisePreview)}`);
     }
@@ -175,7 +181,11 @@ class RolesCommand {
       console.log(chalk.bold('\nParty Mode Brief\n'));
       console.log(`  Topic:    ${chalk.cyan(topic)}`);
       console.log(`  Context:  ${chalk.dim(context.techStack || 'unknown')}`);
-      console.log(`  Roles:    ${selected.map(r => chalk.cyan(r.name)).join(', ')}\n`);
+      const roleLabels = selected.map(r => {
+        const p = getPersona(r.id);
+        return p ? chalk.cyan(`${p.firstName}(${r.name})`) : chalk.cyan(r.name);
+      });
+      console.log(`  Agents:   ${roleLabels.join(', ')}\n`);
 
       for (const item of contributions) {
         console.log(`  ${chalk.yellow(item.name)} (${item.role})`);
@@ -225,7 +235,10 @@ class RolesCommand {
     if (options.json) {
       console.log(JSON.stringify(evaluation, null, 2));
     } else {
-      console.log(chalk.bold(`\n${def.name} Consultation\n`));
+      const persona = getPersona(roleId);
+      const header = persona ? `${persona.firstName} — ${def.name} Consultation` : `${def.name} Consultation`;
+      console.log(chalk.bold(`\n${header}\n`));
+      if (persona) console.log(`  ${chalk.dim(persona.greeting(''))}\n`);
       console.log(`  Topic:  ${chalk.cyan(topic)}`);
       console.log(`  Lens:   ${chalk.dim(def.lens)}\n`);
 
@@ -319,6 +332,38 @@ class RolesCommand {
     }
 
     return result;
+  }
+
+  // ─── activate (persona activation protocol) ──────────────────────
+  activate(roleId, topic, options = {}) {
+    if (!roleId) throw new Error('Usage: stdd roles activate <roleId> [topic]');
+    const context = this._gatherProjectContext();
+    context.topic = topic || '';
+
+    // Load persona memory for recall step.
+    const memory = new PersonaMemory(path.join(this.cwd, 'stdd'));
+    const rememberedContext = memory.recallContext(roleId);
+    if (rememberedContext) {
+      context.projectContext = rememberedContext;
+    }
+
+    const transcript = activatePersona(roleId, context);
+
+    // Save activation transcript.
+    const dir = path.join(this.cwd, 'stdd', 'reports');
+    fs.mkdirSync(dir, { recursive: true });
+    const outputPath = path.join(dir, `activation-${roleId}-${Date.now()}.md`);
+    fs.writeFileSync(outputPath, transcript, 'utf8');
+    const relPath = path.relative(this.cwd, outputPath).replace(/\\/g, '/');
+
+    if (options.json) {
+      console.log(JSON.stringify({ roleId, transcript, output: relPath }, null, 2));
+    } else {
+      console.log(transcript);
+      console.log(`\n  Output: ${chalk.cyan(relPath)}\n`);
+    }
+
+    return { roleId, transcript, output: relPath };
   }
 
   // ─── helpers ─────────────────────────────────────────────────────

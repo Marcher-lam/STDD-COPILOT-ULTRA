@@ -4,6 +4,8 @@
  *
  * Each role carries expertise domains, review focus areas, a structured
  * checklist, and a prompt-template function used by party-mode and consult.
+ * Persona profiles (names, personalities, greetings) are lazily merged via
+ * getPersonaForRole() from persona-profiles.js.
  */
 
 const ROLE_DEFINITIONS = {
@@ -503,11 +505,30 @@ const ROLE_DEFINITIONS = {
 /**
  * Return the flat ROLES array that the rest of the codebase expects.
  * Keeps backward compatibility while the richer definition lives above.
+ * Adds firstName and greeting from persona profiles when available.
  */
-const ROLES = Object.values(ROLE_DEFINITIONS).map((def) => ({
-  id: def.id,
-  name: def.name,
-  lens: def.lens,
-}));
+let _personaCache = null;
+
+function _getPersonas() {
+  if (!_personaCache) {
+    try {
+      const { PERSONA_PROFILES } = require('./persona-profiles');
+      _personaCache = PERSONA_PROFILES;
+    } catch {
+      _personaCache = {};
+    }
+  }
+  return _personaCache;
+}
+
+const ROLES = Object.values(ROLE_DEFINITIONS).map((def) => {
+  const persona = _getPersonas()[def.id];
+  return {
+    id: def.id,
+    name: def.name,
+    lens: def.lens,
+    ...(persona ? { firstName: persona.firstName, greeting: persona.greeting } : {}),
+  };
+});
 
 module.exports = { ROLE_DEFINITIONS, ROLES };

@@ -3,12 +3,13 @@ const path = require('path');
 const chalk = require('chalk');
 const { spawnSync } = require('child_process');
 const { MemoryScanner } = require('./memory-scan');
+const { CodeGraphIndexer } = require('../../utils/codegraph/indexer');
 const { resolveWorkspace } = require('../../utils/workspace-detector');
 const { workspaceToScope } = require('../../utils/workspace-scope');
 const { createLogger } = require('../../utils/logger');
 const logger = createLogger('context');
 
-const LAYERS = ['foundation', 'components', 'contracts'];
+const LAYERS = ['foundation', 'components', 'contracts', 'codegraph'];
 
 const CLIP_COMMANDS = {
   darwin: { bin: 'pbcopy', args: [] },
@@ -92,7 +93,7 @@ class ContextCommand {
       outputStr = JSON.stringify(layers, null, 2);
     } else {
       const sections = [];
-      const titles = { foundation: 'Foundation', components: 'Components', contracts: 'Contracts' };
+      const titles = { foundation: 'Foundation', components: 'Components', contracts: 'Contracts', codegraph: 'CodeGraph' };
       let index = 0;
       for (const layer of LAYERS) {
         if (layers[layer] !== undefined) {
@@ -162,6 +163,9 @@ class ContextCommand {
   }
 
   async readLayer(layer, workspace = null) {
+    if (layer === 'codegraph') {
+      await this.ensureCodeGraphLayer();
+    }
     if (workspace) {
       return this.readWorkspaceLayer(layer, workspace);
     }
@@ -174,6 +178,21 @@ class ContextCommand {
         return null;
       }
       throw error;
+    }
+  }
+
+  async ensureCodeGraphLayer() {
+    const summaryPath = path.join(this.memoryDir, 'codegraph.md');
+    try {
+      await fs.access(summaryPath);
+      return;
+    } catch (_) {
+      try {
+        const indexer = new CodeGraphIndexer(this.cwd);
+        indexer.ensureFresh({ quiet: true });
+      } catch (error) {
+        logger.warn(`CodeGraph unavailable: ${error.message}`);
+      }
     }
   }
 

@@ -21,7 +21,7 @@ const {
   ApplyCommand, VerifyCommand, ArchiveCommand, FFCommand, TurboCommand,
   MetricsCommand, GuardCommand, ExploreCommand, StartersCommand,
   ContinueCommand, IssueCommand, CommitCommand, ContextCommand,
-  CiGeneratorCommand, AuditCommand, WorkspaceCommand, DepcheckCommand,
+  CodeGraphCommand, CiGeneratorCommand, AuditCommand, WorkspaceCommand, DepcheckCommand,
   SchemaCommand, ContractCommand, MockGenCommand, ValidateCommand,
   LearnCommand, RolesCommand, ExtensionsCommand, StoryCommand,
   UserTestCommand, PipelineCommand, FixPacketCommand, OutsideInCommand,
@@ -92,7 +92,7 @@ const commandFactories = {
   ApplyCommand, VerifyCommand, ArchiveCommand, FFCommand, TurboCommand,
   MetricsCommand, GuardCommand, ExploreCommand, StartersCommand,
   ContinueCommand, IssueCommand, CommitCommand, ContextCommand,
-  CiGeneratorCommand, AuditCommand, WorkspaceCommand, DepcheckCommand,
+  CodeGraphCommand, CiGeneratorCommand, AuditCommand, WorkspaceCommand, DepcheckCommand,
   SchemaCommand, ContractCommand, MockGenCommand, ValidateCommand,
   LearnCommand, RolesCommand, ExtensionsCommand, StoryCommand,
   UserTestCommand, PipelineCommand, FixPacketCommand, OutsideInCommand,
@@ -420,6 +420,9 @@ program.command('design [action]')
   .option('-p <name>', 'Design preset (shorthand)')
   .option('--no-preview', 'Skip preview.html and preview-dark.html generation')
   .option('--force', 'Force overwrite')
+  .option('--dir <path>', 'Directory to scan for reverse-scan')
+  .option('--dry-run', 'Preview reverse-scan output without writing file')
+  .option('--output <path>', 'Custom output path for reverse-scan')
   .action(safeAction(async (action, options) => {
     const cmd = new DesignCommand(process.cwd());
     await cmd.execute(action || 'create', [], options);

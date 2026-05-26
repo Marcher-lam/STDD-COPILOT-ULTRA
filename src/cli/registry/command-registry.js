@@ -308,6 +308,19 @@ const commandRegistry = [
       { flags: '--format <format>', description: 'Output format' },
     ],
     action: 'ContextCommand',
+    mapper: (layer, options) => [{ ...(options || {}), layer: layer || null }],
+  },
+  {
+    name: 'codegraph [action] [args...]',
+    description: 'Inspect and maintain the default code knowledge graph',
+    options: [
+      { flags: '--file <path>', description: 'Sync or explain a specific file' },
+      { flags: '--changed', description: 'Sync changed files' },
+      { flags: '--json', description: 'JSON output' },
+      { flags: '--silent', description: 'Suppress text output' },
+    ],
+    action: 'CodeGraphCommand',
+    mapper: (action, args, options) => [action || 'status', args || [], options || {}],
   },
   {
     name: 'explore [scope]',
@@ -609,6 +622,23 @@ const commandRegistry = [
         action: 'BrowserCommand.inspect',
       },
       {
+        name: 'compare <url>',
+        description: 'Compare page screenshot against visual baseline',
+        options: [
+          { flags: '--name <name>', description: 'Snapshot name (default: derived from URL)' },
+          { flags: '--threshold <ratio>', description: 'Max allowed diff ratio (default: 0.01 = 1%)' },
+        ],
+        action: 'BrowserCommand.compare',
+      },
+      {
+        name: 'update-baseline <url>',
+        description: 'Take screenshot and save/update as visual baseline',
+        options: [
+          { flags: '--name <name>', description: 'Snapshot name (default: derived from URL)' },
+        ],
+        action: 'BrowserCommand.updateBaseline',
+      },
+      {
         name: 'doctor',
         description: 'Check Playwright browser dependency health',
         options: [
@@ -784,6 +814,17 @@ const commandRegistry = [
     ],
     action: 'DocsCommand',
     helpText: `Actions: generate (default), open, sources\n\nExamples:\n  stdd docs                     # Generate docs site to stdd/docs-site/\n  stdd docs generate            # Same as above\n  stdd docs open                # Generate and open in browser\n  stdd docs sources             # List documentation sources\n  stdd docs --json              # Output source listing as JSON\n  stdd docs --lang en           # Generate English-only docs\n  stdd docs --output ./my-docs  # Custom output directory`,
+  },
+  {
+    name: 'prfaq [stage]',
+    description: 'Amazon Working Backwards PRFAQ workflow (ignition, press-release, customer-faq, internal-faq, verdict, full)',
+    options: [
+      { flags: '--idea <text>', description: 'Initial idea for ignition stage' },
+      { flags: '--product <name>', description: 'Product name for press release' },
+      { flags: '--json', description: 'JSON output' },
+    ],
+    action: 'PrfaqCommand',
+    helpText: `Stages: ignition, press-release, customer-faq, internal-faq, verdict, full\n\nExamples:\n  stdd prfaq full                              # Run all 5 stages\n  stdd prfaq ignition --idea "Build AI tool"   # Capture initial spark\n  stdd prfaq press-release                     # Generate press release\n  stdd prfaq verdict                           # Quantitative go/no-go\n  stdd prfaq customer-faq                      # Customer Q&A\n  stdd prfaq internal-faq                      # Technical/business Q&A`,
   },
 ];
 
