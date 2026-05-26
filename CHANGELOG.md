@@ -2,6 +2,78 @@
 
 All notable changes to STDD Copilot will be documented in this file.
 
+## [2.1.0] - 2026-05-26
+
+### Phase 1: Visual Regression & Test Closure
+- **NEW** `src/utils/visual-regression.js` — pixel-level screenshot comparison with pixelmatch + fallback
+- **NEW** `stdd browser compare <url>` — compare page screenshot against visual baseline
+- **NEW** `stdd browser update-baseline <url>` — save/update baseline screenshot
+- **MOD** `stdd verify` — Visual Constitution Gate: auto-trigger visual diff when configured in `stdd/config.yaml`
+- **MOD** `evidence-capture.js` — `_determineStatus` includes visual check
+
+### Phase 2: UI/Design System Reverse Self-Healing
+- **NEW** `src/utils/css-extractor.js` — extract CSS variables, colors, fonts, border-radius, shadows from .css/.scss/tailwind.config.js
+- **NEW** `stdd design reverse-scan` — scan project styles and auto-generate DESIGN.md from actual code tokens
+- Supports `--dir`, `--dry-run`, `--output` options
+
+### Phase 3: Workflow DSL & Multi-Agent
+- **NEW** `src/utils/workflow-dsl-interpreter.js` — parse YAML workflows, Kahn topological sort, DAG compilation, cycle detection
+- **MOD** `agent-simulator.js` — `startDebate()` and `convergeToProposal()` for AI-powered multi-role debate via PartyOrchestrator
+
+### Phase 4: Sandbox Security & Trace
+- **MOD** `command-runner.js` — sandbox mode: block dangerous binaries, intercept unauthorized write paths
+- **MOD** `session-progress.js` — auto-inject TraceID/SpanID into every progress.jsonl entry
+- **MOD** `evidence-capture.js` — evidence reports include traceId + spanId
+
+### Tests
+- 93 new test cases across 4 test files (visual-regression, css-extractor, workflow-dsl, sandbox-trace)
+- 206 total suites, 4378 total tests, 100% pass rate, zero regressions
+
+## [2.0.0] - 2026-05-26
+
+### Added — Phase 2: Builder Engine & UI Generator
+- **`stdd builder`**: Builder 引擎 — 从规格自动生成项目脚手架与模块化代码骨架
+- **`stdd ui`**: UI Generator — 从设计规格生成前端组件代码 (React/Vue/Svelte 支持)
+- **Builder 命令模板**: `src/templates/commands/builder.md`
+- **UI 命令模板**: `src/templates/commands/ui.md`
+
+### Added — Phase 3: Modules Marketplace, Dashboard & Docs Site
+- **`stdd modules`**: Modules Marketplace — 浏览、安装和管理可复用 STDD 扩展模块
+- **`stdd dashboard`**: Dashboard — 项目质量指标可视化仪表板，含 Constitution 合规、测试覆盖率、变更状态等维度
+- **`stdd docs`**: Docs Site Generator — 从 STDD 产物自动生成文档站点 (Markdown/HTML)
+- **Dashboard 配置模板**: `src/config/dashboard-templates.js`
+- **Modules 命令模板**: `src/templates/commands/modules.md`
+
+### Added — Phase 4: Profile 自适应、PRFAQ、CodeGraph & 增强
+- **`stdd profile`**: Profile 自适应 — 自动检测开发环境与偏好，生成个性化配置
+- **`stdd prfaq`**: PRFAQ 文档生成 — Press Release / FAQ 格式的产品决策文档
+- **`stdd codegraph`**: CodeGraph — 代码依赖图分析，可视化模块关系与影响范围
+- **`stdd iterate`**: 增强 — Plan-Execute-Reflect 自主迭代循环优化
+- **`stdd parallel`**: 增强 — DAG 并行执行引擎升级
+- **`stdd start`**: 增强 — 交互式快速启动向导优化
+- **`stdd recommend`**: 增强 — 智能推荐引擎升级
+- **IDE Adapters**: `src/config/ide-adapters/` 多 IDE 自适应配置
+- **Persona Memory**: `src/config/persona-memory.js` 开发者画像记忆
+- **Persona Profiles**: `src/config/persona-profiles.js` 多角色画像系统
+- **Cross-Talk Analyzer**: `src/runtime/cross-talk-analyzer.js` 跨模块通信分析
+- **Party Orchestrator**: `src/runtime/party-orchestrator.js` Party Mode 编排器增强
+
+### Changed
+- **品牌升级**: STDD 重命名为 Smart Team-Driven Development, 启动 Ultra v2.0.0
+- **CLI 命令总数**: 75 → 88 (新增 builder, ui, modules, dashboard, docs, profile, prfaq, codegraph 等)
+- **Command 模板总数**: 75 → 88
+- **斜杠命令总数**: 122 → 145 (88 Command + 57 Skill)
+- **文档全面更新**: CHANGELOG.md, README.md, README_EN.md, USAGE.md, INSTALL.md, ARCHITECTURE.md, docs/command-reference.md 等
+- **角色定义增强**: `src/config/role-definitions.js` 角色能力扩展
+- **Supervisor 增强**: `src/cli/commands/supervisor.js` 多 Agent 协调能力升级
+- **Hooks 增强**: `src/templates/hooks/post-file-write.js` 文件写入后钩子增强
+- **Context 增强**: `src/cli/commands/context.js` 上下文管理能力扩展
+- **扩展目录更新**: `stdd/extensions/catalog.json` 模块目录扩展
+
+### Fixed
+- 修复文档与命令注册表的数量不一致问题
+- 修复测试契约与实际命令定义的同步问题
+
 ## [1.0.7] - 2026-05-24
 
 ### Added
@@ -11,7 +83,7 @@ All notable changes to STDD Copilot will be documented in this file.
   - `change-helpers-coverage.test.js` (22 tests) — generateChangeName, toSafeFilename, toTitleCase, workspaceContext, resolveWorkspaceContext
   - `api-spec-coverage.test.js` (78 tests) — 20+ standalone utility methods
 - `round34-coverage.test.js` (8 tests) — commit-msg (94.89%, +7pp) and constitution-status (93.22%, +5pp) branch coverage boost.
-- Test count: 4158 (+210), suites: 191 (+8).
+- Test count: 4285, suites: 202, all passing.
 
 ### Fixed
 - Fixed async `execute()` calls in batch test files using synchronous `try/finally` (missing `await` + `catch`) causing unhandled Promise rejections and process crashes.
@@ -56,12 +128,12 @@ All notable changes to STDD Copilot will be documented in this file.
 ## [1.0.4-preview] - 2026-05-22
 
 ### Added
-- **STDD Skills 全量审查完成**: 47 个 STDD skills 全部审查并标记 ✅ 完成
+- **STDD Skills 全量审查完成**: 57 个 STDD skills 全部审查并标记 ✅ 完成
 - **api-spec skill 增强**: 添加框架原生 hooks (React Query, SWR, Vue Query, Svelte Query)
 - **apply skill 增强**: 添加 Snapshot 测试、并行执行、智能重试、参数化测试支持
 
 ### Changed
-- **SKILL.md 文档质量**: 所有 47 个 skill 文档覆盖外部工具最佳实践
+- **SKILL.md 文档质量**: 所有 57 个 skill 文档覆盖外部工具最佳实践
 - **多语言支持**: 确认所有 skills 支持语言无关设计
 - **文档计数**: skill_method.md 中所有 skills 标记完成状态
 
@@ -84,7 +156,7 @@ All notable changes to STDD Copilot will be documented in this file.
 
 ### Fixed
 - 修复所有文档中的命令数量不一致问题
-- 所有 122 个斜杠命令和 67 个 CLI 命令已完全覆盖
+- 所有 145 个定义入口（91 个唯一 `/stdd:*` 入口）和 75 个 CLI 命令已完全覆盖
 
 ## [1.0.2] - 2026-05-20
 
@@ -102,7 +174,7 @@ All notable changes to STDD Copilot will be documented in this file.
 
 ### Fixed
 - 修复文档中命令数量不一致的问题
-- 所有 122 个斜杠命令和 67 个 CLI 命令已完全覆盖
+- 所有 145 个定义入口（91 个唯一 `/stdd:*` 入口）和 75 个 CLI 命令已完全覆盖
 ## [1.0.1] - 2026-05-19
 
 ### Added

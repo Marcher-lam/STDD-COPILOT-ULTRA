@@ -3,6 +3,8 @@ const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
 
+process.env.FORCE_COLOR = '0';
+
 describe('archive CLI command', () => {
   const cliPath = path.join(__dirname, '..', 'cli.js');
 

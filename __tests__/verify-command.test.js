@@ -7,11 +7,14 @@ describe('verify CLI command', () => {
   const cliPath = path.join(__dirname, '..', 'cli.js');
 
   function runCli(args, cwd) {
-    return spawnSync(process.execPath, [cliPath, ...args], {
+    const result = spawnSync(process.execPath, [cliPath, ...args], {
       cwd,
       encoding: 'utf8',
-      env: { ...process.env, CI: '1' },
+      env: { ...process.env, CI: '1', FORCE_COLOR: '0', NO_COLOR: '1' },
     });
+    if (result.stdout) result.stdout = result.stdout.replace(/\x1B\[[0-9;]*m/g, '');
+    if (result.stderr) result.stderr = result.stderr.replace(/\x1B\[[0-9;]*m/g, '');
+    return result;
   }
 
   function createTempProject(name, options = {}) {

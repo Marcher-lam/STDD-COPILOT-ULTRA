@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+
+process.env.FORCE_COLOR = '0';
+
 const { MetricsCommand } = require('../src/cli/commands/metrics');
 
 describe('MetricsCommand', () => {

@@ -89,7 +89,7 @@ describe('RolesCommand', () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'stdd-roles-overflow-'));
     const lines = [];
     for (let i = 0; i < 40; i++) {
-      lines.push(`const password_${i} = "secret_${i}";`);
+      lines.push(`const var_${i} = { password: "secret_${i}", private_key: "key_${i}" };`);
     }
     fs.writeFileSync(path.join(tmp, 'many-secrets.js'), lines.join('\n'));
     const cmd = new RolesCommand(tmp);

@@ -1,7 +1,19 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+
+// Force chalk to output plain text in tests
+process.env.FORCE_COLOR = '0';
+
 const { UpdateCommand } = require('../src/cli/commands/update');
+
+function stripAnsi(str) {
+  return String(str).replace(/\x1B\[[0-9;]*m/g, '');
+}
+
+function getLogText(spy) {
+  return spy.mock.calls.map(c => c.map(stripAnsi).join(' ')).join('\n');
+}
 
 describe('UpdateCommand', () => {
   let tempDirs = [];
@@ -172,12 +184,13 @@ describe('UpdateCommand', () => {
       expect(content).toBe('# My Custom Modified SKILL\n\nlocal changes here\n');
 
       const summaryCall = logSpy.mock.calls.find(call =>
-        String(call[0]).includes('Update summary')
+        stripAnsi(String(call[0])).includes('Update summary')
       );
       expect(summaryCall).toBeDefined();
 
+      const logOutput = getLogText(logSpy);
       const localChangesCall = logSpy.mock.calls.find(call => {
-        const msg = String(call[0]);
+        const msg = stripAnsi(String(call[0]));
         return msg.includes('local changes 1') || msg.includes('local changes 2') || msg.includes('local changes 3');
       });
       expect(localChangesCall).toBeDefined();

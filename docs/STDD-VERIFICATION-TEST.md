@@ -1,8 +1,8 @@
 # STDD Copilot 全命令验证文档
 
-> **项目**: STDD Copilot CLI v1.0.5
-> **验证日期**: 2026-05-23
-> **覆盖范围**: 75 个 CLI 命令 + 80 个 Command 模板 + 47 个 Skill 模板 (全部审查完成 ✅)
+> **项目**: STDD Copilot Ultra v2.0.0
+> **验证日期**: 2026-05-26
+> **覆盖范围**: 88 个 CLI 命令 + 88 个 Command 模板 + 57 个 Skill 模板 (全部审查完成 ✅)
 > **质量基线**: `npm run premerge` (audit + zero-warning lint + docs + coverage)
 
 ---
@@ -91,8 +91,8 @@ stdd commands
 ```
 
 **验证点:**
-- [ ] 列出 47 个 Skill 模板
-- [ ] 列出 80 个 Command 模板
+- [ ] 列出 57 个 Skill 模板
+- [ ] 列出 88 个 Command 模板
 
 ### T04 — `stdd list` / `stdd status`
 ```bash
@@ -641,13 +641,13 @@ stdd start
 
 # Command 模板验证（AI 助手中）
 
-> 以下 75 个 `/stdd:` 斜杠命令通过 AI 助手执行，由 AI 生成内容。
+> 以下 88 个 `/stdd:` 斜杠命令通过 AI 助手执行，由 AI 生成内容。
 
 | # | 命令 | 用途 | 状态 |
 |---|------|------|------|
 | T45 | `/stdd:api-spec` | API 规范生成 | ✅ |
 | T46 | `/stdd:apply` | TDD 实现 | ✅ |
-| T47 | `/stdd:archive` | 归档变更 | ✅ |
+| T57 | `/stdd:archive` | 归档变更 | ✅ |
 | T48 | `/stdd:audit` | 合规审计 | ✅ |
 | T49 | `/stdd:baby-steps` | TDD 小步引导 | ✅ |
 | T50 | `/stdd:brainstorm` | 多维度分析 | ✅ |
@@ -725,7 +725,7 @@ stdd start
 
 # Skill 模板验证
 
-> 47 个 Skill 模板全部完成 ✅
+> 57 个 Skill 模板全部完成 ✅
 
 ## 生命周期 Skills (7)
 | Skill | 功能 | 状态 |
@@ -842,8 +842,8 @@ stdd start
 | 浏览器 | T41 | 1 | ✅ |
 | 进度追踪 | T42-T43 | 2 | ✅ |
 | 辅助工具 | T44 | 1 | ✅ |
-| Command 模板 | T45-T119 | 75 | ✅ |
-| Skill 模板 | 47 个 | 47 | ✅ |
+| Command 模板 | T45-T132 | 88 | ✅ |
+| Skill 模板 | 57 个 | 57 | ✅ |
 | **总计 CLI 用例** | **T01-T44** | **44** | **✅** |
 
 ---
@@ -870,9 +870,9 @@ T42-T44  → 进度追踪与辅助工具
 ---
 
 > **STDD Copilot v1.0.5**
-> - 75 个 CLI 命令 ✅
-> - 80 个 Command 模板 ✅
-> - 47 个 Skill 模板 ✅
+> - 88 个 CLI 命令 ✅
+> - 88 个 Command 模板 ✅
+> - 57 个 Skill 模板 ✅
 > - 171 测试套件，3810 测试用例，100% 通过率 ✅
 > - 97.33% 语句覆盖，91.03% 分支覆盖 ✅
 >

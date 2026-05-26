@@ -13,7 +13,7 @@
 | `/stdd:plan` | — | 评估架构变更，生成 5-6 个细粒度微任务清单 (每任务约 30 分钟) + ADR 记录 |
 | `/stdd:apply` | `stdd apply [change]` | 执行 Ralph Loop TDD 循环：红灯→检查→绿灯→变异→重构，支持 `--task`/`--fix`/`--phase` |
 | `/stdd:execute` | — | 严格 Ralph Loop TDD 闭环执行 (apply 的别名) |
-| `/stdd:verify` | `stdd verify [change]` | 5 维验证：API 签名/BDD 覆盖/类型/边界异常/文档一致性 + Constitution 合规 + Evidence |
+| `/stdd:verify` | `stdd verify [change]` | 5 维验证：API 签名/BDD 覆盖/类型/边界异常/文档一致性 + Constitution 合规 + Evidence + Visual Constitution Gate (配置后自动触发视觉差异检查) |
 | `/stdd:archive` | `stdd archive [change]` | 完成变更：合并 Delta Spec 到主规格，移至归档，生成 spec-merge-report.json |
 
 ## 2. 工作流增强 (6 个)
@@ -80,6 +80,7 @@
 | `/stdd:commit` | `stdd commit [change]` | 原子化 Git 提交：red:/green:/refactor: 前缀 (Conventional Commits + TDD)，支持 `--tdd`/`--phase`/`--issue` |
 | `/stdd:final-doc` | — | 聚合所有阶段产物为 FINAL_REQUIREMENT.md 综合文档 |
 | `/stdd:design` | — | 将规格转化为技术设计文档，含 Context/Decision/Rationale/Consequences ADR 格式 |
+| `/stdd:design reverse-scan` | `stdd design reverse-scan` | 反向扫描项目现有样式 (CSS/Tailwind/设计令牌)，自动提取 token 并生成 DESIGN.md 设计系统文档 |
 | `/stdd:prp` | — | What/Why/How/Success 结构化规划框架，便于干系人对齐 |
 | `/stdd:product-proposal` | `stdd product-proposal` | 扫描所有 stdd/ 产物，生成 15 章产品方案报告 (PRODUCT-PROPOSAL.md)，含覆盖率、质量指标、路线图，支持 `--json`/`--output` |
 | `/stdd:context` | `stdd context [layer]` | 三层文档上下文管理 (Foundation~500t + Component~1000t + Feature~2000t)，支持 `--export`/`--json` |
@@ -126,9 +127,48 @@
 | `stdd extensions list/install/validate` | STDD 扩展管理：列出/安装/验证扩展 |
 | `stdd starters list/create` | 项目启动模板管理 (TS/JS/Python/Go/Rust 5 种) |
 | `stdd ci [platform]` | 生成 CI 配置文件 (支持 github) |
-| `stdd browser snapshot/inspect/doctor` | 内置浏览器驱动 (Playwright)：截图/检查/健康诊断，支持 `--width`/`--height` |
+| `stdd browser snapshot/inspect/doctor/compare/update-baseline` | 内置浏览器驱动 (Playwright)：截图/检查/健康诊断/视觉回归对比/基线更新，支持 `--width`/`--height` |
+| `stdd browser compare <url>` | 视觉回归对比：截取页面截图并与基线进行像素级差异比对，输出差异报告和差异图 |
+| `stdd browser update-baseline <url>` | 更新视觉基线截图：重新截取页面并覆盖存储的基线，用于确认设计变更后更新参照 |
 | `stdd graph recommend` | 智能推荐下一步 Skill (同第 6 类) |
 | `stdd constitution audit` | Constitution 合规审计 (同第 5 类) |
+
+## 11. Ultra 增强命令 — Builder、UI、模块市场 (Phase 2-4 新增)
+
+| 斜杠命令 | CLI 命令 | 功能 |
+|---------|---------|------|
+| `/stdd:builder` | `stdd builder create / list` | 创建自定义 Agent、Workflow、Skill，列出已创建的构建产物 |
+| `/stdd:ui` | `stdd ui create / list` | 基于 DESIGN.md 设计令牌生成前端页面和组件，列出已生成的 UI 产物 |
+| `/stdd:modules` | `stdd modules search / install / list` | 模块市场：浏览、搜索、安装社区模块，列出已安装模块 |
+
+## 12. Ultra 增强命令 — 可视化与文档站点 (Phase 2-4 新增)
+
+| 斜杠命令 | CLI 命令 | 功能 |
+|---------|---------|------|
+| `/stdd:dashboard` | `stdd dashboard generate / open` | 生成静态 HTML 项目健康仪表板，在浏览器中打开仪表板 |
+| `/stdd:docs` | `stdd docs build / serve` | 从项目文档生成静态文档站点，启动本地预览服务 |
+
+## 13. Ultra 增强命令 — 智能规划与决策 (Phase 2-4 新增)
+
+| 斜杠命令 | CLI 命令 | 功能 |
+|---------|---------|------|
+| `/stdd:profile` | `stdd profile detect / set` | 规划深度自适应：按项目复杂度自动检测，或手动设置规划深度等级 |
+| `/stdd:prfaq` | `stdd prfaq ignition / press-release / full` | Amazon Working Backwards PRFAQ 工作流：起步、生成新闻稿、完整 PRFAQ 文档 |
+| `/stdd:codegraph` | `stdd codegraph inspect / query / update` | 代码知识图谱：检查代码关系和依赖，查询代码图谱，更新知识图谱 |
+
+## 14. Ultra 增强命令 — 迭代与并行执行 (Phase 2-4 新增)
+
+| 斜杠命令 | CLI 命令 | 功能 |
+|---------|---------|------|
+| `/stdd:iterate` | `stdd iterate plan / execute / reflect` | Plan-Execute-Reflect 自主迭代循环：规划、执行、反思与质量提升 |
+| `/stdd:parallel` | `stdd parallel execute <intent>` | DAG 意图并行执行：识别并并行执行独立任务，聚合结果 |
+
+## 15. Ultra 增强命令 — 快速启动与推荐 (Phase 2-4 新增)
+
+| 斜杠命令 | CLI 命令 | 功能 |
+|---------|---------|------|
+| `/stdd:start` | `stdd start` | 交互式快速启动向导 (TTY) / 帮助文本 (非 TTY) |
+| `/stdd:recommend` | `stdd recommend` | 根据项目状态智能推荐下一步操作，支持 `--json` |
 
 ---
 
@@ -136,18 +176,18 @@
 
 | 指标 | 数量 | 说明 |
 |------|------|------|
-| **Skill 模板** (SKILL.md) | **47** | `src/templates/skills/stdd/{name}/SKILL.md` |
-| **Command 模板** (.md) | **75** | `src/templates/commands/{name}.md` |
-| **唯一斜杠命令** (`/stdd:*`) | **76** | 去重后的 Skill + Command 入口 |
-| **CLI 命令** (含子命令) | **75** | `stdd xxx` 终端命令 |
-| **Skill 驱动入口** | **47** | 有 Skill 模板的命令 |
-| **Command 文件入口** | **75** | 有 Command 模板的命令 |
-| **总入口** | **127** | 80 Command + 47 Skill，去重后 80 个唯一入口 |
+| **Skill 模板** (SKILL.md) | **57** | `src/templates/skills/stdd/{name}/SKILL.md` |
+| **Command 模板** (.md) | **88** | `src/templates/commands/{name}.md` |
+| **唯一斜杠命令** (`/stdd:*`) | **88** | 去重后的 Skill + Command 入口 |
+| **CLI 命令** (含子命令) | **88** | `stdd xxx` 终端命令 |
+| **Skill 驱动入口** | **57** | 有 Skill 模板的命令 |
+| **Command 文件入口** | **88** | 有 Command 模板的命令 |
+| **总入口** | **145** | 88 Command + 57 Skill，去重后 88 个唯一入口 |
 | **AI 引擎适配** | **22** | 4 Tier 兼容体系 |
 | **Constitution 条例** | **9** | 3 Blocking + 4 Warning + 2 Suggestion |
 | **Agent 角色** | **12** | 4 基础 + 8 专用 |
 | **Graph Intent** | **4** | feature/hotfix/repair/research |
-| **测试基线** | **171 套件 / 3810 测试** | Branch 91.03%，`npm test` 全部通过 |
+| **测试基线** | **202 套件 / 4285 测试** | Branch 91.03%，`npm test` 全部通过 |
 
 ---
 
@@ -176,4 +216,24 @@ stdd turbo "需求描述" → 自动完成所有阶段 → stdd commit
 ### 断点恢复
 ```
 stdd progress --resume → stdd continue <change>
+```
+
+### 快速启动向导
+```
+stdd start → 交互式选择工作流 → 自动执行
+```
+
+### 模块市场
+```
+stdd modules search <keyword> → stdd modules install <module> → stdd modules list
+```
+
+### 项目健康仪表板
+```
+stdd dashboard generate → stdd dashboard open
+```
+
+### 代码知识图谱
+```
+stdd codegraph inspect → stdd codegraph query <pattern> → stdd codegraph update
 ```

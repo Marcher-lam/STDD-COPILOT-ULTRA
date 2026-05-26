@@ -6,7 +6,7 @@ describe('commands/index.js re-exports', () => {
     'StatusCommand', 'ApplyCommand', 'VerifyCommand', 'ArchiveCommand',
     'FFCommand', 'TurboCommand', 'MetricsCommand', 'GuardCommand',
     'MutationCommand', 'ExploreCommand', 'StartersCommand', 'ContinueCommand',
-    'IssueCommand', 'CommitCommand', 'ContextCommand', 'CiGeneratorCommand',
+    'IssueCommand', 'CommitCommand', 'ContextCommand', 'CodeGraphCommand', 'CiGeneratorCommand',
     'RecommendEngine', 'printRecommendations', 'ApiSpecCommand',
     'ConstitutionFixCommand', 'AuditCommand',
     'WorkspaceCommand', 'DepcheckCommand', 'SchemaCommand', 'ContractCommand',
@@ -23,6 +23,7 @@ describe('commands/index.js re-exports', () => {
     'ParallelCommand', 'SupervisorCommand', 'ProfileCommand',
     'BuilderCommand', 'UICommand', 'ModulesCommand', 'DashboardCommand', 'DocsCommand',
     // Skill-based workflow commands
+    'PrfaqCommand',
     'ProposeCommand', 'ClarifyCommand', 'ConfirmCommand', 'PlanCommand',
     'ExecuteCommand', 'FinalDocCommand', 'CommitTddCommand',
   ];

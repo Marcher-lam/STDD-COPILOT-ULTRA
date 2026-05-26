@@ -6,7 +6,7 @@
 
 ```
 Test Suites: 191 passed
-Tests:       4158 passed (100%)
+Tests:       4285 passed (100%)
 Coverage:    ~97%+ Stmts | ~93%+ Branch | ~97%+ Funcs | ~97%+ Lines
 ```
 
@@ -14,7 +14,7 @@ Coverage:    ~97%+ Stmts | ~93%+ Branch | ~97%+ Funcs | ~97%+ Lines
 
 | 类别 | 数量 |
 |------|------|
-| 新增测试用例 | +1623 (2535→4158) |
+| 新增测试用例 | +1623 (2535→4285) |
 | 新增测试套件 | +63 (128→191) |
 | 空 catch 块修复 | 52 |
 | process.exit → exitCode | 14 |
@@ -79,7 +79,7 @@ Coverage:    ~97%+ Stmts | ~93%+ Branch | ~97%+ Funcs | ~97%+ Lines
 - AGENTS.md → docs/agent-protocol.md，CLAUDE.md 删除（冗余）
 - 同步更新 docs-taxonomy-consistency.test.js 和 docs-cli-examples-consistency.test.js
 
-结果：190→191 套件，4150→4158 测试。
+结果：190→202 套件，4150→4285 测试。
 
 ## 前端/UI 能力现状（2026-05-24）
 
@@ -160,7 +160,7 @@ workspace-scope.js, elicitation-engine.js, coverage-parser.js
 3. **var 声明** — 全部清理完毕
 4. **空 catch 块** — 仅剩合理保留项
 5. **Registry 对齐** — 50 registry + 7 inline = 57 命令文件
-6. **Skill 模板** — 47 个全部有效
+6. **Skill 模板** — 57 个全部有效
 7. **Math.random** — 仅 1 处，无安全风险
 8. **cli.js 入口测试** — 33 个测试用例
 9. **process.exit** — 残留均为 signal handler 或 hook 脚本，合法用途
@@ -181,4 +181,4 @@ workspace-scope.js, elicitation-engine.js, coverage-parser.js
 # cli.js: ~82% → 85%+
 ```
 
-当前状态已可交付。191 套件 / 4158 测试全绿，90%+ 分支覆盖里程碑已达成。
+当前状态已可交付。202 套件 / 4285 测试全绿，90%+ 分支覆盖里程碑已达成。

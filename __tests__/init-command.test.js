@@ -904,6 +904,9 @@ describe('InitCommand', () => {
     expect(content).toContain('defense');
     expect(content).toContain('confirm_gate');
     expect(content).toContain('memory');
+    expect(content).toContain('codegraph:');
+    expect(content).toContain('auto_sync: true');
+    expect(content).toContain('context_layer: true');
     expect(content).toContain('enabled: true');
   });
 
@@ -1243,6 +1246,9 @@ describe('InitCommand', () => {
     expect(fs.existsSync(path.join(targetPath, 'stdd', 'changes', 'archive'))).toBe(true);
     expect(fs.existsSync(path.join(targetPath, 'stdd', 'memory'))).toBe(true);
     expect(fs.existsSync(path.join(targetPath, 'stdd', 'graph'))).toBe(true);
+    expect(fs.existsSync(path.join(targetPath, 'stdd', 'graph', 'codegraph'))).toBe(true);
+    expect(fs.existsSync(path.join(targetPath, 'stdd', 'graph', 'codegraph', 'index.json'))).toBe(true);
+    expect(fs.existsSync(path.join(targetPath, 'stdd', 'memory', 'codegraph.md'))).toBe(true);
     expect(fs.existsSync(path.join(targetPath, 'stdd', 'explorations'))).toBe(true);
   });
 

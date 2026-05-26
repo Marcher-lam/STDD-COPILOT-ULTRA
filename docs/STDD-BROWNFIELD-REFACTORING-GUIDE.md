@@ -893,7 +893,7 @@ stdd archive refactor-target-module
 | 行覆盖 | 97.87% |
 | CLI 命令 | 75 |
 | Command 模板 | 75 |
-| Skill 模板 | 47 |
+| Skill 模板 | 57 |
 
 ---
 

@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-green.svg)](https://nodejs.org/)
 [![npm](https://img.shields.io/npm/v/@marcher-lam/stdd-copilot-ultra)](https://www.npmjs.com/package/@marcher-lam/stdd-copilot-ultra)
-[![Tests](https://img.shields.io/badge/tests-4158%2F4158%20passing-brightgreen.svg)](CONTRIBUTING.md)
+[![Tests](https://img.shields.io/badge/tests-4285%2F4285%20passing-brightgreen.svg)](CONTRIBUTING.md)
 [![Coverage](https://img.shields.io/badge/coverage-97%25%20stmts%20%7C%2093%25%20branch-brightgreen.svg)](CONTRIBUTING.md)
 
 [简体中文](./README.md) · [English](./README_EN.md)
@@ -50,10 +50,10 @@ It unifies three dimensions:
 
 | Metric | Value |
 |--------|-------|
-| CLI Commands | 75 |
-| Command Templates | 80 (`/stdd:*` slash commands) |
-| Skill Templates | 47 |
-| Test Suites | **191** suites, **4,158** tests, 100% passing |
+| CLI Commands | 88 |
+| Command Templates | 88 (`/stdd:*` slash commands) |
+| Skill Templates | 57 |
+| Test Suites | **202** suites, **4,285** tests, 100% passing |
 | Statement Coverage | **97.7%** |
 | Branch Coverage | **93.2%** |
 | Supported AI Engines | 24 (Claude Code, Cursor, Windsurf, etc. across 4 tiers) |
@@ -319,12 +319,27 @@ init → new → propose → clarify → confirm → spec → plan → apply →
 | `stdd graph recommend` | Smart next-step recommendation |
 | `stdd graph analyze` | Bottleneck analysis and path optimization |
 
+### Ultra Enhanced Commands (Phase 2-4)
+
+| CLI | Purpose |
+|-----|---------|
+| `stdd builder create / list` | Create custom agents, workflows, and skills |
+| `stdd ui create / list` | Generate frontend pages and components using DESIGN.md design tokens |
+| `stdd modules search / install / list` | Module marketplace: browse, search, install community modules |
+| `stdd dashboard generate / open` | Static HTML project health dashboard |
+| `stdd docs build / serve` | Generate static documentation site from project docs |
+| `stdd profile detect / set` | Adaptive planning depth (auto-adjusts by project complexity) |
+| `stdd prfaq ignition / press-release / full` | Amazon Working Backwards PRFAQ workflow |
+| `stdd codegraph inspect / query / update` | Code knowledge graph: code relationships, dependency analysis |
+| `stdd iterate plan / execute / reflect` | Plan-Execute-Reflect iteration loop |
+| `stdd parallel execute <intent>` | DAG intent-based parallel execution |
+| `stdd start` | Interactive quick-start wizard |
+
 ### Collaboration & Extensions
 
 | CLI | Purpose |
 |-----|---------|
 | `stdd workspace list / validate / repair` | Monorepo workspace management |
-| `stdd parallel <cmd>` | Cross-workspace parallel execution |
 | `stdd user-test [change]` | Human + agent test scripts |
 | `stdd pipeline [change]` | Generate IR + acceptance test skeletons from specs |
 | `stdd starters` | Project starter templates (JS / TS / Python / Go / Rust) |
@@ -378,7 +393,7 @@ STDD Copilot Ultra fuses exploration, specification, and TDD via a **Skill Graph
 │  DAG Runner  │  Visualizer  │  Analyzer  │  Recommender   │
 ├──────────────────────────────────────────────────────────┤
 │              Core Executors                                │
-│  75 Commands  │  21 Utilities  │  Agent Simulator  │  RT   │
+│  88 Commands  │  21 Utilities  │  Agent Simulator  │  RT   │
 ├──────────────────────────────────────────────────────────┤
 │              Infrastructure                                │
 │  Templates  │  Hooks  │  Logger  │  Security  │  Memory   │
@@ -396,15 +411,15 @@ stdd-copilot-ultra/
 ├── cli.js                          # CLI entry point (Commander.js)
 ├── src/
 │   ├── cli/
-│   │   ├── commands/               # 75 command implementations (one class each)
+│   │   ├── commands/               # 88 command implementations (one class each)
 │   │   ├── helpers/                # Shared CLI utilities (spinner, safe wrappers)
 │   │   └── registry/               # CommandRegistry + CommandLoader
 │   ├── utils/                      # 21 shared utility modules
 │   ├── runtime/                    # Agent simulator, SudoLang, browser
 │   └── types/                      # JSDoc type definitions
 ├── src/templates/
-│   ├── commands/                   # 80 slash-command templates (Markdown)
-│   └── skills/stdd/                # 47 skill template directories
+│   ├── commands/                   # 88 slash-command templates (Markdown)
+│   └── skills/stdd/                # 57 skill template directories
 ├── stdd/                           # Runtime working directory (generated in user projects)
 │   ├── changes/                    # Change lifecycle
 │   ├── specs/                      # BDD source of truth
@@ -413,7 +428,7 @@ stdd-copilot-ultra/
 │   ├── memory/                     # Project memory store
 │   ├── config/                     # Additional config (engines.yaml, etc.)
 │   └── reporters/                  # Test reporter plugins
-├── __tests__/                      # 191 suites / 4,158 tests
+├── __tests__/                      # 202 suites / 4,285 tests
 ├── docs/                           # Documentation
 ├── schemas/                        # JSON / YAML Schemas
 └── tools/                          # Utility scripts
@@ -427,7 +442,7 @@ stdd-copilot-ultra/
 |----------|---------|
 | [docs/getting-started.md](./docs/getting-started.md) | First-run workflow and quick reference |
 | [docs/cli-guide.md](./docs/cli-guide.md) | Complete CLI command reference |
-| [docs/command-reference.md](./docs/command-reference.md) | Detailed descriptions for all 80 commands |
+| [docs/command-reference.md](./docs/command-reference.md) | Detailed descriptions for all 88 commands |
 | [docs/concepts.md](./docs/concepts.md) | Core concepts: Spec-First, Ralph Loop, Constitution |
 | [docs/workflows.md](./docs/workflows.md) | Workflow details: Greenfield / Brownfield / Quick Fix |
 | [docs/capabilities.md](./docs/capabilities.md) | Full capability catalog |
@@ -461,7 +476,7 @@ docker compose up -d
 ### Development & Testing
 
 ```bash
-npm test                # Run 191 suites / 4,158 tests
+npm test                # Run 202 suites / 4,285 tests
 npm run lint            # ESLint check
 npm run premerge        # Full pre-merge check (audit + lint + docs + coverage)
 npm run test:coverage   # Run with coverage report

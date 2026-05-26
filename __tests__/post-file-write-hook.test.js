@@ -8,6 +8,7 @@ const {
   hasNPlusOnePattern,
   extractBraceBody,
   formatSuggestions,
+  shouldSyncCodeGraph,
 } = require('../src/templates/hooks/post-file-write');
 
 describe('post-file-write hook exported functions', () => {
@@ -36,6 +37,33 @@ describe('post-file-write hook exported functions', () => {
       expect(isSourceFile('/src/README.md')).toBe(false);
       expect(isSourceFile('/src/style.css')).toBe(false);
       expect(isSourceFile('/src/data.json')).toBe(false);
+    });
+  });
+
+  describe('shouldSyncCodeGraph', () => {
+    afterEach(() => {
+      delete process.env.STDD_CODEGRAPH_DISABLED;
+      delete process.env.STDD_CODEGRAPH_SYNCING;
+    });
+
+    it('syncs supported source files', () => {
+      expect(shouldSyncCodeGraph('/repo/src/app.ts')).toBe(true);
+      expect(shouldSyncCodeGraph('/repo/src/app.tsx')).toBe(true);
+      expect(shouldSyncCodeGraph('/repo/src/app.py')).toBe(true);
+    });
+
+    it('does not sync unsupported or ignored files', () => {
+      expect(shouldSyncCodeGraph('/repo/README.md')).toBe(false);
+      expect(shouldSyncCodeGraph('/repo/node_modules/pkg/index.js')).toBe(false);
+      expect(shouldSyncCodeGraph('/repo/stdd/graph/codegraph/index.json')).toBe(false);
+    });
+
+    it('respects disable environment variables', () => {
+      process.env.STDD_CODEGRAPH_DISABLED = '1';
+      expect(shouldSyncCodeGraph('/repo/src/app.ts')).toBe(false);
+      delete process.env.STDD_CODEGRAPH_DISABLED;
+      process.env.STDD_CODEGRAPH_SYNCING = '1';
+      expect(shouldSyncCodeGraph('/repo/src/app.ts')).toBe(false);
     });
   });
 

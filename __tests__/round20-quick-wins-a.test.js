@@ -3,6 +3,8 @@
  * Targets 5 modules: metrics, init, status, skills, extensions
  */
 
+process.env.FORCE_COLOR = '0';
+
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
